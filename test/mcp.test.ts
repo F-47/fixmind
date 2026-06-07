@@ -1,0 +1,94 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { createLessonStore } from "../src/storage.js";
+
+test("MCP exposes one save tool and persists a lesson", async () => {
+  const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-"));
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.resolve("dist/src/cli.js"), "mcp"],
+    env: { ...process.env, FIXMIND_DATA_DIR: dataDirectory } as Record<string, string>,
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "fixmind-test", version: "1.0.0" });
+
+  try {
+    await client.connect(transport);
+    const tools = await client.listTools();
+    assert.deepEqual(tools.tools.map((tool) => tool.name), ["save_learning_lesson"]);
+
+    const result = await client.callTool({
+      name: "save_learning_lesson",
+      arguments: {
+        tool: "windsurf",
+        projectPath: dataDirectory,
+        title: "Understand hydration",
+        originalPrompt: "Fix the mismatch",
+        problem: "Initial markup differed",
+        mistake: "Read browser state during server rendering",
+        rootCause: "The server and browser had different inputs",
+        fixSummary: "Use stable initial state and load browser state after hydration",
+        takeaway: "Keep the first server and browser render identical.",
+        mistakePattern: "Hydration timing",
+        concepts: ["hydration"],
+        filesChanged: ["app/page.tsx"],
+        codeExample: "useEffect(() => loadTheme(), [])",
+        badCodeExample: "const theme = localStorage.getItem('theme')",
+        goodCodeExample: "useEffect(() => loadTheme(), [])",
+        codeExplanation: "The corrected version waits until the component is running in the browser.",
+        practiceTask: "Build a component with stable server markup.",
+        reviewQuestions: [{
+          question: "Why must initial renders match?",
+          expectedAnswer: "Hydration attaches to the server-rendered markup.",
+        }],
+        understanding: "unknown",
+        tags: ["nextjs"],
+      },
+    });
+    assert.equal(result.isError, undefined);
+
+    const store = createLessonStore(path.join(dataDirectory, "learning.db"));
+    try {
+      const saved = store.list();
+      assert.equal(saved.length, 1);
+      assert.equal(saved[0].tool, "windsurf");
+      assert.equal(saved[0].title, "Understand hydration");
+      assert.match(saved[0].badCodeExample ?? "", /localStorage/);
+      assert.match(saved[0].practiceTask ?? "", /stable server markup/);
+      assert.equal(saved[0].mistakePattern, "Hydration timing");
+      assert.match(saved[0].codeExplanation ?? "", /waits until/);
+    } finally {
+      store.close();
+    }
+  } finally {
+    await client.close();
+    fs.rmSync(dataDirectory, { recursive: true, force: true });
+  }
+});
+
+test("MCP rejects incomplete lesson input", async () => {
+  const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-invalid-"));
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.resolve("dist/src/cli.js"), "mcp"],
+    env: { ...process.env, FIXMIND_DATA_DIR: dataDirectory } as Record<string, string>,
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "fixmind-test", version: "1.0.0" });
+  try {
+    await client.connect(transport);
+    const result = await client.callTool({
+      name: "save_learning_lesson",
+      arguments: { title: "Incomplete" },
+    });
+    assert.equal(result.isError, true);
+  } finally {
+    await client.close();
+    fs.rmSync(dataDirectory, { recursive: true, force: true });
+  }
+});

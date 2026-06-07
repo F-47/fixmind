@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@theme {
+  --color-page: #090b0e;
+  --color-panel: #101419;
+  --color-line: #27313c;
+  --color-ink: #f4f7fb;
+  --color-muted: #94a0af;
+  --color-mint: #72edc1;
+  --color-sky: #79c9ff;
+  --color-warn: #ffc764;
+  --color-danger: #ff899f;
+}
+
+@layer base {
+  :root { color-scheme: dark; }
+  body {
+    @apply m-0 min-h-screen bg-page font-sans text-ink;
+    background-image: radial-gradient(900px 500px at 85% -10%, #17354a 0, transparent 65%), radial-gradient(700px 500px at -10% 40%, #153027 0, transparent 65%);
+  }
+  button, input, textarea, select { font: inherit; }
+  dialog::backdrop { background: #020305d9; backdrop-filter: blur(5px); }
+}

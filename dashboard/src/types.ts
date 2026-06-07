@@ -1,0 +1,44 @@
+export type Understanding = "understood" | "partial" | "copied_blindly" | "unknown";
+
+export interface ReviewQuestion {
+  id: string;
+  question: string;
+  expectedAnswer: string;
+  userAnswer?: string;
+  status: "unanswered" | "answered" | "skipped";
+}
+
+export interface DashboardLesson {
+  id: string;
+  createdAt: string;
+  tool: string;
+  title: string;
+  originalPrompt: string;
+  problem: string;
+  mistake: string;
+  rootCause: string;
+  fixSummary: string;
+  concepts: string[];
+  filesChanged: string[];
+  codeExample?: string;
+  badCodeExample?: string;
+  goodCodeExample?: string;
+  codeExplanation?: string;
+  practiceTask?: string;
+  reviewQuestions: ReviewQuestion[];
+  understanding: Understanding;
+  nextReviewAt: string;
+  reviewCount: number;
+  displayTakeaway: string;
+  displayPattern: string;
+}
+
+export interface RankedItem { name: string; count: number }
+export interface PatternItem extends RankedItem { lessonIds: string[] }
+export interface DashboardData {
+  lessons: DashboardLesson[];
+  due: DashboardLesson[];
+  topics: RankedItem[];
+  patterns: PatternItem[];
+  summary: { total: number; due: number; learning: number; understood: number };
+}

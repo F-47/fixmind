@@ -1,0 +1,142 @@
+import type { LessonInput, Understanding } from "./types.js";
+
+const UNDERSTANDING = new Set<Understanding>([
+  "understood",
+  "partial",
+  "copied_blindly",
+  "unknown",
+]);
+
+function requiredString(value: unknown, field: string): string {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new Error(`Invalid lesson: ${field} is required.`);
+  }
+  return value.trim();
+}
+
+function stringArray(
+  value: unknown,
+  field: string,
+  required = false,
+): string[] {
+  if (value === undefined && !required) return [];
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new Error(
+      `Invalid lesson: ${field} must be an array of strings.`,
+    );
+  }
+  const result = value.map((item) => item.trim()).filter(Boolean);
+  if (required && result.length === 0) {
+    throw new Error(
+      `Invalid lesson: ${field} must contain at least one value.`,
+    );
+  }
+  return result;
+}
+
+export function validateLessonInput(value: unknown): LessonInput {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Invalid lesson: expected a JSON object.");
+  }
+
+  const input = value as Record<string, unknown>;
+  const tool = input.tool ?? "manual";
+  if (typeof tool !== "string" || tool.trim() === "") {
+    throw new Error("Invalid lesson: tool must be a non-empty string.");
+  }
+
+  const understanding = input.understanding ?? "unknown";
+  if (
+    typeof understanding !== "string" ||
+    !UNDERSTANDING.has(understanding as Understanding)
+  ) {
+    throw new Error(
+      "Invalid lesson: understanding must be understood, partial, copied_blindly, or unknown.",
+    );
+  }
+
+  if (
+    !Array.isArray(input.reviewQuestions) ||
+    input.reviewQuestions.length === 0
+  ) {
+    throw new Error(
+      "Invalid lesson: at least one review question is required.",
+    );
+  }
+
+  const reviewQuestions = input.reviewQuestions.map((item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new Error(
+        `Invalid lesson: reviewQuestions[${index}] must be an object.`,
+      );
+    }
+    const question = item as Record<string, unknown>;
+    return {
+      question: requiredString(
+        question.question,
+        `reviewQuestions[${index}].question`,
+      ),
+      expectedAnswer: requiredString(
+        question.expectedAnswer,
+        `reviewQuestions[${index}].expectedAnswer`,
+      ),
+    };
+  });
+
+  const nextReviewAt = input.nextReviewAt;
+  if (
+    nextReviewAt !== undefined &&
+    (typeof nextReviewAt !== "string" || Number.isNaN(Date.parse(nextReviewAt)))
+  ) {
+    throw new Error("Invalid lesson: nextReviewAt must be a valid date.");
+  }
+
+  return {
+    tool: tool.trim(),
+    projectPath:
+      typeof input.projectPath === "string" ? input.projectPath : undefined,
+    title: requiredString(input.title, "title"),
+    originalPrompt:
+      typeof input.originalPrompt === "string"
+        ? input.originalPrompt.trim()
+        : "",
+    problem: requiredString(input.problem, "problem"),
+    mistake: requiredString(input.mistake, "mistake"),
+    rootCause: requiredString(input.rootCause, "rootCause"),
+    fixSummary: requiredString(input.fixSummary, "fixSummary"),
+    takeaway:
+      typeof input.takeaway === "string" ? input.takeaway.trim() : undefined,
+    mistakePattern:
+      typeof input.mistakePattern === "string"
+        ? input.mistakePattern.trim()
+        : undefined,
+    concepts: stringArray(input.concepts, "concepts", true),
+    filesChanged: stringArray(input.filesChanged, "filesChanged"),
+    codeExample:
+      typeof input.codeExample === "string"
+        ? input.codeExample.trim()
+        : undefined,
+    badCodeExample:
+      typeof input.badCodeExample === "string"
+        ? input.badCodeExample.trim()
+        : undefined,
+    goodCodeExample:
+      typeof input.goodCodeExample === "string"
+        ? input.goodCodeExample.trim()
+        : undefined,
+    codeExplanation:
+      typeof input.codeExplanation === "string"
+        ? input.codeExplanation.trim()
+        : undefined,
+    practiceTask:
+      typeof input.practiceTask === "string"
+        ? input.practiceTask.trim()
+        : undefined,
+    reviewQuestions,
+    understanding: understanding as Understanding,
+    nextReviewAt,
+    sourceDiff:
+      typeof input.sourceDiff === "string" ? input.sourceDiff : undefined,
+    tags: stringArray(input.tags, "tags"),
+  };
+}
