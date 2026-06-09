@@ -9,14 +9,35 @@ import { databasePath } from "./paths.js";
 import { initializeDataDirectory, createLessonStore, type LessonStore } from "./storage.js";
 import { validateLessonInput } from "./validation.js";
 
-export const MCP_INSTRUCTIONS = [
-  "After completing a meaningful coding fix, call save_learning_lesson for the human developer.",
-  "Write in plain teaching language. Include a one-sentence takeaway and a short reusable mistake pattern such as Resource cleanup or Stale state.",
-  "Capture the mistake, root cause, reusable concept, why the fix works, and one recall question.",
-  "Include a minimal wrong example, corrected example, and short practice task whenever code is involved.",
-  "Do not save lessons for formatting-only changes, renames, generated files, or purely mechanical edits unless the user asks.",
-  "Keep lessons concise and focused on human learning rather than agent memory.",
-].join(" ");
+export const MCP_INSTRUCTIONS = `
+You are the fixmind learning recorder. Your job is to capture lessons that help developers improve over time.
+
+BEFORE calling save_learning_lesson, run this checklist:
+  1. Was real logic fixed? (a bug, an incorrect assumption, a missing guard, wrong API usage, bad state management, etc.)
+  2. Does the developer now understand something they did not understand before?
+  3. Can you write a concrete badCodeExample showing the wrong pattern?
+  4. Can you explain WHY the old code was wrong, not just WHAT changed?
+
+If any answer is NO, do NOT call save_learning_lesson.
+
+DO NOT save a lesson for:
+  - Moving code to a different file (pure relocation, no logic change)
+  - Renaming variables, functions, or files
+  - Formatting-only changes (whitespace, semicolons, quotes, line breaks)
+  - Generated files or build artifacts
+  - Adding a comment or doc-string without changing logic
+  - Splitting one file into multiple files without changing logic
+  - Purely mechanical refactors with no new understanding gained
+
+STRONGLY RECOMMENDED fields — always provide these when code is involved:
+  - mistake: What the developer actually did wrong in their thinking (not just what line changed)
+  - badCodeExample: The minimal broken snippet. Example: "const data = await fetch(url)"
+  - goodCodeExample: The corrected version. Example: "const res = await fetch(url); const data = await res.json();"
+  - takeaway: One sentence to remember. Example: "fetch() resolves when headers arrive, not when the body is parsed."
+  - mistakePattern: A 2–4 word reusable category. Examples: "Missing await", "Stale closure", "Off-by-one", "Wrong event lifetime"
+
+Write as a teacher, not as an agent log. Keep lessons short and human-readable.
+`.trim();
 
 const reviewQuestionSchema = z.object({
   question: z.string().trim().min(1),
@@ -32,20 +53,38 @@ export const lessonInputSchema = z.object({
   mistake: z.string().trim().min(1),
   rootCause: z.string().trim().min(1),
   fixSummary: z.string().trim().min(1),
-  takeaway: z.string().trim().min(1).optional().describe("One plain sentence stating what the developer should remember."),
-  mistakePattern: z.string().trim().min(1).optional().describe("A short reusable category, usually two to four words."),
+  takeaway: z.string().trim().min(1).optional().describe("STRONGLY RECOMMENDED. One plain sentence the developer should memorize. Example: 'Always revoke object URLs when a component unmounts.'"),
+  mistakePattern: z.string().trim().min(1).optional().describe("STRONGLY RECOMMENDED. A 2–4 word reusable category. Examples: Missing cleanup, Stale closure, Off-by-one, Wrong event lifetime."),
   concepts: z.array(z.string().trim().min(1)).min(1),
   filesChanged: z.array(z.string().trim().min(1)).default([]),
   codeExample: z.string().optional(),
-  badCodeExample: z.string().optional().describe("A minimal example showing the mistake."),
-  goodCodeExample: z.string().optional().describe("A minimal corrected example showing the concept."),
-  codeExplanation: z.string().optional().describe("A short explanation of the important difference between the broken and corrected examples."),
+  badCodeExample: z.string().optional().describe("STRONGLY RECOMMENDED when code is involved. A minimal snippet showing the mistake. Omit only for concept-only lessons with no code change."),
+  goodCodeExample: z.string().optional().describe("STRONGLY RECOMMENDED when code is involved. The corrected snippet. Must pair with badCodeExample."),
+  codeExplanation: z.string().optional().describe("A short explanation of the key difference between the broken and corrected examples."),
   practiceTask: z.string().optional().describe("A small exercise the developer can do without copying the fix."),
   reviewQuestions: z.array(reviewQuestionSchema).min(1),
   understanding: z.enum(["understood", "partial", "copied_blindly", "unknown"]).default("unknown"),
   sourceDiff: z.string().optional(),
-  tags: z.array(z.string().trim().min(1)).default([]),
+  tags: z.array(z.object({
+    name: z.string().trim().min(1),
+    url: z.string().min(1).optional(),
+  })).default([]),
 });
+
+const REFACTOR_PATTERN = /\b(mov(e|ing|ed)|extract(ed|ing)?|split(ting)?|rename(d|ing)?|refactor(ed|ing)?|reorganiz(e|ed|ing)|relocat(e|ed|ing))\b/i;
+
+function detectRefactorWarning(input: ReturnType<typeof validateLessonInput>): string | null {
+  const hasCodeExamples = Boolean(input.badCodeExample || input.goodCodeExample);
+  if (hasCodeExamples) return null;
+  const text = `${input.mistake} ${input.mistakePattern ?? ""}`;
+  if (REFACTOR_PATTERN.test(text)) {
+    return "Quality notice: This lesson has no code examples and the mistake description sounds like a structural change. If this was a pure refactor (moving/renaming code), do not save it. If a real bug was fixed, add badCodeExample and goodCodeExample so the lesson is useful for future review.";
+  }
+  if ((input.filesChanged ?? []).length > 0) {
+    return "Quality notice: No code examples were captured. Add badCodeExample and goodCodeExample to make this lesson useful for future review.";
+  }
+  return null;
+}
 
 export function createLearningLessonServer(
   store: LessonStore = createLessonStore(),
@@ -79,6 +118,7 @@ export function createLearningLessonServer(
         }
 
         const input = validateLessonInput({ ...candidate, projectPath });
+        const warning = detectRefactorWarning(input);
         const saved = store.save(input);
         return {
           content: [{
@@ -88,6 +128,7 @@ export function createLearningLessonServer(
               `Title: ${saved.title}`,
               `Next review: ${saved.nextReviewAt}`,
               `Database: ${databasePath()}`,
+              ...(warning ? ["", warning] : []),
             ].join("\n"),
           }],
         };

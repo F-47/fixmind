@@ -1,5 +1,10 @@
 export type Understanding = "understood" | "partial" | "copied_blindly" | "unknown";
 
+export interface Tag {
+  name: string;
+  url?: string;
+}
+
 export interface ReviewQuestion {
   id: string;
   question: string;
@@ -18,8 +23,11 @@ export interface DashboardLesson {
   mistake: string;
   rootCause: string;
   fixSummary: string;
+  takeaway?: string;
+  mistakePattern?: string;
   concepts: string[];
   filesChanged: string[];
+  tags: Tag[];
   codeExample?: string;
   badCodeExample?: string;
   goodCodeExample?: string;

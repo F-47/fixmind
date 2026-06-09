@@ -2,6 +2,11 @@ export type ToolName = string;
 export type Understanding = "understood" | "partial" | "copied_blindly" | "unknown";
 export type QuestionStatus = "unanswered" | "answered" | "skipped";
 
+export interface Tag {
+  name: string;
+  url?: string;
+}
+
 export interface ReviewQuestion {
   id: string;
   question: string;
@@ -36,7 +41,7 @@ export interface Lesson {
   nextReviewAt: string;
   reviewCount: number;
   sourceDiff?: string;
-  tags: string[];
+  tags: Tag[];
 }
 
 export interface LessonInput {
@@ -61,7 +66,7 @@ export interface LessonInput {
   understanding?: Understanding;
   nextReviewAt?: string;
   sourceDiff?: string;
-  tags?: string[];
+  tags?: Tag[];
 }
 
 export interface ConceptStat {

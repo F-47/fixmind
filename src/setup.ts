@@ -151,6 +151,89 @@ function configureCursor(homeDirectory: string, server: ServerCommand, dryRun: b
   };
 }
 
+const INSTRUCTION_MARKER = "fixmind:instructions";
+
+const INSTRUCTION_BODY = `\
+After fixing any meaningful bug or resolving a real coding mistake, always call \
+the fixmind save_learning_lesson MCP tool before finishing your response.
+
+Call it for: bugs, incorrect API usage, wrong assumptions, bad state management, \
+logic errors, missing cleanup, security issues.
+
+Skip it for: renaming files or variables, formatting changes, moving code between \
+files, generated files, or adding comments without logic changes.
+
+When code is involved, always provide badCodeExample and goodCodeExample.`;
+
+function instructionBlock(client: SupportedClient): string {
+  if (client === "cursor") {
+    return [
+      "---",
+      `description: Fixmind — save learning lessons after bug fixes`,
+      "alwaysApply: true",
+      "---",
+      "",
+      INSTRUCTION_BODY,
+      "",
+    ].join("\n");
+  }
+  return [
+    `<!-- ${INSTRUCTION_MARKER}:start -->`,
+    "## Fixmind — Always Save Learning Lessons",
+    "",
+    INSTRUCTION_BODY,
+    `<!-- ${INSTRUCTION_MARKER}:end -->`,
+    "",
+  ].join("\n");
+}
+
+export interface InstructionResult {
+  client: SupportedClient;
+  status: "written" | "already_configured" | "dry_run";
+  filePath: string;
+}
+
+export function configureInstructions(options: SetupOptions): InstructionResult[] {
+  const homeDirectory = options.homeDirectory ?? os.homedir();
+  return options.clients.map((client) =>
+    injectInstruction(client, homeDirectory, Boolean(options.dryRun)),
+  );
+}
+
+function instructionFilePath(client: SupportedClient, homeDirectory: string): string {
+  if (client === "claude") return path.join(homeDirectory, ".claude", "CLAUDE.md");
+  if (client === "codex") return path.join(homeDirectory, "AGENTS.md");
+  return path.join(homeDirectory, ".cursor", "rules", "fixmind.mdc");
+}
+
+function injectInstruction(
+  client: SupportedClient,
+  homeDirectory: string,
+  dryRun: boolean,
+): InstructionResult {
+  const filePath = instructionFilePath(client, homeDirectory);
+  const block = instructionBlock(client);
+  const marker = client === "cursor" ? "alwaysApply: true" : `${INSTRUCTION_MARKER}:start`;
+
+  const existing = fs.existsSync(filePath)
+    ? fs.readFileSync(filePath, "utf8")
+    : "";
+
+  if (existing.includes(marker)) {
+    return { client, status: "already_configured", filePath };
+  }
+
+  if (!dryRun) {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    const content = existing
+      ? `${existing.trimEnd()}\n\n${block}`
+      : block;
+    fs.writeFileSync(filePath, content, "utf8");
+  }
+
+  return { client, status: dryRun ? "dry_run" : "written", filePath };
+}
+
 function commandExists(command: string): boolean {
   try {
     execFileSync(process.platform === "win32" ? "where.exe" : "which", [command], { stdio: "ignore" });

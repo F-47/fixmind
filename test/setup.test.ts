@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { configureClients, genericMcpConfiguration, mcpServerCommand } from "../src/setup.js";
+import { configureClients, configureInstructions, genericMcpConfiguration, mcpServerCommand } from "../src/setup.js";
 
 test("builds a Windows-compatible local MCP command", () => {
   assert.deepEqual(mcpServerCommand("win32"), {
@@ -88,6 +88,58 @@ test("reports unavailable CLI clients instead of crashing when the binary is mis
 
   assert.equal(results[0].status, "unavailable");
   assert.match(results[0].detail, /not available on PATH/);
+});
+
+test("injects instructions into Claude, Codex, and Cursor files", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-instructions-"));
+  try {
+    const results = configureInstructions({ clients: ["claude", "codex", "cursor"], homeDirectory: home });
+    assert.equal(results.length, 3);
+    assert.equal(results.every((r) => r.status === "written"), true);
+
+    const claudeMd = fs.readFileSync(path.join(home, ".claude", "CLAUDE.md"), "utf8");
+    assert.ok(claudeMd.includes("fixmind:instructions:start"));
+    assert.ok(claudeMd.includes("save_learning_lesson"));
+
+    const agentsMd = fs.readFileSync(path.join(home, "AGENTS.md"), "utf8");
+    assert.ok(agentsMd.includes("fixmind:instructions:start"));
+
+    const cursorMdc = fs.readFileSync(path.join(home, ".cursor", "rules", "fixmind.mdc"), "utf8");
+    assert.ok(cursorMdc.includes("alwaysApply: true"));
+    assert.ok(cursorMdc.includes("save_learning_lesson"));
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("instruction injection is idempotent", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-instructions-idem-"));
+  try {
+    configureInstructions({ clients: ["claude"], homeDirectory: home });
+    const first = fs.readFileSync(path.join(home, ".claude", "CLAUDE.md"), "utf8");
+
+    const second = configureInstructions({ clients: ["claude"], homeDirectory: home });
+    assert.equal(second[0].status, "already_configured");
+    const after = fs.readFileSync(path.join(home, ".claude", "CLAUDE.md"), "utf8");
+    assert.equal(first, after);
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("instruction injection appends to existing CLAUDE.md without overwriting it", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-instructions-append-"));
+  const claudeDir = path.join(home, ".claude");
+  fs.mkdirSync(claudeDir, { recursive: true });
+  fs.writeFileSync(path.join(claudeDir, "CLAUDE.md"), "# My rules\n\nDo something.\n", "utf8");
+  try {
+    configureInstructions({ clients: ["claude"], homeDirectory: home });
+    const content = fs.readFileSync(path.join(claudeDir, "CLAUDE.md"), "utf8");
+    assert.ok(content.startsWith("# My rules"));
+    assert.ok(content.includes("fixmind:instructions:start"));
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
 });
 
 test("refuses to overwrite malformed Cursor JSON", () => {

@@ -1,4 +1,4 @@
-import type { LessonInput, Understanding } from "./types.js";
+import type { LessonInput, Tag, Understanding } from "./types.js";
 
 const UNDERSTANDING = new Set<Understanding>([
   "understood",
@@ -32,6 +32,25 @@ function stringArray(
     );
   }
   return result;
+}
+
+function parseTags(value: unknown): Tag[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error("Invalid lesson: tags must be an array.");
+  return value.map((item, index) => {
+    if (typeof item === "string") return { name: item.trim() };
+    if (item && typeof item === "object" && !Array.isArray(item)) {
+      const tag = item as Record<string, unknown>;
+      if (typeof tag.name !== "string" || tag.name.trim() === "") {
+        throw new Error(`Invalid lesson: tags[${index}].name is required.`);
+      }
+      return {
+        name: tag.name.trim(),
+        ...(typeof tag.url === "string" && tag.url.trim() ? { url: tag.url.trim() } : {}),
+      };
+    }
+    throw new Error(`Invalid lesson: tags[${index}] must be a string or { name, url? } object.`);
+  });
 }
 
 export function validateLessonInput(value: unknown): LessonInput {
@@ -137,6 +156,6 @@ export function validateLessonInput(value: unknown): LessonInput {
     nextReviewAt,
     sourceDiff:
       typeof input.sourceDiff === "string" ? input.sourceDiff : undefined,
-    tags: stringArray(input.tags, "tags"),
+    tags: parseTags(input.tags),
   };
 }

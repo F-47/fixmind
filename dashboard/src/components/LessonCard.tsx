@@ -1,4 +1,5 @@
 import { formatDate, reviewAction, statusLabel } from "../format";
+import { computeCompleteness, completenessColor } from "../completeness";
 import type { DashboardLesson } from "../types";
 
 interface Props {
@@ -8,6 +9,8 @@ interface Props {
 }
 
 export function LessonCard({ lesson, due, onOpen }: Props) {
+  const { score } = computeCompleteness(lesson);
+  const dotColor = completenessColor(score) === "green" ? "bg-mint" : completenessColor(score) === "yellow" ? "bg-warn" : "bg-danger";
   return (
     <article
       className="grid cursor-pointer grid-cols-[6px_1fr_auto] gap-4 rounded-2xl border border-line bg-gradient-to-br from-[#12171d] to-[#0d1115] p-4 transition hover:-translate-y-0.5 hover:border-[#455463] max-sm:grid-cols-[5px_1fr]"
@@ -17,6 +20,7 @@ export function LessonCard({ lesson, due, onOpen }: Props) {
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="m-0 text-[17px] font-semibold">{lesson.title}</h3>
+          <span className={`size-2 shrink-0 rounded-full ${dotColor}`} title={`Lesson completeness: ${score}%`} />
           <span className="text-[11px] text-muted">
             {lesson.tool} &middot; {formatDate(lesson.createdAt)}
           </span>

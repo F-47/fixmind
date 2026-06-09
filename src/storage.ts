@@ -11,6 +11,7 @@ import type {
   ConceptStat,
   MistakeStat,
   ReviewQuestion,
+  Tag,
   Understanding,
 } from "./types.js";
 
@@ -228,9 +229,16 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
 
 type DbRow = typeof lessonsTable.$inferSelect;
 
+function normalizeTags(raw: Tag[] | string[]): Tag[] {
+  return (raw as Array<Tag | string>).map((item) =>
+    typeof item === "string" ? { name: item } : item,
+  );
+}
+
 function fromDb(row: DbRow): Lesson {
   return {
     ...row,
+    tags: normalizeTags(row.tags as Tag[] | string[]),
     takeaway: row.takeaway ?? undefined,
     mistakePattern: row.mistakePattern ?? undefined,
     codeExample: row.codeExample ?? undefined,

@@ -20,4 +20,15 @@
   }
   button, input, textarea, select { font: inherit; }
   dialog::backdrop { background: #020305d9; backdrop-filter: blur(5px); }
+
+  /* highlight.js token colors — tuned for the fixmind dark theme */
+  .hljs-keyword, .hljs-built_in, .hljs-tag { color: #79c9ff; }
+  .hljs-string, .hljs-attr { color: #a8d8a8; }
+  .hljs-number, .hljs-literal { color: #ffc764; }
+  .hljs-comment { color: #5a6a7a; font-style: italic; }
+  .hljs-title, .hljs-class, .hljs-type, .hljs-selector-class { color: #72edc1; }
+  .hljs-function, .hljs-name { color: #c9a8f8; }
+  .hljs-operator, .hljs-punctuation { color: #8a9bac; }
+  .hljs-meta { color: #5a6a7a; }
+  .hljs-variable, .hljs-params { color: #f4f7fb; }
 }

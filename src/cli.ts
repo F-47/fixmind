@@ -13,6 +13,7 @@ import { readGitContext } from "./git.js";
 import { createPrompter } from "./prompts.js";
 import {
   configureClients,
+  configureInstructions,
   detectClients,
   genericMcpConfiguration,
   type SupportedClient,
@@ -142,13 +143,14 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
     return;
   }
 
-  const results = configureClients({
-    clients,
-    dryRun: Boolean(options["dry-run"]),
-  });
+  const dryRun = Boolean(options["dry-run"]);
+  const results = configureClients({ clients, dryRun });
+  const instructions = configureInstructions({ clients, dryRun });
   console.log(`Local data initialized at ${paths.directory}.`);
   for (const result of results)
     console.log(`${result.client}: ${result.status} - ${result.detail}`);
+  for (const result of instructions)
+    console.log(`${result.client} instructions: ${result.status} - ${result.filePath}`);
   console.log("Restart configured AI clients so they discover the MCP server.");
 }
 
@@ -240,7 +242,7 @@ async function saveLesson(
       ],
       understanding: optionString(options.understanding) ?? "unknown",
       sourceDiff: git.sourceDiff,
-      tags: parseList(await get("tags", "Tags (comma-separated)")),
+      tags: parseList(await get("tags", "Tags (comma-separated)")).map((name) => ({ name })),
     });
     const saved = store.save(input);
     if (prompt) {

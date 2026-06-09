@@ -47,7 +47,7 @@ test("MCP exposes one save tool and persists a lesson", async () => {
           expectedAnswer: "Hydration attaches to the server-rendered markup.",
         }],
         understanding: "unknown",
-        tags: ["nextjs"],
+        tags: [{ name: "nextjs", url: "https://nextjs.org/docs/messages/react-hydration-error" }],
       },
     });
     assert.equal(result.isError, undefined);
@@ -65,6 +65,40 @@ test("MCP exposes one save tool and persists a lesson", async () => {
     } finally {
       store.close();
     }
+  } finally {
+    await client.close();
+    fs.rmSync(dataDirectory, { recursive: true, force: true });
+  }
+});
+
+test("MCP appends quality warning when code examples are missing", async () => {
+  const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-quality-"));
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.resolve("dist/src/cli.js"), "mcp"],
+    env: { ...process.env, FIXMIND_DATA_DIR: dataDirectory } as Record<string, string>,
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "fixmind-test", version: "1.0.0" });
+  try {
+    await client.connect(transport);
+    const result = await client.callTool({
+      name: "save_learning_lesson",
+      arguments: {
+        tool: "claude",
+        projectPath: dataDirectory,
+        title: "Extract option helpers",
+        problem: "The CLI file was too large",
+        mistake: "Moved optionString and parseList into a separate file",
+        rootCause: "The helpers were defined inline",
+        fixSummary: "Extracted helpers into cli-options.ts",
+        concepts: ["single-responsibility"],
+        reviewQuestions: [{ question: "When should you extract helpers?", expectedAnswer: "When they are reused or obscure intent." }],
+      },
+    });
+    assert.equal(result.isError, undefined);
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    assert.ok(text.includes("Quality notice"), `Expected quality warning in: ${text}`);
   } finally {
     await client.close();
     fs.rmSync(dataDirectory, { recursive: true, force: true });

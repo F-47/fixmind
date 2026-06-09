@@ -22,7 +22,7 @@ function input(overrides: Record<string, unknown> = {}) {
       expectedAnswer: "The initial renders differed",
     }],
     understanding: "unknown",
-    tags: ["nextjs"],
+    tags: [{ name: "nextjs" }],
     ...overrides,
   });
 }
