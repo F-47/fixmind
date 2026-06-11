@@ -35,6 +35,7 @@ STRONGLY RECOMMENDED fields — always provide these when code is involved:
   - goodCodeExample: The corrected version. Example: "const res = await fetch(url); const data = await res.json();"
   - takeaway: One sentence to remember. Example: "fetch() resolves when headers arrive, not when the body is parsed."
   - mistakePattern: A 2–4 word reusable category. Examples: "Missing await", "Stale closure", "Off-by-one", "Wrong event lifetime"
+  - tags: 1-3 entries naming the APIs/concepts involved, e.g. { "name": "MDN: URL.revokeObjectURL", "url": "https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static" }. Only set url when you are confident it is a real, official documentation page (MDN, the framework's own docs). If unsure, omit url and the tag is shown as a plain label.
 
 Write as a teacher, not as an agent log. Keep lessons short and human-readable.
 `.trim();
@@ -45,7 +46,7 @@ const reviewQuestionSchema = z.object({
 });
 
 export const lessonInputSchema = z.object({
-  tool: z.string().trim().min(1).default("unknown-ai-tool"),
+  tool: z.string().trim().min(1).optional().describe("The calling AI tool's name. Usually omit this — it is detected automatically from the MCP client."),
   projectPath: z.string().trim().min(1).optional(),
   title: z.string().trim().min(1),
   originalPrompt: z.string().default(""),
@@ -110,6 +111,7 @@ export function createLearningLessonServer(
     async (arguments_) => {
       try {
         const candidate = { ...arguments_ };
+        candidate.tool ||= server.server.getClientVersion()?.name ?? "unknown-ai-tool";
         const projectPath = candidate.projectPath ?? process.cwd();
         if (!candidate.sourceDiff || candidate.filesChanged.length === 0) {
           const git = readGitContext(projectPath);

@@ -22,6 +22,8 @@ export interface LessonStore {
   search(query: string): Lesson[];
   due(now?: Date): Lesson[];
   updateReview(id: string, questions: ReviewQuestion[], understanding: Understanding): Lesson;
+  update(id: string, partial: Partial<LessonInput>): Lesson;
+  delete(id: string): boolean;
   conceptStats(): ConceptStat[];
   mistakeStats(): MistakeStat[];
   close(): void;
@@ -197,6 +199,51 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
       }).where(eq(lessonsTable.id, id)).run();
 
       return fromDb(db.select().from(lessonsTable).where(eq(lessonsTable.id, id)).get()!);
+    },
+
+    update(id: string, partial: Partial<LessonInput>): Lesson {
+      const current = db.select().from(lessonsTable).where(eq(lessonsTable.id, id)).get();
+      if (!current) throw new Error(`Lesson not found: ${id}`);
+
+      const updates: Record<string, unknown> = {};
+
+      const requiredFields = ["title", "problem", "mistake", "rootCause", "fixSummary"] as const;
+      for (const field of requiredFields) {
+        const value = partial[field];
+        if (value === undefined) continue;
+        if (typeof value !== "string" || value.trim() === "") {
+          throw new Error(`Invalid lesson: ${field} is required.`);
+        }
+        updates[field] = value.trim();
+      }
+
+      const optionalStringFields = [
+        "takeaway", "mistakePattern", "codeExample", "badCodeExample",
+        "goodCodeExample", "codeExplanation", "practiceTask",
+      ] as const;
+      for (const field of optionalStringFields) {
+        const value = partial[field];
+        if (value === undefined) continue;
+        updates[field] = value.trim() || null;
+      }
+
+      if (partial.concepts !== undefined) updates.concepts = partial.concepts;
+      if (partial.filesChanged !== undefined) updates.filesChanged = partial.filesChanged;
+      if (partial.tags !== undefined) updates.tags = partial.tags;
+      if (partial.understanding !== undefined) updates.understanding = partial.understanding;
+
+      updates.updatedAt = new Date().toISOString();
+
+      db.update(lessonsTable).set(updates).where(eq(lessonsTable.id, id)).run();
+
+      return fromDb(db.select().from(lessonsTable).where(eq(lessonsTable.id, id)).get()!);
+    },
+
+    delete(id: string): boolean {
+      const existing = db.select().from(lessonsTable).where(eq(lessonsTable.id, id)).get();
+      if (!existing) return false;
+      db.delete(lessonsTable).where(eq(lessonsTable.id, id)).run();
+      return true;
     },
 
     conceptStats(): ConceptStat[] {

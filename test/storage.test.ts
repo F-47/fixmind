@@ -84,6 +84,43 @@ test("aggregates repeated concepts and mistakes", () => {
   });
 });
 
+test("updates a lesson, preserving untouched fields and bumping updatedAt", () => {
+  withStore((store) => {
+    const saved = store.save(input());
+    const before = saved.updatedAt;
+
+    const updated = store.update(saved.id, {
+      title: "Updated title",
+      concepts: ["New concept"],
+    });
+
+    assert.equal(updated.title, "Updated title");
+    assert.deepEqual(updated.concepts, ["New concept"]);
+    assert.equal(updated.problem, saved.problem);
+    assert.equal(updated.mistake, saved.mistake);
+    assert.ok(Date.parse(updated.updatedAt) >= Date.parse(before));
+    assert.equal(store.get(saved.id)?.title, "Updated title");
+  });
+});
+
+test("update rejects empty required fields and unknown ids", () => {
+  withStore((store) => {
+    const saved = store.save(input());
+    assert.throws(() => store.update(saved.id, { title: "  " }), /title is required/);
+    assert.throws(() => store.update("missing-id", { title: "New" }), /Lesson not found/);
+  });
+});
+
+test("deletes a lesson", () => {
+  withStore((store) => {
+    const saved = store.save(input());
+    assert.equal(store.delete(saved.id), true);
+    assert.equal(store.get(saved.id), undefined);
+    assert.deepEqual(store.list(), []);
+    assert.equal(store.delete(saved.id), false);
+  });
+});
+
 test("rejects incomplete lesson input", () => {
   assert.throws(
     () => validateLessonInput({ title: "Incomplete" }),

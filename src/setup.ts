@@ -163,7 +163,12 @@ logic errors, missing cleanup, security issues.
 Skip it for: renaming files or variables, formatting changes, moving code between \
 files, generated files, or adding comments without logic changes.
 
-When code is involved, always provide badCodeExample and goodCodeExample.`;
+When code is involved, always provide badCodeExample and goodCodeExample.
+
+When the mistake involves a documented API or concept, add tags: [{ name, url }] \
+linking to the official docs (MDN, the framework's docs, etc.). Only set url when \
+you're confident it's a real page — otherwise omit it and the tag still shows as a \
+label.`;
 
 function instructionBlock(client: SupportedClient): string {
   if (client === "cursor") {
@@ -232,6 +237,58 @@ function injectInstruction(
   }
 
   return { client, status: dryRun ? "dry_run" : "written", filePath };
+}
+
+const FIXMIND_SAVE_TOOL = "mcp__fixmind__save_learning_lesson";
+
+export interface PermissionResult {
+  client: "claude";
+  status: "configured" | "already_configured" | "dry_run";
+  filePath: string;
+}
+
+export function configurePermissions(options: SetupOptions): PermissionResult[] {
+  const homeDirectory = options.homeDirectory ?? os.homedir();
+  return options.clients
+    .filter((client): client is "claude" => client === "claude")
+    .map((client) => configureClaudePermissions(client, homeDirectory, Boolean(options.dryRun)));
+}
+
+function configureClaudePermissions(
+  client: "claude",
+  homeDirectory: string,
+  dryRun: boolean,
+): PermissionResult {
+  const directory = path.join(homeDirectory, ".claude");
+  const filePath = path.join(directory, "settings.json");
+  let config: Record<string, unknown> = {};
+  if (fs.existsSync(filePath)) {
+    try {
+      config = JSON.parse(fs.readFileSync(filePath, "utf8")) as Record<string, unknown>;
+    } catch (error) {
+      throw new Error(`Cannot configure Claude permissions because ${filePath} contains invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  const permissions = isRecord(config.permissions) ? { ...config.permissions } : {};
+  const allow = Array.isArray(permissions.allow) ? [...permissions.allow] : [];
+
+  if (allow.includes(FIXMIND_SAVE_TOOL)) {
+    return { client, status: "already_configured", filePath };
+  }
+
+  allow.push(FIXMIND_SAVE_TOOL);
+  const updated = { ...config, permissions: { ...permissions, allow } };
+
+  if (!dryRun) {
+    fs.mkdirSync(directory, { recursive: true });
+    if (fs.existsSync(filePath)) {
+      fs.copyFileSync(filePath, `${filePath}.backup`);
+    }
+    fs.writeFileSync(filePath, `${JSON.stringify(updated, null, 2)}\n`, "utf8");
+  }
+
+  return { client, status: dryRun ? "dry_run" : "configured", filePath };
 }
 
 function commandExists(command: string): boolean {

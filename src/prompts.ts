@@ -1,5 +1,6 @@
 import {
   cancel,
+  confirm,
   intro,
   isCancel,
   log,
@@ -20,6 +21,7 @@ export interface Prompter {
   info(message: string): void;
   note(message: string, title?: string): void;
   ask(question: string, defaultValue?: string): Promise<string>;
+  confirm(message: string, initialValue?: boolean): Promise<boolean>;
   chooseOne<Value extends string>(
     message: string,
     options: PromptOption<Value>[],
@@ -53,6 +55,14 @@ export function createPrompter(): Prompter {
       const value = await text({
         message: question,
         defaultValue: defaultValue || undefined,
+        ...common,
+      });
+      return unwrap(value);
+    },
+    async confirm(message, initialValue) {
+      const value = await confirm({
+        message,
+        initialValue,
         ...common,
       });
       return unwrap(value);

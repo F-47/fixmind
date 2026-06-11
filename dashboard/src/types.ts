@@ -43,10 +43,25 @@ export interface DashboardLesson {
 
 export interface RankedItem { name: string; count: number }
 export interface PatternItem extends RankedItem { lessonIds: string[] }
+
+export interface WeeklyCount { weekStart: string; count: number }
+export interface UnderstandingBreakdown {
+  weekStart: string;
+  understood: number;
+  partial: number;
+  copied_blindly: number;
+  unknown: number;
+}
+export interface ProgressData {
+  lessonsPerWeek: WeeklyCount[];
+  understandingByWeek: UnderstandingBreakdown[];
+}
+
 export interface DashboardData {
   lessons: DashboardLesson[];
   due: DashboardLesson[];
   topics: RankedItem[];
   patterns: PatternItem[];
+  progress: ProgressData;
   summary: { total: number; due: number; learning: number; understood: number };
 }

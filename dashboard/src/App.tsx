@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { loadDashboard, saveReview } from "./api";
+import { deleteLesson, loadDashboard, saveReview } from "./api";
 import { LessonCard } from "./components/LessonCard";
 import { LessonDialog } from "./components/LessonDialog";
+import { ProgressChart } from "./components/ProgressChart";
 import { RankList } from "./components/RankList";
 import { reviewAction } from "./format";
 import type {
@@ -60,6 +61,11 @@ export default function App() {
     setData(await loadDashboard(query));
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
+  }
+  async function removeLesson(lessonId: string) {
+    await deleteLesson(lessonId);
+    setSelected(null);
+    setData(await loadDashboard(query));
   }
 
   if (!data)
@@ -136,6 +142,7 @@ export default function App() {
                   lesson={lesson}
                   due={dueIds.has(lesson.id)}
                   onOpen={open}
+                  onDelete={(lessonId) => void removeLesson(lessonId)}
                   key={lesson.id}
                 />
               ))
@@ -179,12 +186,17 @@ export default function App() {
           </section>
         </aside>
       </div>
+      <section className="mt-5 rounded-2xl border border-line bg-gradient-to-br from-[#12171d] to-[#0d1115] p-5">
+        <h2 className="m-0 mb-4 text-[17px] font-semibold">Your progress</h2>
+        <ProgressChart data={data.progress} />
+      </section>
       <LessonDialog
         lesson={selected}
         reviewMode={reviewMode}
         onClose={() => setSelected(null)}
         onStartReview={() => setReviewMode(true)}
         onSave={submitReview}
+        onDelete={(lessonId) => void removeLesson(lessonId)}
       />
       {saved && <div className="fixed right-6 bottom-6 rounded-xl border border-[#2f6555] bg-[#143329] px-4 py-3 text-mint">Review saved</div>}
     </div>

@@ -74,6 +74,13 @@ async function handleRequest(
       await saveReview(store, decodeURIComponent(reviewMatch[1]), request, response);
       return;
     }
+    const deleteMatch = request.method === "DELETE"
+      && url.pathname.match(/^\/api\/lessons\/([^/]+)$/);
+    if (deleteMatch) {
+      const existed = store.delete(decodeURIComponent(deleteMatch[1]));
+      sendJson(response, existed ? 200 : 404, existed ? { ok: true } : { error: "Lesson not found." });
+      return;
+    }
     if (request.method === "GET") {
       serveDashboardAsset(url.pathname, response);
       return;

@@ -11,11 +11,30 @@ export interface PatternStat {
   lessonIds: string[];
 }
 
+export interface WeeklyCount {
+  weekStart: string;
+  count: number;
+}
+
+export interface UnderstandingBreakdown {
+  weekStart: string;
+  understood: number;
+  partial: number;
+  copied_blindly: number;
+  unknown: number;
+}
+
+export interface ProgressData {
+  lessonsPerWeek: WeeklyCount[];
+  understandingByWeek: UnderstandingBreakdown[];
+}
+
 export interface DashboardData {
   lessons: DashboardLesson[];
   due: DashboardLesson[];
   topics: ConceptStat[];
   patterns: PatternStat[];
+  progress: ProgressData;
   summary: {
     total: number;
     due: number;
@@ -38,6 +57,7 @@ export function buildDashboardData(
     due: all.filter((lesson) => dueIds.has(lesson.id)),
     topics,
     patterns: groupPatterns(all),
+    progress: buildProgressData(allLessons),
     summary: {
       total: all.length,
       due: dueIds.size,
@@ -45,6 +65,51 @@ export function buildDashboardData(
       understood: all.filter((lesson) => lesson.understanding === "understood").length,
     },
   };
+}
+
+export function buildProgressData(allLessons: Lesson[], weeks = 12, now = new Date()): ProgressData {
+  const currentWeekStart = startOfWeek(now);
+  const buckets: string[] = [];
+  for (let i = weeks - 1; i >= 0; i -= 1) {
+    buckets.push(toIsoDate(addWeeks(currentWeekStart, -i)));
+  }
+
+  const counts = new Map<string, number>(buckets.map((week) => [week, 0]));
+  const understandingCounts = new Map<string, UnderstandingBreakdown>(
+    buckets.map((week) => [
+      week,
+      { weekStart: week, understood: 0, partial: 0, copied_blindly: 0, unknown: 0 },
+    ]),
+  );
+
+  for (const lesson of allLessons) {
+    const week = toIsoDate(startOfWeek(new Date(lesson.createdAt)));
+    if (!counts.has(week)) continue;
+    counts.set(week, (counts.get(week) ?? 0) + 1);
+    understandingCounts.get(week)![lesson.understanding] += 1;
+  }
+
+  return {
+    lessonsPerWeek: buckets.map((week) => ({ weekStart: week, count: counts.get(week) ?? 0 })),
+    understandingByWeek: buckets.map((week) => understandingCounts.get(week)!),
+  };
+}
+
+function startOfWeek(date: Date): Date {
+  const result = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const daysSinceMonday = (result.getUTCDay() + 6) % 7;
+  result.setUTCDate(result.getUTCDate() - daysSinceMonday);
+  return result;
+}
+
+function addWeeks(date: Date, weeks: number): Date {
+  const result = new Date(date);
+  result.setUTCDate(result.getUTCDate() + weeks * 7);
+  return result;
+}
+
+function toIsoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
 }
 
 export function toDashboardLesson(lesson: Lesson): DashboardLesson {

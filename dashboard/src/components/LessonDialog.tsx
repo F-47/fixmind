@@ -10,17 +10,19 @@ interface Props {
   onClose(): void;
   onStartReview(): void;
   onSave(answers: Record<string, string>, understanding: Understanding): Promise<void>;
+  onDelete(id: string): void;
 }
 
-export function LessonDialog({ lesson, reviewMode, onClose, onStartReview, onSave }: Props) {
+export function LessonDialog({ lesson, reviewMode, onClose, onStartReview, onSave, onDelete }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [understanding, setUnderstanding] = useState<Understanding | "">("");
   const [error, setError] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   useEffect(() => {
     if (lesson) dialogRef.current?.showModal(); else dialogRef.current?.close();
-    setAnswers({}); setUnderstanding(""); setError("");
+    setAnswers({}); setUnderstanding(""); setError(""); setConfirmingDelete(false);
   }, [lesson, reviewMode]);
 
   if (!lesson) return <dialog ref={dialogRef} />;
@@ -82,6 +84,35 @@ export function LessonDialog({ lesson, reviewMode, onClose, onStartReview, onSav
                 </div>
               ))}
             </div>
+          </div>
+          {/* Delete lesson */}
+          <div className="mt-5 border-t border-line pt-4">
+            {confirmingDelete ? (
+              <div className="rounded-lg border border-danger/40 bg-[#241319] p-3 text-[11px]">
+                <p className="mb-2 text-ink">Delete this lesson? This cannot be undone.</p>
+                <div className="flex gap-2">
+                  <button
+                    className="cursor-pointer rounded-md border-0 bg-danger px-2 py-1 font-bold text-[#2a0b0b]"
+                    onClick={() => onDelete(lesson.id)}
+                  >
+                    Confirm delete
+                  </button>
+                  <button
+                    className="cursor-pointer rounded-md border border-line bg-transparent px-2 py-1 text-muted"
+                    onClick={() => setConfirmingDelete(false)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                className="cursor-pointer border-0 bg-transparent text-[11px] text-danger"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                Delete lesson
+              </button>
+            )}
           </div>
         </aside>
 

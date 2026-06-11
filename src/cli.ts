@@ -9,11 +9,13 @@ import {
 } from "./cli-options.js";
 import { supportedClientOptions } from "./client-options.js";
 import { formatLessonList } from "./format.js";
+import { lessonsToJson, lessonsToMarkdown } from "./export.js";
 import { readGitContext } from "./git.js";
 import { createPrompter } from "./prompts.js";
 import {
   configureClients,
   configureInstructions,
+  configurePermissions,
   detectClients,
   genericMcpConfiguration,
   type SupportedClient,
@@ -23,7 +25,7 @@ import {
   initializeDataDirectory,
   type LessonStore,
 } from "./storage.js";
-import type { ReviewQuestion, Understanding } from "./types.js";
+import type { Lesson, LessonInput, ReviewQuestion, Understanding } from "./types.js";
 import { validateLessonInput } from "./validation.js";
 
 interface ParsedArgs {
@@ -36,16 +38,6 @@ async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   if (!args.command || args.options.help) {
     printHelp();
-    return;
-  }
-
-  if (args.command === "init") {
-    const paths = initializeDataDirectory();
-    const store = createLessonStore(paths.database);
-    store.close();
-    console.log(
-      `Fixmind initialized.\nData: ${paths.directory}\nDatabase: ${paths.database}\nConfig: ${paths.config}`,
-    );
     return;
   }
 
@@ -100,6 +92,24 @@ async function main(): Promise<void> {
       case "stats":
         showStats(store);
         break;
+      case "status":
+        showStatus(store);
+        break;
+      case "delete": {
+        const id = args.positionals[0];
+        if (!id) throw new Error("Usage: fixmind delete <id> [--yes]");
+        await deleteLesson(store, id, args.options);
+        break;
+      }
+      case "edit": {
+        const id = args.positionals[0];
+        if (!id) throw new Error("Usage: fixmind edit <id> [--title ... --problem ...]");
+        await editLesson(store, id, args.options);
+        break;
+      }
+      case "export":
+        exportLessons(store, args.options);
+        break;
       default:
         throw new Error(
           `Unknown command: ${args.command}. Run fixmind --help for usage.`,
@@ -146,11 +156,14 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
   const dryRun = Boolean(options["dry-run"]);
   const results = configureClients({ clients, dryRun });
   const instructions = configureInstructions({ clients, dryRun });
+  const permissions = configurePermissions({ clients, dryRun });
   console.log(`Local data initialized at ${paths.directory}.`);
   for (const result of results)
     console.log(`${result.client}: ${result.status} - ${result.detail}`);
   for (const result of instructions)
     console.log(`${result.client} instructions: ${result.status} - ${result.filePath}`);
+  for (const result of permissions)
+    console.log(`${result.client} permissions: ${result.status} - ${result.filePath}`);
   console.log("Restart configured AI clients so they discover the MCP server.");
 }
 
@@ -372,6 +385,205 @@ function showStats(store: LessonStore): void {
   );
 }
 
+function showStatus(store: LessonStore): void {
+  const due = store.due();
+  console.log(due.length === 0
+    ? "Fixmind: no lessons due for review."
+    : `Fixmind: ${due.length} lesson(s) due for review. Run \`fixmind review\`.`);
+}
+
+function findLesson(store: LessonStore, idOrPrefix: string): Lesson {
+  const exact = store.get(idOrPrefix);
+  if (exact) return exact;
+
+  const matches = store
+    .list(Number.MAX_SAFE_INTEGER)
+    .filter((lesson) => lesson.id.startsWith(idOrPrefix));
+  if (matches.length === 1) return matches[0];
+  if (matches.length > 1) {
+    throw new Error(
+      `"${idOrPrefix}" matches ${matches.length} lessons. Use a longer id prefix.`,
+    );
+  }
+  throw new Error(`Lesson not found: ${idOrPrefix}`);
+}
+
+async function deleteLesson(
+  store: LessonStore,
+  idOrPrefix: string,
+  options: Record<string, string | boolean>,
+): Promise<void> {
+  const lesson = findLesson(store, idOrPrefix);
+  const interactive = stdin.isTTY && stdout.isTTY;
+
+  let confirmed = Boolean(options.yes);
+  if (!confirmed && interactive) {
+    const prompt = createPrompter();
+    try {
+      confirmed = await prompt.confirm(
+        `Delete "${lesson.title}"? This cannot be undone.`,
+        false,
+      );
+    } finally {
+      prompt.close();
+    }
+  }
+
+  if (!confirmed) {
+    if (!interactive) {
+      throw new Error(
+        `Refusing to delete without confirmation. Re-run with --yes: fixmind delete ${idOrPrefix} --yes`,
+      );
+    }
+    console.log("Cancelled.");
+    return;
+  }
+
+  store.delete(lesson.id);
+  console.log(`Deleted lesson ${lesson.id}: ${lesson.title}`);
+}
+
+async function editLesson(
+  store: LessonStore,
+  idOrPrefix: string,
+  options: Record<string, string | boolean>,
+): Promise<void> {
+  const lesson = findLesson(store, idOrPrefix);
+  const interactive = stdin.isTTY && stdout.isTTY;
+  const prompt = interactive ? createPrompter() : undefined;
+
+  try {
+    if (prompt) {
+      prompt.intro(`Edit lesson: ${lesson.title}`);
+      prompt.note("Press Enter to keep the current value.", "Tip");
+    }
+
+    const get = async (
+      key: string,
+      label: string,
+      current: string,
+    ): Promise<string | undefined> => {
+      const supplied = optionString(options[key]);
+      if (supplied !== undefined) return supplied;
+      if (!prompt) return undefined;
+      return prompt.ask(label, current);
+    };
+
+    const partial: Partial<LessonInput> = {};
+
+    const title = await get("title", "Title", lesson.title);
+    if (title !== undefined) partial.title = title;
+
+    const problem = await get("problem", "Problem", lesson.problem);
+    if (problem !== undefined) partial.problem = problem;
+
+    const mistake = await get("mistake", "Mistake", lesson.mistake);
+    if (mistake !== undefined) partial.mistake = mistake;
+
+    const rootCause = await get("root-cause", "Root cause", lesson.rootCause);
+    if (rootCause !== undefined) partial.rootCause = rootCause;
+
+    const fixSummary = await get("fix-summary", "Fix summary", lesson.fixSummary);
+    if (fixSummary !== undefined) partial.fixSummary = fixSummary;
+
+    const takeaway = await get("takeaway", "One-sentence takeaway", lesson.takeaway ?? "");
+    if (takeaway !== undefined) partial.takeaway = takeaway;
+
+    const mistakePattern = await get(
+      "mistake-pattern",
+      "Short mistake pattern",
+      lesson.mistakePattern ?? "",
+    );
+    if (mistakePattern !== undefined) partial.mistakePattern = mistakePattern;
+
+    const codeExample = await get("code-example", "Small code example", lesson.codeExample ?? "");
+    if (codeExample !== undefined) partial.codeExample = codeExample;
+
+    const badCodeExample = await get(
+      "bad-code-example",
+      "Minimal wrong code example",
+      lesson.badCodeExample ?? "",
+    );
+    if (badCodeExample !== undefined) partial.badCodeExample = badCodeExample;
+
+    const goodCodeExample = await get(
+      "good-code-example",
+      "Minimal corrected code example",
+      lesson.goodCodeExample ?? "",
+    );
+    if (goodCodeExample !== undefined) partial.goodCodeExample = goodCodeExample;
+
+    const codeExplanation = await get(
+      "code-explanation",
+      "Why the corrected example works",
+      lesson.codeExplanation ?? "",
+    );
+    if (codeExplanation !== undefined) partial.codeExplanation = codeExplanation;
+
+    const practiceTask = await get(
+      "practice-task",
+      "Small practice task",
+      lesson.practiceTask ?? "",
+    );
+    if (practiceTask !== undefined) partial.practiceTask = practiceTask;
+
+    const concepts = await get(
+      "concepts",
+      "Concepts (comma-separated)",
+      lesson.concepts.join(", "),
+    );
+    if (concepts !== undefined) partial.concepts = parseList(concepts);
+
+    const filesChanged = await get(
+      "files-changed",
+      "Files changed (comma-separated)",
+      lesson.filesChanged.join(", "),
+    );
+    if (filesChanged !== undefined) partial.filesChanged = parseList(filesChanged);
+
+    const tags = await get(
+      "tags",
+      "Tags (comma-separated)",
+      lesson.tags.map((tag) => tag.name).join(", "),
+    );
+    if (tags !== undefined) partial.tags = parseList(tags).map((name) => ({ name }));
+
+    const understanding = optionString(options.understanding);
+    if (understanding !== undefined) partial.understanding = understanding as Understanding;
+
+    const updated = store.update(lesson.id, partial);
+    if (prompt) {
+      prompt.outro(`Updated lesson ${updated.id}: ${updated.title}`);
+    } else {
+      console.log(`Updated lesson ${updated.id}: ${updated.title}`);
+    }
+  } finally {
+    prompt?.close();
+  }
+}
+
+function exportLessons(
+  store: LessonStore,
+  options: Record<string, string | boolean>,
+): void {
+  const format = optionString(options.format) ?? "json";
+  if (format !== "json" && format !== "md") {
+    throw new Error("--format must be json or md.");
+  }
+
+  const id = optionString(options.id);
+  const lessons = id ? [findLesson(store, id)] : store.list(Number.MAX_SAFE_INTEGER);
+  const content = format === "json" ? lessonsToJson(lessons) : lessonsToMarkdown(lessons);
+
+  const output = optionString(options.output);
+  if (output) {
+    fs.writeFileSync(output, `${content}\n`, "utf8");
+    console.log(`Exported ${lessons.length} lesson(s) to ${output}`);
+  } else {
+    console.log(content);
+  }
+}
+
 function parseArgs(argv: string[]): ParsedArgs {
   const command = argv[0]?.startsWith("-") ? undefined : argv[0];
   const rest = command ? argv.slice(1) : argv;
@@ -379,6 +591,10 @@ function parseArgs(argv: string[]): ParsedArgs {
   const positionals: string[] = [];
   for (let index = 0; index < rest.length; index += 1) {
     const argument = rest[index];
+    if (argument === "-y") {
+      options.yes = true;
+      continue;
+    }
     if (!argument.startsWith("--")) {
       positionals.push(argument);
       continue;
@@ -403,7 +619,7 @@ async function readStdin(): Promise<string> {
 
 function printHelp(): void {
   console.log(
-    `fixmind\n\nCommands:\n  fixmind init\n  fixmind setup [--client codex,claude,cursor] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20]\n  fixmind search <query>\n  fixmind review\n  fixmind stats\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --concepts --files-changed --code-example\n  --bad-code-example --good-code-example --code-explanation --practice-task\n  --review-question --expected-answer --tool --understanding --tags\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
+    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20]\n  fixmind search <query>\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --concepts --files-changed --code-example\n  --bad-code-example --good-code-example --code-explanation --practice-task\n  --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
   );
 }
 

@@ -3,7 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { configureClients, configureInstructions, genericMcpConfiguration, mcpServerCommand } from "../src/setup.js";
+import { configureClients, configureInstructions, configurePermissions, genericMcpConfiguration, mcpServerCommand } from "../src/setup.js";
 
 test("builds a Windows-compatible local MCP command", () => {
   assert.deepEqual(mcpServerCommand("win32"), {
@@ -152,6 +152,93 @@ test("refuses to overwrite malformed Cursor JSON", () => {
       () => configureClients({ clients: ["cursor"], homeDirectory: home }),
       /contains invalid JSON/,
     );
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("configures Claude permissions in a fresh settings.json", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-permissions-"));
+  try {
+    const results = configurePermissions({ clients: ["claude"], homeDirectory: home });
+    assert.equal(results.length, 1);
+    assert.equal(results[0].status, "configured");
+    const filePath = path.join(home, ".claude", "settings.json");
+    const config = JSON.parse(fs.readFileSync(filePath, "utf8")) as Record<string, any>;
+    assert.deepEqual(config.permissions.allow, ["mcp__fixmind__save_learning_lesson"]);
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("Claude permission configuration is idempotent", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-permissions-idem-"));
+  try {
+    configurePermissions({ clients: ["claude"], homeDirectory: home });
+    const filePath = path.join(home, ".claude", "settings.json");
+    const first = fs.readFileSync(filePath, "utf8");
+
+    const second = configurePermissions({ clients: ["claude"], homeDirectory: home });
+    assert.equal(second[0].status, "already_configured");
+    assert.equal(fs.readFileSync(filePath, "utf8"), first);
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("merges Claude permissions without clobbering existing settings", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-permissions-merge-"));
+  const claudeDir = path.join(home, ".claude");
+  fs.mkdirSync(claudeDir, { recursive: true });
+  const filePath = path.join(claudeDir, "settings.json");
+  fs.writeFileSync(filePath, JSON.stringify({
+    enabledPlugins: { "rust-analyzer-lsp@claude-plugins-official": true },
+    autoUpdatesChannel: "latest",
+    mcpServers: { context7: { type: "stdio", command: "cmd", args: ["/c", "npx", "-y", "@upstash/context7-mcp@latest"] } },
+    theme: "dark-daltonized",
+    permissions: {
+      allow: ["mcp__context7__resolve-library-id"],
+      deny: ["Bash(rm -rf *)"],
+    },
+  }), "utf8");
+
+  try {
+    const results = configurePermissions({ clients: ["claude"], homeDirectory: home });
+    assert.equal(results[0].status, "configured");
+    assert.ok(fs.existsSync(`${filePath}.backup`));
+
+    const config = JSON.parse(fs.readFileSync(filePath, "utf8")) as Record<string, any>;
+    assert.equal(config.autoUpdatesChannel, "latest");
+    assert.equal(config.theme, "dark-daltonized");
+    assert.deepEqual(config.mcpServers.context7.args, ["/c", "npx", "-y", "@upstash/context7-mcp@latest"]);
+    assert.deepEqual(config.permissions.allow, ["mcp__context7__resolve-library-id", "mcp__fixmind__save_learning_lesson"]);
+    assert.deepEqual(config.permissions.deny, ["Bash(rm -rf *)"]);
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("refuses to overwrite malformed Claude settings.json", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-permissions-invalid-"));
+  const claudeDir = path.join(home, ".claude");
+  fs.mkdirSync(claudeDir, { recursive: true });
+  fs.writeFileSync(path.join(claudeDir, "settings.json"), "{ invalid", "utf8");
+  try {
+    assert.throws(
+      () => configurePermissions({ clients: ["claude"], homeDirectory: home }),
+      /contains invalid JSON/,
+    );
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("does not configure permissions for codex or cursor", () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-permissions-skip-"));
+  try {
+    const results = configurePermissions({ clients: ["codex", "cursor"], homeDirectory: home });
+    assert.equal(results.length, 0);
+    assert.ok(!fs.existsSync(path.join(home, ".claude", "settings.json")));
   } finally {
     fs.rmSync(home, { recursive: true, force: true });
   }

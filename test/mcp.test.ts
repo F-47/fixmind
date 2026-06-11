@@ -71,6 +71,52 @@ test("MCP exposes one save tool and persists a lesson", async () => {
   }
 });
 
+test("MCP infers tool name from MCP client info when omitted", async () => {
+  const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-clientinfo-"));
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.resolve("dist/src/cli.js"), "mcp"],
+    env: { ...process.env, FIXMIND_DATA_DIR: dataDirectory } as Record<string, string>,
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "fixmind-test", version: "1.0.0" });
+
+  try {
+    await client.connect(transport);
+    const result = await client.callTool({
+      name: "save_learning_lesson",
+      arguments: {
+        projectPath: dataDirectory,
+        title: "Detect tool from clientInfo",
+        problem: "The tool field always defaulted to unknown-ai-tool",
+        mistake: "The schema applied a static default instead of reading the MCP client identity",
+        rootCause: "A zod default ran before the connected client's name was considered",
+        fixSummary: "Fall back to the MCP client's clientInfo.name when tool is omitted",
+        concepts: ["MCP clientInfo"],
+        badCodeExample: "tool: z.string().trim().min(1).default(\"unknown-ai-tool\")",
+        goodCodeExample: "candidate.tool ||= server.server.getClientVersion()?.name ?? \"unknown-ai-tool\"",
+        reviewQuestions: [{
+          question: "Where does fixmind get the tool name when it is omitted?",
+          expectedAnswer: "From the MCP client's clientInfo.name sent during the initialize handshake.",
+        }],
+      },
+    });
+    assert.equal(result.isError, undefined);
+
+    const store = createLessonStore(path.join(dataDirectory, "learning.db"));
+    try {
+      const saved = store.list();
+      assert.equal(saved.length, 1);
+      assert.equal(saved[0].tool, "fixmind-test");
+    } finally {
+      store.close();
+    }
+  } finally {
+    await client.close();
+    fs.rmSync(dataDirectory, { recursive: true, force: true });
+  }
+});
+
 test("MCP appends quality warning when code examples are missing", async () => {
   const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-quality-"));
   const transport = new StdioClientTransport({

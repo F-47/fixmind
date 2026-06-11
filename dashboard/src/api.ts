@@ -17,3 +17,11 @@ export async function saveReview(lessonId: string, answers: Record<string, strin
     throw new Error(result.error ?? "Could not save review.");
   }
 }
+
+export async function deleteLesson(lessonId: string): Promise<void> {
+  const response = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, { method: "DELETE" });
+  if (!response.ok) {
+    const result = await response.json() as { error?: string };
+    throw new Error(result.error ?? "Could not delete lesson.");
+  }
+}

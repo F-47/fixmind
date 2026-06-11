@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { formatDate, reviewAction, statusLabel } from "../format";
 import { computeCompleteness, completenessColor } from "../completeness";
 import type { DashboardLesson } from "../types";
@@ -6,9 +7,11 @@ interface Props {
   lesson: DashboardLesson;
   due: boolean;
   onOpen(lesson: DashboardLesson, review: boolean): void;
+  onDelete(id: string): void;
 }
 
-export function LessonCard({ lesson, due, onOpen }: Props) {
+export function LessonCard({ lesson, due, onOpen, onDelete }: Props) {
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const { score } = computeCompleteness(lesson);
   const dotColor = completenessColor(score) === "green" ? "bg-mint" : completenessColor(score) === "yellow" ? "bg-warn" : "bg-danger";
   return (
@@ -44,6 +47,33 @@ export function LessonCard({ lesson, due, onOpen }: Props) {
           >
             {reviewAction(lesson.nextReviewAt)}
           </button>
+          {confirmingDelete ? (
+            <span className="ml-auto flex items-center gap-1.5 text-[11px]" onClick={(event) => event.stopPropagation()}>
+              <span className="text-muted">Delete?</span>
+              <button
+                className="cursor-pointer rounded-md border-0 bg-danger px-2 py-0.5 font-bold text-[#2a0b0b]"
+                onClick={() => onDelete(lesson.id)}
+              >
+                Confirm
+              </button>
+              <button
+                className="cursor-pointer rounded-md border border-line bg-transparent px-2 py-0.5 text-muted"
+                onClick={() => setConfirmingDelete(false)}
+              >
+                Cancel
+              </button>
+            </span>
+          ) : (
+            <button
+              className="ml-auto cursor-pointer border-0 bg-transparent p-1 text-[11px] text-muted hover:text-danger"
+              onClick={(event) => {
+                event.stopPropagation();
+                setConfirmingDelete(true);
+              }}
+            >
+              Delete
+            </button>
+          )}
         </div>
       </div>
       <span
