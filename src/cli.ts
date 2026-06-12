@@ -75,15 +75,19 @@ async function main(): Promise<void> {
       case "save-from-summary":
         await saveLessonFromSummary(store, args.options);
         break;
-      case "list":
-        console.log(
-          formatLessonList(store.list(numberOption(args.options.limit, 20))),
-        );
+      case "list": {
+        const includeSuperseded = Boolean(args.options["include-superseded"]);
+        const lessons = store.list(numberOption(args.options.limit, 20))
+          .filter((lesson) => includeSuperseded || lesson.status !== "superseded");
+        console.log(formatLessonList(lessons));
         break;
+      }
       case "search": {
         const query = args.positionals.join(" ").trim();
         if (!query) throw new Error("Usage: fixmind search <query>");
-        console.log(formatLessonList(store.search(query)));
+        console.log(formatLessonList(store.search(query, {
+          includeSuperseded: Boolean(args.options["include-superseded"]),
+        })));
         break;
       }
       case "review":
@@ -105,6 +109,15 @@ async function main(): Promise<void> {
         const id = args.positionals[0];
         if (!id) throw new Error("Usage: fixmind edit <id> [--title ... --problem ...]");
         await editLesson(store, id, args.options);
+        break;
+      }
+      case "supersede": {
+        const oldId = args.positionals[0];
+        const newId = args.positionals[1];
+        if (!oldId || !newId) {
+          throw new Error('Usage: fixmind supersede <oldId> <newId> [--reason "..."]');
+        }
+        supersedeLesson(store, oldId, newId, args.options);
         break;
       }
       case "export":
@@ -562,6 +575,22 @@ async function editLesson(
   }
 }
 
+function supersedeLesson(
+  store: LessonStore,
+  oldIdPrefix: string,
+  newIdPrefix: string,
+  options: Record<string, string | boolean>,
+): void {
+  const oldLesson = findLesson(store, oldIdPrefix);
+  const newLesson = findLesson(store, newIdPrefix);
+  const reason = optionString(options.reason);
+
+  store.supersede(oldLesson.id, newLesson.id, reason);
+  console.log(
+    `Superseded ${oldLesson.id} -> ${newLesson.id}${reason ? `: ${reason}` : ""}`,
+  );
+}
+
 function exportLessons(
   store: LessonStore,
   options: Record<string, string | boolean>,
@@ -619,7 +648,7 @@ async function readStdin(): Promise<string> {
 
 function printHelp(): void {
   console.log(
-    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20]\n  fixmind search <query>\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --concepts --files-changed --code-example\n  --bad-code-example --good-code-example --code-explanation --practice-task\n  --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
+    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --concepts --files-changed --code-example\n  --bad-code-example --good-code-example --code-explanation --practice-task\n  --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
   );
 }
 

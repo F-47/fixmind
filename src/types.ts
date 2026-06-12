@@ -1,6 +1,7 @@
 export type ToolName = string;
 export type Understanding = "understood" | "partial" | "copied_blindly" | "unknown";
 export type QuestionStatus = "unanswered" | "answered" | "skipped";
+export type LessonStatus = "active" | "superseded";
 
 export interface Tag {
   name: string;
@@ -42,6 +43,10 @@ export interface Lesson {
   reviewCount: number;
   sourceDiff?: string;
   tags: Tag[];
+  status: LessonStatus;
+  supersededBy?: string;
+  supersedes?: string;
+  supersedeReason?: string;
 }
 
 export interface LessonInput {
@@ -67,6 +72,8 @@ export interface LessonInput {
   nextReviewAt?: string;
   sourceDiff?: string;
   tags?: Tag[];
+  supersedesLessonId?: string;
+  supersedeReason?: string;
 }
 
 export interface ConceptStat {

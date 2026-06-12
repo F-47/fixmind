@@ -26,9 +26,3 @@ export function computeCompleteness(lesson: DashboardLesson): CompletenessResult
   const full = checks.map((c) => ({ ...c, earned: c.passed ? c.max : 0 }));
   return { score: full.reduce((sum, c) => sum + c.earned, 0), checks: full };
 }
-
-export function completenessColor(score: number): "green" | "yellow" | "red" {
-  if (score >= 80) return "green";
-  if (score >= 50) return "yellow";
-  return "red";
-}

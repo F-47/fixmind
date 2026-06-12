@@ -65,11 +65,11 @@ export function CodeBlock({ value, kind, label, filesChanged = [] }: CodeBlockPr
   }, [value, filesChanged]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-[#080b0f]">
-      <div className={`bg-[#121820] px-3 py-2.5 font-mono text-[10px] font-bold uppercase tracking-wider ${kind === "bad" ? "text-danger" : "text-mint"}`}>
+    <div className="overflow-hidden border border-line">
+      <div className={`border-b border-line px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[.2em] ${kind === "bad" ? "text-danger" : "text-positive"}`}>
         {label}
       </div>
-      <pre className="m-0 overflow-auto p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-[#d8e4ef]">
+      <pre className="m-0 overflow-auto bg-surface p-4 font-mono text-xs leading-relaxed whitespace-pre-wrap text-ink">
         <code ref={codeRef} />
       </pre>
     </div>

@@ -4,8 +4,9 @@ export function formatLessonList(lessons: Lesson[]): string {
   if (lessons.length === 0) return "No lessons found.";
   return lessons.map((lesson) => {
     const concepts = lesson.concepts.join(", ") || "none";
+    const suffix = lesson.status === "superseded" ? " [superseded]" : "";
     return [
-      `${lesson.id.slice(0, 8)}  ${lesson.title}`,
+      `${lesson.id.slice(0, 8)}  ${lesson.title}${suffix}`,
       `  concepts: ${concepts}`,
       `  understanding: ${lesson.understanding} | next review: ${formatDate(lesson.nextReviewAt)}`,
     ].join("\n");

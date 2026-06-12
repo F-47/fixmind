@@ -37,6 +37,7 @@ function lesson(overrides: Partial<Lesson> = {}): Lesson {
     reviewCount: 1,
     sourceDiff: undefined,
     tags: [{ name: "MDN: localStorage", url: "https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage" }],
+    status: "active",
     ...overrides,
   };
 }

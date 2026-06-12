@@ -2,12 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { drizzle } from "drizzle-orm/node-sqlite";
-import { eq, or, desc, asc, lte, sql } from "drizzle-orm";
+import { eq, or, and, ne, desc, asc, lte, sql } from "drizzle-orm";
 import { configPath, dataDirectory, databasePath } from "./paths.js";
 import { lessons as lessonsTable } from "./schema.js";
 import type {
   Lesson,
   LessonInput,
+  LessonStatus,
   ConceptStat,
   MistakeStat,
   ReviewQuestion,
@@ -19,11 +20,12 @@ export interface LessonStore {
   save(input: LessonInput): Lesson;
   get(id: string): Lesson | undefined;
   list(limit?: number): Lesson[];
-  search(query: string): Lesson[];
+  search(query: string, options?: { includeSuperseded?: boolean }): Lesson[];
   due(now?: Date): Lesson[];
   updateReview(id: string, questions: ReviewQuestion[], understanding: Understanding): Lesson;
   update(id: string, partial: Partial<LessonInput>): Lesson;
   delete(id: string): boolean;
+  supersede(oldId: string, newId: string, reason?: string): { old: Lesson; new: Lesson };
   conceptStats(): ConceptStat[];
   mistakeStats(): MistakeStat[];
   close(): void;
@@ -74,7 +76,11 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
       next_review_at TEXT NOT NULL,
       review_count INTEGER NOT NULL DEFAULT 0,
       source_diff TEXT,
-      tags TEXT NOT NULL
+      tags TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      superseded_by TEXT,
+      supersedes TEXT,
+      supersede_reason TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_lessons_created_at ON lessons(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_lessons_next_review_at ON lessons(next_review_at);
@@ -93,6 +99,10 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
   ensureColumn("mistake_pattern", "TEXT");
   ensureColumn("code_explanation", "TEXT");
   ensureColumn("practice_task", "TEXT");
+  ensureColumn("status", "TEXT NOT NULL DEFAULT 'active'");
+  ensureColumn("superseded_by", "TEXT");
+  ensureColumn("supersedes", "TEXT");
+  ensureColumn("supersede_reason", "TEXT");
 
   return {
     save(input: LessonInput): Lesson {
@@ -128,6 +138,7 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
         reviewCount: 0,
         sourceDiff: input.sourceDiff,
         tags: input.tags ?? [],
+        status: "active",
       };
 
       db.insert(lessonsTable).values({
@@ -140,7 +151,16 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
         codeExplanation: lesson.codeExplanation ?? null,
         practiceTask: lesson.practiceTask ?? null,
         sourceDiff: lesson.sourceDiff ?? null,
+        supersededBy: null,
+        supersedes: null,
+        supersedeReason: null,
       }).run();
+
+      if (input.supersedesLessonId && this.get(input.supersedesLessonId)) {
+        this.supersede(input.supersedesLessonId, lesson.id, input.supersedeReason);
+        lesson.supersedes = input.supersedesLessonId;
+        lesson.supersedeReason = input.supersedeReason;
+      }
 
       return lesson;
     },
@@ -158,25 +178,31 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
         .map(fromDb);
     },
 
-    search(query: string): Lesson[] {
+    search(query: string, options: { includeSuperseded?: boolean } = {}): Lesson[] {
       const pattern = `%${query.toLowerCase()}%`;
-      return db.select().from(lessonsTable).where(
-        or(
-          sql`lower(${lessonsTable.title}) like ${pattern}`,
-          sql`lower(${lessonsTable.problem}) like ${pattern}`,
-          sql`lower(${lessonsTable.rootCause}) like ${pattern}`,
-          sql`lower(${lessonsTable.fixSummary}) like ${pattern}`,
-          sql`lower(${lessonsTable.takeaway}) like ${pattern}`,
-          sql`lower(${lessonsTable.mistakePattern}) like ${pattern}`,
-          sql`lower(${lessonsTable.concepts}) like ${pattern}`,
-          sql`lower(${lessonsTable.tags}) like ${pattern}`,
-        ),
-      ).orderBy(desc(lessonsTable.createdAt)).all().map(fromDb);
+      const textMatch = or(
+        sql`lower(${lessonsTable.title}) like ${pattern}`,
+        sql`lower(${lessonsTable.problem}) like ${pattern}`,
+        sql`lower(${lessonsTable.rootCause}) like ${pattern}`,
+        sql`lower(${lessonsTable.fixSummary}) like ${pattern}`,
+        sql`lower(${lessonsTable.takeaway}) like ${pattern}`,
+        sql`lower(${lessonsTable.mistakePattern}) like ${pattern}`,
+        sql`lower(${lessonsTable.concepts}) like ${pattern}`,
+        sql`lower(${lessonsTable.tags}) like ${pattern}`,
+      );
+      const where = options.includeSuperseded
+        ? textMatch
+        : and(textMatch, ne(lessonsTable.status, "superseded"));
+      return db.select().from(lessonsTable).where(where)
+        .orderBy(desc(lessonsTable.createdAt)).all().map(fromDb);
     },
 
     due(now = new Date()): Lesson[] {
       return db.select().from(lessonsTable)
-        .where(lte(lessonsTable.nextReviewAt, now.toISOString()))
+        .where(and(
+          lte(lessonsTable.nextReviewAt, now.toISOString()),
+          ne(lessonsTable.status, "superseded"),
+        ))
         .orderBy(asc(lessonsTable.nextReviewAt))
         .all()
         .map(fromDb);
@@ -246,9 +272,36 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
       return true;
     },
 
+    supersede(oldId: string, newId: string, reason?: string): { old: Lesson; new: Lesson } {
+      const old = db.select().from(lessonsTable).where(eq(lessonsTable.id, oldId)).get();
+      if (!old) throw new Error(`Lesson not found: ${oldId}`);
+      const next = db.select().from(lessonsTable).where(eq(lessonsTable.id, newId)).get();
+      if (!next) throw new Error(`Lesson not found: ${newId}`);
+
+      const updatedAt = new Date().toISOString();
+      db.update(lessonsTable).set({
+        status: "superseded",
+        supersededBy: newId,
+        supersedeReason: reason ?? null,
+        updatedAt,
+      }).where(eq(lessonsTable.id, oldId)).run();
+
+      db.update(lessonsTable).set({
+        supersedes: oldId,
+        supersedeReason: reason ?? null,
+        updatedAt,
+      }).where(eq(lessonsTable.id, newId)).run();
+
+      return {
+        old: fromDb(db.select().from(lessonsTable).where(eq(lessonsTable.id, oldId)).get()!),
+        new: fromDb(db.select().from(lessonsTable).where(eq(lessonsTable.id, newId)).get()!),
+      };
+    },
+
     conceptStats(): ConceptStat[] {
       const counts = new Map<string, number>();
       for (const lesson of this.list(Number.MAX_SAFE_INTEGER)) {
+        if (lesson.status === "superseded") continue;
         for (const concept of lesson.concepts) {
           counts.set(concept, (counts.get(concept) ?? 0) + 1);
         }
@@ -261,6 +314,7 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
     mistakeStats(): MistakeStat[] {
       const counts = new Map<string, number>();
       for (const lesson of this.list(Number.MAX_SAFE_INTEGER)) {
+        if (lesson.status === "superseded") continue;
         counts.set(lesson.mistake, (counts.get(lesson.mistake) ?? 0) + 1);
       }
       return [...counts.entries()]
@@ -294,6 +348,10 @@ function fromDb(row: DbRow): Lesson {
     codeExplanation: row.codeExplanation ?? undefined,
     practiceTask: row.practiceTask ?? undefined,
     sourceDiff: row.sourceDiff ?? undefined,
+    status: row.status as LessonStatus,
+    supersededBy: row.supersededBy ?? undefined,
+    supersedes: row.supersedes ?? undefined,
+    supersedeReason: row.supersedeReason ?? undefined,
   };
 }
 

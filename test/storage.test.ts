@@ -131,3 +131,102 @@ test("rejects incomplete lesson input", () => {
     /concepts must contain at least one value/,
   );
 });
+
+test("new lessons default to active status", () => {
+  withStore((store) => {
+    const saved = store.save(input());
+    assert.equal(saved.status, "active");
+    assert.equal(saved.supersededBy, undefined);
+    assert.equal(saved.supersedes, undefined);
+    assert.equal(saved.supersedeReason, undefined);
+  });
+});
+
+test("save with supersedesLessonId links and supersedes the old lesson", () => {
+  withStore((store) => {
+    const oldLesson = store.save(input({ title: "Wrong fix" }));
+    const newLesson = store.save(input({
+      title: "Correct fix",
+      supersedesLessonId: oldLesson.id,
+      supersedeReason: "The first fix did not actually resolve the bug.",
+    }));
+
+    const reloadedOld = store.get(oldLesson.id)!;
+    assert.equal(reloadedOld.status, "superseded");
+    assert.equal(reloadedOld.supersededBy, newLesson.id);
+    assert.equal(reloadedOld.supersedeReason, "The first fix did not actually resolve the bug.");
+
+    assert.equal(newLesson.status, "active");
+    assert.equal(newLesson.supersedes, oldLesson.id);
+    assert.equal(newLesson.supersedeReason, "The first fix did not actually resolve the bug.");
+  });
+});
+
+test("search and due exclude superseded lessons by default", () => {
+  withStore((store) => {
+    const oldLesson = store.save(input({
+      title: "Wrong fix",
+      nextReviewAt: "2020-01-01T00:00:00.000Z",
+    }));
+    store.save(input({ title: "Correct fix", supersedesLessonId: oldLesson.id }));
+
+    assert.deepEqual(store.search("Wrong fix"), []);
+    assert.deepEqual(store.due(new Date("2020-01-02T00:00:00.000Z")), []);
+
+    const withSuperseded = store.search("Wrong fix", { includeSuperseded: true });
+    assert.equal(withSuperseded.length, 1);
+    assert.equal(withSuperseded[0].id, oldLesson.id);
+  });
+});
+
+test("save with an unresolvable supersedesLessonId does not throw", () => {
+  withStore((store) => {
+    const saved = store.save(input({ supersedesLessonId: "missing-id" }));
+    assert.equal(saved.status, "active");
+    assert.equal(saved.supersedes, undefined);
+  });
+});
+
+test("supersede links lessons and rejects unknown ids", () => {
+  withStore((store) => {
+    const oldLesson = store.save(input({ title: "Wrong fix" }));
+    const newLesson = store.save(input({ title: "Correct fix" }));
+
+    const result = store.supersede(oldLesson.id, newLesson.id, "Replaced by a better fix");
+    assert.equal(result.old.status, "superseded");
+    assert.equal(result.old.supersededBy, newLesson.id);
+    assert.equal(result.old.supersedeReason, "Replaced by a better fix");
+    assert.equal(result.new.supersedes, oldLesson.id);
+    assert.equal(result.new.supersedeReason, "Replaced by a better fix");
+
+    assert.throws(() => store.supersede("missing-id", newLesson.id), /Lesson not found/);
+    assert.throws(() => store.supersede(oldLesson.id, "missing-id"), /Lesson not found/);
+  });
+});
+
+test("list and get still return superseded lessons", () => {
+  withStore((store) => {
+    const oldLesson = store.save(input({ title: "Wrong fix" }));
+    store.save(input({ title: "Correct fix", supersedesLessonId: oldLesson.id }));
+
+    assert.equal(store.get(oldLesson.id)?.status, "superseded");
+    assert.ok(store.list().some((lesson) => lesson.id === oldLesson.id));
+  });
+});
+
+test("conceptStats and mistakeStats exclude superseded lessons", () => {
+  withStore((store) => {
+    const oldLesson = store.save(input());
+    store.save(input({
+      title: "Correct fix",
+      supersedesLessonId: oldLesson.id,
+      concepts: ["Next.js hydration"],
+    }));
+
+    assert.deepEqual(store.conceptStats()[0], { name: "Next.js hydration", count: 1 });
+    assert.deepEqual(store.mistakeStats()[0], {
+      mistake: "Read localStorage during render",
+      count: 1,
+    });
+  });
+});

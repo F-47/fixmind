@@ -37,6 +37,17 @@ STRONGLY RECOMMENDED fields — always provide these when code is involved:
   - mistakePattern: A 2–4 word reusable category. Examples: "Missing await", "Stale closure", "Off-by-one", "Wrong event lifetime"
   - tags: 1-3 entries naming the APIs/concepts involved, e.g. { "name": "MDN: URL.revokeObjectURL", "url": "https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static" }. Only set url when you are confident it is a real, official documentation page (MDN, the framework's own docs). If unsure, omit url and the tag is shown as a plain label.
 
+SUPERSEDING A PREVIOUS LESSON:
+If you previously called save_learning_lesson for a fix that turned out NOT to
+work, and you are now saving a lesson for the CORRECT fix, set:
+  - supersedesLessonId: the id of the earlier (wrong) lesson, from its
+    "Saved learning lesson <id>" response in this conversation.
+  - supersedeReason: one sentence on what was wrong with the earlier fix and
+    why this one replaces it.
+The old lesson stops appearing in search and spaced-repetition review, but
+stays in history with a link to this corrected lesson. Only use this for
+fixes that turned out to be incorrect or incomplete — not for pure rewording.
+
 Write as a teacher, not as an agent log. Keep lessons short and human-readable.
 `.trim();
 
@@ -70,6 +81,12 @@ export const lessonInputSchema = z.object({
     name: z.string().trim().min(1),
     url: z.string().min(1).optional(),
   })).default([]),
+  supersedesLessonId: z.string().trim().min(1).optional().describe(
+    "If this lesson corrects a PREVIOUS lesson you saved earlier in this conversation that turned out to be wrong or incomplete, set this to that lesson's id (from its 'Saved learning lesson <id>' response). The old lesson is marked superseded and hidden from future search/review, but kept in history.",
+  ),
+  supersedeReason: z.string().trim().min(1).optional().describe(
+    "Use together with supersedesLessonId. One sentence on what was wrong with the old lesson and why this one replaces it.",
+  ),
 });
 
 const REFACTOR_PATTERN = /\b(mov(e|ing|ed)|extract(ed|ing)?|split(ting)?|rename(d|ing)?|refactor(ed|ing)?|reorganiz(e|ed|ing)|relocat(e|ed|ing))\b/i;
@@ -121,7 +138,18 @@ export function createLearningLessonServer(
 
         const input = validateLessonInput({ ...candidate, projectPath });
         const warning = detectRefactorWarning(input);
+        const supersedeTarget = input.supersedesLessonId ? store.get(input.supersedesLessonId) : undefined;
         const saved = store.save(input);
+
+        const supersedeLines: string[] = [];
+        if (input.supersedesLessonId) {
+          supersedeLines.push(
+            supersedeTarget
+              ? `Superseded lesson ${input.supersedesLessonId} (hidden from future search/review).`
+              : `Warning: supersedesLessonId ${input.supersedesLessonId} was not found - nothing was marked superseded.`,
+          );
+        }
+
         return {
           content: [{
             type: "text" as const,
@@ -130,6 +158,7 @@ export function createLearningLessonServer(
               `Title: ${saved.title}`,
               `Next review: ${saved.nextReviewAt}`,
               `Database: ${databasePath()}`,
+              ...(supersedeLines.length ? ["", ...supersedeLines] : []),
               ...(warning ? ["", warning] : []),
             ].join("\n"),
           }],

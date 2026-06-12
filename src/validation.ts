@@ -157,5 +157,11 @@ export function validateLessonInput(value: unknown): LessonInput {
     sourceDiff:
       typeof input.sourceDiff === "string" ? input.sourceDiff : undefined,
     tags: parseTags(input.tags),
+    supersedesLessonId:
+      typeof input.supersedesLessonId === "string" && input.supersedesLessonId.trim()
+        ? input.supersedesLessonId.trim()
+        : undefined,
+    supersedeReason:
+      typeof input.supersedeReason === "string" ? input.supersedeReason.trim() : undefined,
   };
 }

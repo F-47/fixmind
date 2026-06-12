@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
-import type { ReviewQuestion, Tag, Understanding } from "./types.js";
+import type { LessonStatus, ReviewQuestion, Tag, Understanding } from "./types.js";
 
 export const lessons = sqliteTable("lessons", {
   id: text("id").primaryKey(),
@@ -28,4 +28,8 @@ export const lessons = sqliteTable("lessons", {
   reviewCount: integer("review_count").notNull().default(0),
   sourceDiff: text("source_diff"),
   tags: text("tags", { mode: "json" }).$type<Tag[]>().notNull(),
+  status: text("status").$type<LessonStatus>().notNull().default("active"),
+  supersededBy: text("superseded_by"),
+  supersedes: text("supersedes"),
+  supersedeReason: text("supersede_reason"),
 });

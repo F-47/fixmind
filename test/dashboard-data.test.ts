@@ -23,6 +23,7 @@ function lesson(overrides: Partial<Lesson> = {}): Lesson {
     nextReviewAt: "2026-06-02T00:00:00.000Z",
     reviewCount: 0,
     tags: [],
+    status: "active",
     ...overrides,
   };
 }

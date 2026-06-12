@@ -151,6 +151,135 @@ test("MCP appends quality warning when code examples are missing", async () => {
   }
 });
 
+test("MCP supersedes a previous lesson via supersedesLessonId", async () => {
+  const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-supersede-"));
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.resolve("dist/src/cli.js"), "mcp"],
+    env: { ...process.env, FIXMIND_DATA_DIR: dataDirectory } as Record<string, string>,
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "fixmind-test", version: "1.0.0" });
+
+  try {
+    await client.connect(transport);
+    const tools = await client.listTools();
+    assert.deepEqual(tools.tools.map((tool) => tool.name), ["save_learning_lesson"]);
+
+    const first = await client.callTool({
+      name: "save_learning_lesson",
+      arguments: {
+        tool: "claude",
+        projectPath: dataDirectory,
+        title: "Wrong fix for hydration",
+        problem: "Initial markup differed",
+        mistake: "Read browser state during server rendering",
+        rootCause: "The server and browser had different inputs",
+        fixSummary: "Wrapped the read in a try/catch",
+        concepts: ["hydration"],
+        badCodeExample: "const theme = localStorage.getItem('theme')",
+        goodCodeExample: "try { localStorage.getItem('theme') } catch {}",
+        reviewQuestions: [{
+          question: "Why did hydration fail?",
+          expectedAnswer: "The initial renders differed",
+        }],
+      },
+    });
+    assert.equal(first.isError, undefined);
+    const firstText = (first.content as Array<{ text: string }>)[0].text;
+    const oldId = /Saved learning lesson (\S+)\./.exec(firstText)?.[1];
+    assert.ok(oldId, `Expected lesson id in: ${firstText}`);
+
+    const second = await client.callTool({
+      name: "save_learning_lesson",
+      arguments: {
+        tool: "claude",
+        projectPath: dataDirectory,
+        title: "Correct fix for hydration",
+        problem: "Initial markup differed",
+        mistake: "Read browser state during server rendering",
+        rootCause: "The server and browser had different inputs",
+        fixSummary: "Read browser state after hydration in useEffect",
+        concepts: ["hydration"],
+        badCodeExample: "const theme = localStorage.getItem('theme')",
+        goodCodeExample: "useEffect(() => setTheme(localStorage.getItem('theme')), [])",
+        reviewQuestions: [{
+          question: "When is it safe to read localStorage?",
+          expectedAnswer: "After the component has mounted in the browser",
+        }],
+        supersedesLessonId: oldId,
+        supersedeReason: "The try/catch silenced the error without fixing the SSR mismatch.",
+      },
+    });
+    assert.equal(second.isError, undefined);
+    const secondText = (second.content as Array<{ text: string }>)[0].text;
+    assert.ok(
+      secondText.includes(`Superseded lesson ${oldId}`),
+      `Expected supersede confirmation in: ${secondText}`,
+    );
+
+    const store = createLessonStore(path.join(dataDirectory, "learning.db"));
+    try {
+      const oldLesson = store.get(oldId!);
+      assert.equal(oldLesson?.status, "superseded");
+      assert.ok(oldLesson?.supersededBy);
+
+      const newLesson = store.list().find((lesson) => lesson.id === oldLesson?.supersededBy);
+      assert.equal(newLesson?.supersedes, oldId);
+      assert.equal(
+        newLesson?.supersedeReason,
+        "The try/catch silenced the error without fixing the SSR mismatch.",
+      );
+    } finally {
+      store.close();
+    }
+  } finally {
+    await client.close();
+    fs.rmSync(dataDirectory, { recursive: true, force: true });
+  }
+});
+
+test("MCP warns when supersedesLessonId does not match an existing lesson", async () => {
+  const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-supersede-missing-"));
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.resolve("dist/src/cli.js"), "mcp"],
+    env: { ...process.env, FIXMIND_DATA_DIR: dataDirectory } as Record<string, string>,
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "fixmind-test", version: "1.0.0" });
+
+  try {
+    await client.connect(transport);
+    const result = await client.callTool({
+      name: "save_learning_lesson",
+      arguments: {
+        tool: "claude",
+        projectPath: dataDirectory,
+        title: "Correct fix for hydration",
+        problem: "Initial markup differed",
+        mistake: "Read browser state during server rendering",
+        rootCause: "The server and browser had different inputs",
+        fixSummary: "Read browser state after hydration in useEffect",
+        concepts: ["hydration"],
+        badCodeExample: "const theme = localStorage.getItem('theme')",
+        goodCodeExample: "useEffect(() => setTheme(localStorage.getItem('theme')), [])",
+        reviewQuestions: [{
+          question: "When is it safe to read localStorage?",
+          expectedAnswer: "After the component has mounted in the browser",
+        }],
+        supersedesLessonId: "00000000-0000-0000-0000-000000000000",
+      },
+    });
+    assert.equal(result.isError, undefined);
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    assert.ok(text.includes("was not found"), `Expected not-found warning in: ${text}`);
+  } finally {
+    await client.close();
+    fs.rmSync(dataDirectory, { recursive: true, force: true });
+  }
+});
+
 test("MCP rejects incomplete lesson input", async () => {
   const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-invalid-"));
   const transport = new StdioClientTransport({

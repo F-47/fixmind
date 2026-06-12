@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { deleteLesson, loadDashboard, saveReview } from "./api";
 import { LessonCard } from "./components/LessonCard";
 import { LessonDialog } from "./components/LessonDialog";
+import { MarginArt } from "./components/MarginArt";
 import { ProgressChart } from "./components/ProgressChart";
 import { RankList } from "./components/RankList";
-import { reviewAction } from "./format";
+import { formatToolName, reviewAction } from "./format";
 import type {
   DashboardLesson,
   DashboardData,
   Understanding,
 } from "./types";
 
-type Filter = "all" | "due" | "learning" | "understood";
+type Filter = "all" | "due" | "learning" | "understood" | `tool:${string}`;
 
 export default function App() {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -35,6 +37,11 @@ export default function App() {
     () => new Set(data?.due.map((item) => item.id) ?? []),
     [data],
   );
+  const tools = useMemo(() => {
+    const set = new Set<string>();
+    for (const lesson of data?.lessons ?? []) set.add(lesson.tool);
+    return [...set].sort();
+  }, [data]);
   const visible = useMemo(
     () =>
       data?.lessons.filter(
@@ -42,7 +49,8 @@ export default function App() {
           filter === "all" ||
           (filter === "due" && dueIds.has(item.id)) ||
           (filter === "learning" && item.understanding !== "understood") ||
-          (filter === "understood" && item.understanding === "understood"),
+          (filter === "understood" && item.understanding === "understood") ||
+          (filter.startsWith("tool:") && item.tool === filter.slice(5)),
       ) ?? [],
     [data, dueIds, filter],
   );
@@ -70,8 +78,11 @@ export default function App() {
 
   if (!data)
     return (
-      <main className="grid min-h-screen place-items-center text-muted">{error || "Loading your lessons..."}</main>
+      <main className="grid min-h-screen place-items-center text-lg text-muted">
+        {error || "Loading your lessons…"}
+      </main>
     );
+
   const metrics = [
     ["Reviews due", data.summary.due],
     ["Still learning", data.summary.learning],
@@ -83,113 +94,168 @@ export default function App() {
     ["due", "Review now"],
     ["learning", "Still learning"],
     ["understood", "Understood"],
+    ...tools.map((tool): [Filter, string] => [`tool:${tool}`, formatToolName(tool)]),
   ];
 
   return (
-    <div className="mx-auto max-w-[1380px] p-7 max-sm:px-3 max-sm:py-5">
-      <nav className="flex items-center justify-between">
-        <div className="flex items-center gap-3 font-extrabold">
-          <span className="grid size-[38px] place-items-center rounded-xl border border-[#315849] bg-[#183129] font-mono text-[17px] font-extrabold text-mint">FM</span>Fixmind
-        </div>
-        <span className="rounded-full border border-[#315849] px-2.5 py-1.5 font-mono text-[10px] font-bold text-mint">LOCAL ONLY</span>
-      </nav>
-      <section className="my-12 grid grid-cols-[minmax(0,1fr)_430px] items-end gap-8 max-[950px]:grid-cols-1 max-sm:mt-9">
+    <>
+    <MarginArt side="left" />
+    <MarginArt side="right" />
+    <div className="mx-auto max-w-[1040px] px-6 py-10 max-sm:px-4 max-sm:py-6">
+      {/* Header */}
+      <header className="flex items-baseline justify-between border-b border-line pb-5">
+        <span className="text-2xl font-bold tracking-tight">
+          Fixmind
+        </span>
+        <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[.2em] text-muted">
+          <span className="size-1.5 rounded-full bg-accent" />
+          Local only
+        </span>
+      </header>
+
+      {/* Hero */}
+      <section className="grid grid-cols-[1.4fr_1fr] gap-16 border-b border-line py-12 max-[820px]:grid-cols-1 max-[820px]:gap-8 max-sm:py-8">
         <div>
-          <div className="font-mono text-[11px] font-bold uppercase tracking-[.14em] text-mint">Your next learning step</div>
-          <h1 className="my-3 text-[clamp(38px,5vw,66px)] leading-none font-bold tracking-[-.055em] max-sm:text-[42px]">What should you learn next?</h1>
-          <p className="m-0 max-w-2xl text-base leading-relaxed text-muted">
-            Review the lessons behind your recent fixes. Each lesson
-            explains what to remember, why the bug happened, and how to avoid it
-            next time.
+          <div className="font-mono text-[11px] uppercase tracking-[.2em] text-accent">
+            Fixmind &mdash; a developer&rsquo;s lesson log
+          </div>
+          <h1 className="mt-3 font-serif text-[clamp(2.4rem,5vw,4.2rem)] leading-[1.05] font-bold tracking-tight">
+            Don&rsquo;t fix the same bug twice.
+          </h1>
+          <p className="mt-4 max-w-md text-base leading-relaxed text-muted">
+            A running record of the bugs you&rsquo;ve fixed and the lessons
+            behind them &mdash; what to remember, why it happened, and how to
+            avoid it next time.
           </p>
         </div>
-        <input
-          className="w-full rounded-2xl border border-line bg-[#0d1116] px-4 py-3.5 text-ink outline-none focus:border-[#4f8f7c]"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search lessons, topics, patterns, or files"
-        />
-      </section>
-      <section className="mb-5 grid grid-cols-4 gap-3 max-[950px]:grid-cols-2">
-        {metrics.map(([label, value]) => (
-          <div className="rounded-2xl border border-line bg-gradient-to-br from-[#12171d] to-[#0d1115] p-4" key={label}>
-            <strong className="block text-3xl tracking-tight">{value}</strong>
-            <span className="text-xs text-muted">{label}</span>
+        <div className="flex flex-col gap-8 max-[820px]:gap-6">
+          <div>
+            <label
+              htmlFor="lesson-search"
+              className="font-mono text-[10px] uppercase tracking-[.2em] text-muted"
+            >
+              Search your lessons
+            </label>
+            <div className="mt-2 flex items-center gap-3 border-b border-line pb-3 focus-within:border-accent">
+              <Search className="size-4 shrink-0 text-muted" />
+              <input
+                id="lesson-search"
+                className="w-full bg-transparent text-lg text-ink outline-none placeholder:text-muted"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Topics, patterns, files, tools&hellip;"
+              />
+            </div>
           </div>
-        ))}
-      </section>
-      <div className="grid grid-cols-[minmax(0,1fr)_350px] gap-5 max-[950px]:grid-cols-1">
-        <section className="rounded-2xl border border-line bg-gradient-to-br from-[#12171d] to-[#0d1115] p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="m-0 text-[17px] font-semibold">Your lessons</h2>
-            <span className="text-xs text-muted">{visible.length} shown</span>
-          </div>
-          <div className="mb-4 flex flex-wrap gap-2">
-            {filters.map(([value, label]) => (
-              <button
-                className={`cursor-pointer rounded-full border px-3 py-2 text-xs ${filter === value ? "border-[#315849] bg-[#183129] text-mint" : "border-line bg-[#11171d] text-muted"}`}
-                onClick={() => setFilter(value)}
-                key={value}
-              >
-                {label}
-              </button>
+          <dl className="grid grid-cols-2 gap-x-8 gap-y-6">
+            {metrics.map(([label, value]) => (
+              <div key={label}>
+                <dd className="font-mono text-4xl font-bold tracking-tight">
+                  {value}
+                </dd>
+                <dt className="mt-1 font-mono text-[10px] uppercase tracking-[.2em] text-muted">
+                  {label}
+                </dt>
+              </div>
             ))}
+          </dl>
+        </div>
+      </section>
+
+      {/* Progress */}
+      <section className="border-b border-line py-10 max-sm:py-8">
+        <h2 className="mb-6 text-2xl font-semibold tracking-tight">
+          Your progress
+        </h2>
+        <ProgressChart data={data.progress} />
+      </section>
+
+      {/* Body */}
+      <div className="grid grid-cols-[1fr_300px] gap-16 py-10 max-[900px]:grid-cols-1 max-[900px]:gap-10">
+        <main>
+          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-4">
+            <h2 className="text-2xl font-semibold tracking-tight">
+              Your lessons
+            </h2>
+            <nav className="flex flex-wrap gap-5">
+              {filters.map(([value, label]) => (
+                <button
+                  className={`cursor-pointer border-b-2 pb-0.5 font-mono text-[11px] uppercase tracking-[.15em] transition ${
+                    filter === value
+                      ? "border-accent text-ink"
+                      : "border-transparent text-muted hover:text-ink"
+                  }`}
+                  onClick={() => setFilter(value)}
+                  key={value}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
           </div>
-          <div className="grid gap-3">
+          <div>
             {visible.length ? (
               visible.map((lesson) => (
                 <LessonCard
                   lesson={lesson}
-                  due={dueIds.has(lesson.id)}
                   onOpen={open}
                   onDelete={(lessonId) => void removeLesson(lessonId)}
                   key={lesson.id}
                 />
               ))
             ) : (
-              <div className="px-2 py-8 text-center text-[13px] text-muted">No lessons match this view.</div>
+              <p className="py-10 text-sm text-muted">
+                No lessons match this view.
+              </p>
             )}
           </div>
-        </section>
-        <aside className="grid content-start gap-5 max-[950px]:row-start-1">
-          <section className="rounded-2xl border border-line bg-gradient-to-br from-[#12171d] to-[#0d1115] p-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="m-0 text-[17px] font-semibold">Review next</h2>
-              <span className="text-xs text-muted">
-                {data.summary.due ? `${data.summary.due} due` : "All caught up"}
+        </main>
+        <aside className="max-[900px]:border-t max-[900px]:border-line max-[900px]:pt-10 [&>section]:border-t [&>section]:border-line [&>section]:pt-6 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0 [&>section]:mt-6 border-l border-line pl-10 max-[900px]:border-l-0 max-[900px]:pl-0">
+          <section>
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <h2 className="text-lg font-semibold tracking-tight">
+                Review next
+              </h2>
+              <span className="font-mono text-[10px] uppercase tracking-[.15em] text-muted">
+                {data.summary.due ? `${data.summary.due} due` : "Caught up"}
               </span>
             </div>
             {data.due.length ? (
               data.due.slice(0, 4).map((lesson) => (
-                <div className="border-b border-line py-3 last:border-0" key={lesson.id}>
-                  <strong className="text-[13px]">{lesson.title}</strong>
-                  <p className="my-2 text-[11px] text-muted">{reviewAction(lesson.nextReviewAt)}</p>
+                <div className="border-t border-line py-3 first:border-t-0" key={lesson.id}>
+                  <div className="text-sm font-medium">{lesson.title}</div>
+                  <p className="mt-1 mb-2 font-mono text-[10px] uppercase tracking-[.1em] text-muted">
+                    {reviewAction(lesson.nextReviewAt)}
+                  </p>
                   <button
-                    className="cursor-pointer rounded-lg border-0 bg-mint px-3 py-2 font-extrabold text-[#05251b]"
+                    className="cursor-pointer font-mono text-[11px] uppercase tracking-[.15em] text-accent hover:underline"
                     onClick={() => open(lesson, true)}
                   >
-                    Start review
+                    Start review &rarr;
                   </button>
                 </div>
               ))
             ) : (
-              <div className="px-2 py-8 text-center text-[13px] text-muted">Nothing is due right now.</div>
+              <p className="py-4 text-sm text-muted">
+                Nothing is due right now.
+              </p>
             )}
           </section>
-          <section className="rounded-2xl border border-line bg-gradient-to-br from-[#12171d] to-[#0d1115] p-5">
-            <h2 className="m-0 text-[17px] font-semibold">Topics you keep encountering</h2>
+          <section>
+            <h2 className="mb-3 text-lg font-semibold tracking-tight">
+              Topics you keep encountering
+            </h2>
             <RankList items={data.topics} />
           </section>
-          <section className="rounded-2xl border border-line bg-gradient-to-br from-[#12171d] to-[#0d1115] p-5">
-            <h2 className="m-0 text-[17px] font-semibold">Patterns to work on</h2>
+          <section>
+            <h2 className="mb-3 text-lg font-semibold tracking-tight">
+              Patterns to work on
+            </h2>
             <RankList items={data.patterns} />
           </section>
         </aside>
       </div>
-      <section className="mt-5 rounded-2xl border border-line bg-gradient-to-br from-[#12171d] to-[#0d1115] p-5">
-        <h2 className="m-0 mb-4 text-[17px] font-semibold">Your progress</h2>
-        <ProgressChart data={data.progress} />
-      </section>
+
       <LessonDialog
         lesson={selected}
         reviewMode={reviewMode}
@@ -198,7 +264,12 @@ export default function App() {
         onSave={submitReview}
         onDelete={(lessonId) => void removeLesson(lessonId)}
       />
-      {saved && <div className="fixed right-6 bottom-6 rounded-xl border border-[#2f6555] bg-[#143329] px-4 py-3 text-mint">Review saved</div>}
+      {saved && (
+        <div className="fixed right-6 bottom-6 border border-line bg-surface px-4 py-3 font-mono text-[12px] uppercase tracking-[.1em] text-positive">
+          Review saved
+        </div>
+      )}
     </div>
+    </>
   );
 }

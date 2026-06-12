@@ -1,93 +1,68 @@
 import { useState } from "react";
-import { formatDate, reviewAction, statusLabel } from "../format";
-import { computeCompleteness, completenessColor } from "../completeness";
+import { formatDate, statusLabel } from "../format";
 import type { DashboardLesson } from "../types";
+import { Trash2 } from "lucide-react";
 
 interface Props {
   lesson: DashboardLesson;
-  due: boolean;
   onOpen(lesson: DashboardLesson, review: boolean): void;
   onDelete(id: string): void;
 }
 
-export function LessonCard({ lesson, due, onOpen, onDelete }: Props) {
+export function LessonCard({ lesson, onOpen, onDelete }: Props) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const { score } = computeCompleteness(lesson);
-  const dotColor = completenessColor(score) === "green" ? "bg-mint" : completenessColor(score) === "yellow" ? "bg-warn" : "bg-danger";
+
   return (
     <article
-      className="grid cursor-pointer grid-cols-[6px_1fr_auto] gap-4 rounded-2xl border border-line bg-gradient-to-br from-[#12171d] to-[#0d1115] p-4 transition hover:-translate-y-0.5 hover:border-[#455463] max-sm:grid-cols-[5px_1fr]"
+      className="group cursor-pointer border-t border-line py-5 first:border-t-0"
       onClick={() => onOpen(lesson, false)}
     >
-      <span className={`rounded-full ${due ? "bg-warn" : "bg-sky"}`} />
-      <div>
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="m-0 text-[17px] font-semibold">{lesson.title}</h3>
-          <span className={`size-2 shrink-0 rounded-full ${dotColor}`} title={`Lesson completeness: ${score}%`} />
-          <span className="text-[11px] text-muted">
-            {lesson.tool} &middot; {formatDate(lesson.createdAt)}
-          </span>
-        </div>
-        <p className="my-2.5 text-sm leading-relaxed text-[#dce5ee]">{lesson.displayTakeaway}</p>
-        <div className="flex flex-wrap items-center gap-2">
-          {lesson.concepts.map((concept) => (
-            <span
-              className="rounded-full border border-[#243e54] bg-[#142333] px-2 py-1 text-[10px] text-sky"
-              key={concept}
+      <div className="flex items-start justify-between gap-4">
+        <h3 className="font-serif text-xl font-semibold tracking-tight transition group-hover:text-accent">
+          {lesson.title}
+        </h3>
+        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[.15em] text-muted max-sm:hidden">
+          {statusLabel(lesson.understanding)}
+        </span>
+      </div>
+      <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
+        {lesson.displayTakeaway}
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 font-mono text-[11px] text-muted">
+        <span>{lesson.tool}</span>
+        <span>{formatDate(lesson.createdAt)}</span>
+        {lesson.concepts.length > 0 && <span>{lesson.concepts.join(", ")}</span>}
+        {confirmingDelete ? (
+          <span
+            className="ml-auto flex items-center gap-2"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span>Delete?</span>
+            <button
+              className="cursor-pointer border-0 bg-transparent p-0 font-bold text-danger hover:underline"
+              onClick={() => onDelete(lesson.id)}
             >
-              {concept}
-            </span>
-          ))}
+              Confirm
+            </button>
+            <button
+              className="cursor-pointer border-0 bg-transparent p-0 hover:underline"
+              onClick={() => setConfirmingDelete(false)}
+            >
+              Cancel
+            </button>
+          </span>
+        ) : (
           <button
-            className="cursor-pointer border-0 bg-transparent p-1 text-[11px] text-muted hover:text-mint"
+            className="ml-auto cursor-pointer border-0 bg-transparent p-0 opacity-0 transition group-hover:opacity-100 hover:text-danger"
             onClick={(event) => {
               event.stopPropagation();
-              onOpen(lesson, due);
+              setConfirmingDelete(true);
             }}
           >
-            {reviewAction(lesson.nextReviewAt)}
+            <Trash2 className="size-3.5" />
           </button>
-          {confirmingDelete ? (
-            <span className="ml-auto flex items-center gap-1.5 text-[11px]" onClick={(event) => event.stopPropagation()}>
-              <span className="text-muted">Delete?</span>
-              <button
-                className="cursor-pointer rounded-md border-0 bg-danger px-2 py-0.5 font-bold text-[#2a0b0b]"
-                onClick={() => onDelete(lesson.id)}
-              >
-                Confirm
-              </button>
-              <button
-                className="cursor-pointer rounded-md border border-line bg-transparent px-2 py-0.5 text-muted"
-                onClick={() => setConfirmingDelete(false)}
-              >
-                Cancel
-              </button>
-            </span>
-          ) : (
-            <button
-              className="ml-auto cursor-pointer border-0 bg-transparent p-1 text-[11px] text-muted hover:text-danger"
-              onClick={(event) => {
-                event.stopPropagation();
-                setConfirmingDelete(true);
-              }}
-            >
-              Delete
-            </button>
-          )}
-        </div>
+        )}
       </div>
-      <span
-        className={`self-start whitespace-nowrap rounded-full px-2 py-1 text-[10px] max-sm:hidden ${statusClasses(lesson.understanding)}`}
-      >
-        {statusLabel(lesson.understanding)}
-      </span>
     </article>
   );
-}
-
-function statusClasses(status: DashboardLesson["understanding"]): string {
-  if (status === "understood") return "bg-[#11271f] text-mint";
-  if (status === "partial") return "bg-[#2a2111] text-warn";
-  if (status === "copied_blindly") return "bg-[#2c151a] text-danger";
-  return "bg-[#1b232c] text-muted";
 }
