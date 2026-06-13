@@ -32,6 +32,7 @@ export interface ProgressData {
 export interface DashboardData {
   lessons: DashboardLesson[];
   due: DashboardLesson[];
+  models: ConceptStat[];
   topics: ConceptStat[];
   patterns: PatternStat[];
   progress: ProgressData;
@@ -55,6 +56,7 @@ export function buildDashboardData(
   return {
     lessons: all.filter((lesson) => visibleIds.has(lesson.id)),
     due: all.filter((lesson) => dueIds.has(lesson.id)),
+    models: groupModels(all),
     topics,
     patterns: groupPatterns(all),
     progress: buildProgressData(allLessons),
@@ -136,6 +138,16 @@ function groupPatterns(lessons: DashboardLesson[]): PatternStat[] {
     groups.set(key, current);
   }
   return [...groups.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
+function groupModels(lessons: DashboardLesson[]): ConceptStat[] {
+  const counts = new Map<string, number>();
+  for (const lesson of lessons) {
+    counts.set(lesson.tool, (counts.get(lesson.tool) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
 function isLearning(understanding: Understanding): boolean {

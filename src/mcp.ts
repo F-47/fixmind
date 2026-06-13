@@ -37,6 +37,12 @@ STRONGLY RECOMMENDED fields — always provide these when code is involved:
   - mistakePattern: A 2–4 word reusable category. Examples: "Missing await", "Stale closure", "Off-by-one", "Wrong event lifetime"
   - tags: 1-3 entries naming the APIs/concepts involved, e.g. { "name": "MDN: URL.revokeObjectURL", "url": "https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static" }. Only set url when you are confident it is a real, official documentation page (MDN, the framework's own docs). If unsure, omit url and the tag is shown as a plain label.
 
+For codeExample, badCodeExample, and goodCodeExample: write multi-line snippets
+with real line breaks and normal indentation, the same way you'd write the code
+in a file. Do not flatten the snippet onto one line using the two characters
+"\" + "n" as a stand-in for a newline - the dashboard renders these fields
+verbatim, so literal "\n" text shows up as "\n" instead of a line break.
+
 SUPERSEDING A PREVIOUS LESSON:
 If you previously called save_learning_lesson for a fix that turned out NOT to
 work, and you are now saving a lesson for the CORRECT fix, set:

@@ -301,7 +301,9 @@ function commandExists(command: string): boolean {
 }
 
 function runCommand(command: string, args: string[]): string {
-  return execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  // On Windows, CLI tools installed via npm are typically `.cmd`/`.ps1` shims, which
+  // Node refuses to spawn directly (EINVAL) unless `shell` is enabled.
+  return execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], shell: process.platform === "win32" });
 }
 
 function formatCommand(command: string, args: string[]): string {
@@ -313,8 +315,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isMissingCommandError(error: unknown): boolean {
-  return error != null
-    && typeof error === "object"
-    && "code" in error
-    && (error as { code?: unknown }).code === "ENOENT";
+  if (error == null || typeof error !== "object") return false;
+  if ("code" in error && (error as { code?: unknown }).code === "ENOENT") return true;
+  // With `shell: true` on Windows, a missing command no longer surfaces as ENOENT;
+  // cmd.exe instead exits non-zero and writes this message to stderr.
+  const stderr = (error as { stderr?: unknown }).stderr;
+  const stderrText = Buffer.isBuffer(stderr) ? stderr.toString("utf8") : typeof stderr === "string" ? stderr : "";
+  return /is not recognized as an internal or external command/i.test(stderrText);
 }

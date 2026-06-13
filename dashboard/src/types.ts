@@ -32,17 +32,13 @@ export interface DashboardLesson {
   badCodeExample?: string;
   goodCodeExample?: string;
   codeExplanation?: string;
-  practiceTask?: string;
   reviewQuestions: ReviewQuestion[];
   understanding: Understanding;
-  nextReviewAt: string;
-  reviewCount: number;
   displayTakeaway: string;
   displayPattern: string;
 }
 
 export interface RankedItem { name: string; count: number }
-export interface PatternItem extends RankedItem { lessonIds: string[] }
 
 export interface WeeklyCount { weekStart: string; count: number }
 export interface UnderstandingBreakdown {
@@ -59,9 +55,9 @@ export interface ProgressData {
 
 export interface DashboardData {
   lessons: DashboardLesson[];
-  due: DashboardLesson[];
+  models: RankedItem[];
   topics: RankedItem[];
-  patterns: PatternItem[];
+  patterns: RankedItem[];
   progress: ProgressData;
-  summary: { total: number; due: number; learning: number; understood: number };
+  summary: { total: number };
 }

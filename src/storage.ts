@@ -5,6 +5,7 @@ import { drizzle } from "drizzle-orm/node-sqlite";
 import { eq, or, and, ne, desc, asc, lte, sql } from "drizzle-orm";
 import { configPath, dataDirectory, databasePath } from "./paths.js";
 import { lessons as lessonsTable } from "./schema.js";
+import { assertRealLineBreaks } from "./validation.js";
 import type {
   Lesson,
   LessonInput,
@@ -247,10 +248,13 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
         "takeaway", "mistakePattern", "codeExample", "badCodeExample",
         "goodCodeExample", "codeExplanation", "practiceTask",
       ] as const;
+      const codeFields = new Set(["codeExample", "badCodeExample", "goodCodeExample"]);
       for (const field of optionalStringFields) {
         const value = partial[field];
         if (value === undefined) continue;
-        updates[field] = value.trim() || null;
+        const trimmed = value.trim();
+        if (trimmed && codeFields.has(field)) assertRealLineBreaks(trimmed, field);
+        updates[field] = trimmed || null;
       }
 
       if (partial.concepts !== undefined) updates.concepts = partial.concepts;

@@ -14,6 +14,21 @@ function requiredString(value: unknown, field: string): string {
   return value.trim();
 }
 
+const LITERAL_ESCAPE_PATTERN = /\\[nrt]/g;
+
+// Catches the case where a caller writes the two characters "\" + "n" (etc.)
+// instead of an actual line break, flattening a multi-line snippet onto one
+// line. Real newline/tab characters in the value mean it was escaped correctly.
+export function assertRealLineBreaks(value: string, field: string): void {
+  const literalEscapes = value.match(LITERAL_ESCAPE_PATTERN);
+  if (!literalEscapes || literalEscapes.length < 2) return;
+  if (/[\n\r\t]/.test(value)) return;
+  throw new Error(
+    `Invalid lesson: ${field} contains literal "\\n"/"\\t" characters instead of real line breaks. ` +
+      `Write the snippet with actual newlines in the string value (not the two-character sequence backslash-n).`,
+  );
+}
+
 function stringArray(
   value: unknown,
   field: string,
@@ -110,6 +125,17 @@ export function validateLessonInput(value: unknown): LessonInput {
     throw new Error("Invalid lesson: nextReviewAt must be a valid date.");
   }
 
+  const codeExample =
+    typeof input.codeExample === "string" ? input.codeExample.trim() : undefined;
+  const badCodeExample =
+    typeof input.badCodeExample === "string" ? input.badCodeExample.trim() : undefined;
+  const goodCodeExample =
+    typeof input.goodCodeExample === "string" ? input.goodCodeExample.trim() : undefined;
+
+  if (codeExample) assertRealLineBreaks(codeExample, "codeExample");
+  if (badCodeExample) assertRealLineBreaks(badCodeExample, "badCodeExample");
+  if (goodCodeExample) assertRealLineBreaks(goodCodeExample, "goodCodeExample");
+
   return {
     tool: tool.trim(),
     projectPath:
@@ -131,18 +157,9 @@ export function validateLessonInput(value: unknown): LessonInput {
         : undefined,
     concepts: stringArray(input.concepts, "concepts", true),
     filesChanged: stringArray(input.filesChanged, "filesChanged"),
-    codeExample:
-      typeof input.codeExample === "string"
-        ? input.codeExample.trim()
-        : undefined,
-    badCodeExample:
-      typeof input.badCodeExample === "string"
-        ? input.badCodeExample.trim()
-        : undefined,
-    goodCodeExample:
-      typeof input.goodCodeExample === "string"
-        ? input.goodCodeExample.trim()
-        : undefined,
+    codeExample,
+    badCodeExample,
+    goodCodeExample,
     codeExplanation:
       typeof input.codeExplanation === "string"
         ? input.codeExplanation.trim()

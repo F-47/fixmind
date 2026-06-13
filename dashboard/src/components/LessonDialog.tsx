@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, X } from "lucide-react";
-import { formatDate, reviewAction } from "../format";
-import { computeCompleteness } from "../completeness";
+import { formatDate, statusColor, statusLabel } from "../format";
 import { CodeBlock } from "./CodeBlock";
 import type { DashboardLesson, Understanding } from "../types";
 
@@ -20,7 +19,8 @@ interface Props {
 const sectionHeading =
   "mt-10 mb-4 border-t border-line pt-8 text-2xl font-semibold tracking-tight";
 const fieldLabel = "font-mono text-[10px] uppercase tracking-[.2em] text-muted";
-const tagClass = "border border-line px-2 py-0.5 font-mono text-[11px] text-ink";
+const tagClass =
+  "border border-line px-2 py-0.5 font-mono text-[11px] text-ink";
 
 export function LessonDialog({
   lesson,
@@ -36,11 +36,16 @@ export function LessonDialog({
   const [error, setError] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
-  const [selfChecks, setSelfChecks] = useState<Record<string, "got" | "missed">>({});
+  const [selfChecks, setSelfChecks] = useState<
+    Record<string, "got" | "missed">
+  >({});
 
   useEffect(() => {
-    if (lesson) dialogRef.current?.showModal();
-    else dialogRef.current?.close();
+    if (lesson) {
+      if (!dialogRef.current?.open) dialogRef.current?.showModal();
+    } else {
+      dialogRef.current?.close();
+    }
     setAnswers({});
     setUnderstanding("");
     setError("");
@@ -61,6 +66,9 @@ export function LessonDialog({
   const hasCode = Boolean(
     lesson.badCodeExample || lesson.goodCodeExample || lesson.codeExample,
   );
+  const hasBothExamples = Boolean(
+    lesson.badCodeExample && (lesson.goodCodeExample || lesson.codeExample),
+  );
 
   async function submit() {
     if (!understanding) {
@@ -74,16 +82,22 @@ export function LessonDialog({
     }
   }
 
-  const { score } = computeCompleteness(lesson);
   const totalQuestions = lesson.reviewQuestions.length;
-  const checkedCount = lesson.reviewQuestions.filter((q) => selfChecks[q.id]).length;
-  const gotCount = lesson.reviewQuestions.filter((q) => selfChecks[q.id] === "got").length;
+  const checkedCount = lesson.reviewQuestions.filter(
+    (q) => selfChecks[q.id],
+  ).length;
+  const gotCount = lesson.reviewQuestions.filter(
+    (q) => selfChecks[q.id] === "got",
+  ).length;
 
   return (
     <dialog
       className="fixed top-1/2 left-1/2 z-50 h-[min(92vh,900px)] w-[min(760px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 overflow-hidden border border-line bg-page p-0 text-ink shadow-[0_40px_100px_-30px_rgba(0,0,0,0.7)]"
       ref={dialogRef}
       onClose={onClose}
+      onClick={(event) => {
+        if (event.target === dialogRef.current) onClose();
+      }}
     >
       <div className="flex h-full flex-col">
         {/* Top bar */}
@@ -94,42 +108,32 @@ export function LessonDialog({
           >
             &larr; All lessons
           </button>
-          {confirmingDelete ? (
-            <span className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[.2em]">
-              <span className="text-muted">Delete this lesson?</span>
-              <button
-                className="cursor-pointer border-0 bg-transparent p-0 font-bold text-danger hover:underline"
-                onClick={() => onDelete(lesson.id)}
-              >
-                Confirm
-              </button>
-              <button
-                className="cursor-pointer border-0 bg-transparent p-0 text-muted hover:underline"
-                onClick={() => setConfirmingDelete(false)}
-              >
-                Cancel
-              </button>
-            </span>
-          ) : (
-            <button
-              className="cursor-pointer border-0 bg-transparent p-0 font-mono text-[11px] uppercase tracking-[.2em] text-muted hover:text-danger"
-              onClick={() => setConfirmingDelete(true)}
-            >
-              Delete
-            </button>
-          )}
+          <button
+            className="cursor-pointer border-0 bg-transparent p-0 text-muted hover:text-ink"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <X className="size-5" />
+          </button>
         </div>
 
         {/* Article */}
-        <article className="overflow-auto px-9 py-8 max-sm:px-5 max-sm:py-6">
+        <article className="overflow-auto overscroll-contain px-9 py-8 max-sm:px-5 max-sm:py-6">
           {/* Byline */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[.2em] text-muted">
-            <span>{lesson.displayPattern}</span>
-            <span>&middot;</span>
-            <span>{lesson.tool}</span>
-            <span>&middot;</span>
-            <span>{formatDate(lesson.createdAt)}</span>
-            <span className="ml-auto">{score}% complete</span>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[.2em] text-muted">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span>{lesson.displayPattern}</span>
+              <span>&middot;</span>
+              <span>{formatDate(lesson.createdAt)}</span>
+              <span>&middot;</span>
+              <span>{lesson.tool}</span>
+            </div>
+            <span
+              className={`flex items-center gap-1.5 ${statusColor(lesson.understanding)}`}
+            >
+              <span className="size-1.5 rounded-full bg-current" />
+              {statusLabel(lesson.understanding)}
+            </span>
           </div>
 
           <h1 className="mt-3 font-serif text-4xl leading-tight font-bold tracking-tight max-sm:text-3xl">
@@ -165,29 +169,16 @@ export function LessonDialog({
             )}
           </div>
 
-          {/* Status line */}
-          <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[.2em] text-muted">
-            <span>
-              {lesson.reviewCount} review{lesson.reviewCount === 1 ? "" : "s"}{" "}
-              completed
-            </span>
-            <span>&middot;</span>
-            <span>{reviewAction(lesson.nextReviewAt)}</span>
-          </div>
-
           {/* Original prompt */}
           {lesson.originalPrompt && (
-            <details className="mt-4 border-t border-line pt-3">
-              <summary className="cursor-pointer font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-                Original question
-              </summary>
-              <p className="mt-3 text-sm leading-relaxed text-muted">
-                {lesson.originalPrompt}
-              </p>
-            </details>
+            <>
+              <h2 className={sectionHeading}>The prompt</h2>
+              <blockquote className="border-l-2 border-line pl-4 text-base leading-relaxed text-muted italic">
+                &ldquo;{lesson.originalPrompt}&rdquo;
+              </blockquote>
+            </>
           )}
 
-          {/* What broke */}
           <h2 className={sectionHeading}>What broke</h2>
           <p className="text-base leading-relaxed">{lesson.problem}</p>
 
@@ -196,15 +187,21 @@ export function LessonDialog({
           <div className="grid gap-5">
             <div>
               <div className={fieldLabel}>What went wrong</div>
-              <p className="mt-1.5 text-base leading-relaxed">{lesson.mistake}</p>
+              <p className="mt-1.5 text-base leading-relaxed">
+                {lesson.mistake}
+              </p>
             </div>
             <div>
               <div className={fieldLabel}>Root cause</div>
-              <p className="mt-1.5 text-base leading-relaxed">{lesson.rootCause}</p>
+              <p className="mt-1.5 text-base leading-relaxed">
+                {lesson.rootCause}
+              </p>
             </div>
             <div>
               <div className={fieldLabel}>Why the fix works</div>
-              <p className="mt-1.5 text-base leading-relaxed">{lesson.fixSummary}</p>
+              <p className="mt-1.5 text-base leading-relaxed">
+                {lesson.fixSummary}
+              </p>
             </div>
           </div>
 
@@ -216,12 +213,14 @@ export function LessonDialog({
                 <CodeBlock
                   label="Broken approach"
                   value={broken}
+                  compareWith={hasBothExamples ? corrected : undefined}
                   kind="bad"
                   filesChanged={lesson.filesChanged}
                 />
                 <CodeBlock
                   label="Correct approach"
                   value={corrected}
+                  compareWith={hasBothExamples ? broken : undefined}
                   kind="good"
                   filesChanged={lesson.filesChanged}
                 />
@@ -240,16 +239,6 @@ export function LessonDialog({
               No useful code comparison was captured for this lesson.
             </p>
           )}
-
-          {/* Practice */}
-          <h2 className={sectionHeading}>Try it yourself</h2>
-          <div className="border border-dashed border-line p-5">
-            <div className={`${fieldLabel} text-positive`}>Practice task</div>
-            <p className="mt-1.5 text-base leading-relaxed">
-              {lesson.practiceTask ??
-                "Recreate the smallest version of this mistake, then correct it without looking at the original fix."}
-            </p>
-          </div>
 
           {/* Files involved */}
           {lesson.filesChanged.length > 0 && (
@@ -314,13 +303,18 @@ export function LessonDialog({
                     <button
                       className="mt-3 flex cursor-pointer items-center gap-2 border-0 bg-transparent p-0 font-mono text-[10px] uppercase tracking-[.2em] text-muted transition hover:text-accent"
                       onClick={() =>
-                        setRevealed((prev) => ({ ...prev, [question.id]: !isRevealed }))
+                        setRevealed((prev) => ({
+                          ...prev,
+                          [question.id]: !isRevealed,
+                        }))
                       }
                     >
                       <ChevronDown
                         className={`size-3 transition-transform ${isRevealed ? "rotate-180" : ""}`}
                       />
-                      {isRevealed ? "Hide expected answer" : "Reveal expected answer"}
+                      {isRevealed
+                        ? "Hide expected answer"
+                        : "Reveal expected answer"}
                     </button>
                     <div
                       className={`mt-3 grid transition-[grid-template-rows] duration-300 ease-out ${
@@ -334,20 +328,30 @@ export function LessonDialog({
                         <div className="mt-3 mb-1 flex gap-5 font-mono text-[10px] uppercase tracking-[.2em]">
                           <button
                             className={`flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 transition ${
-                              check === "got" ? "text-positive" : "text-muted hover:text-ink"
+                              check === "got"
+                                ? "text-positive"
+                                : "text-muted hover:text-ink"
                             }`}
                             onClick={() =>
-                              setSelfChecks((prev) => ({ ...prev, [question.id]: "got" }))
+                              setSelfChecks((prev) => ({
+                                ...prev,
+                                [question.id]: "got",
+                              }))
                             }
                           >
                             <Check className="size-3" /> Got it
                           </button>
                           <button
                             className={`flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 transition ${
-                              check === "missed" ? "text-danger" : "text-muted hover:text-ink"
+                              check === "missed"
+                                ? "text-danger"
+                                : "text-muted hover:text-ink"
                             }`}
                             onClick={() =>
-                              setSelfChecks((prev) => ({ ...prev, [question.id]: "missed" }))
+                              setSelfChecks((prev) => ({
+                                ...prev,
+                                [question.id]: "missed",
+                              }))
                             }
                           >
                             <X className="size-3" /> Missed it
@@ -369,7 +373,10 @@ export function LessonDialog({
                 {lesson.reviewQuestions
                   .filter((q) => q.userAnswer)
                   .map((q) => (
-                    <div className="border-l-2 border-line pl-3 text-sm text-muted" key={q.id}>
+                    <div
+                      className="border-l-2 border-line pl-3 text-sm text-muted"
+                      key={q.id}
+                    >
                       <p className="font-medium text-ink">{q.question}</p>
                       <p className="mt-1">{q.userAnswer}</p>
                     </div>
@@ -387,39 +394,115 @@ export function LessonDialog({
                   Self-check: {gotCount} / {totalQuestions} got it
                 </p>
               )}
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  className="border border-line bg-surface p-2.5 text-ink outline-none focus:border-accent"
-                  value={understanding}
-                  onChange={(event) =>
-                    setUnderstanding(event.target.value as Understanding | "")
-                  }
-                >
-                  <option value="">Choose your understanding</option>
-                  <option value="understood">I understand it</option>
-                  <option value="partial">I partly understand it</option>
-                  <option value="copied_blindly">I need more practice</option>
-                </select>
-                <button
-                  className="cursor-pointer border-0 bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[.2em] text-page"
-                  onClick={() => void submit()}
-                >
-                  Save review
-                </button>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex flex-wrap items-center gap-3">
+                  <select
+                    className="border border-line bg-surface p-2.5 text-ink outline-none focus:border-accent"
+                    value={understanding}
+                    onChange={(event) =>
+                      setUnderstanding(event.target.value as Understanding | "")
+                    }
+                  >
+                    <option value="">Choose result</option>
+                    <option value="understood">Learned</option>
+                    <option value="partial">Not learned</option>
+                  </select>
+                  <button
+                    className="cursor-pointer border-0 bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[.2em] text-page"
+                    onClick={() => void submit()}
+                  >
+                    Save review
+                  </button>
+                </div>
+                <DeleteControl
+                  confirming={confirmingDelete}
+                  onRequest={() => setConfirmingDelete(true)}
+                  onCancel={() => setConfirmingDelete(false)}
+                  onConfirm={() => onDelete(lesson.id)}
+                />
               </div>
             </div>
           ) : (
-            <div className="mt-8 border-t border-line pt-8">
-              <button
-                className="cursor-pointer border-0 bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[.2em] text-page"
-                onClick={onStartReview}
-              >
-                Test my recall
-              </button>
+            <div className="border-t border-line pt-8">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <button
+                  className="cursor-pointer border-0 bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[.2em] text-page"
+                  onClick={onStartReview}
+                >
+                  Test my recall
+                </button>
+                <DeleteControl
+                  confirming={confirmingDelete}
+                  onRequest={() => setConfirmingDelete(true)}
+                  onCancel={() => setConfirmingDelete(false)}
+                  onConfirm={() => onDelete(lesson.id)}
+                />
+              </div>
             </div>
           )}
         </article>
       </div>
     </dialog>
+  );
+}
+
+interface DeleteControlProps {
+  confirming: boolean;
+  onRequest(): void;
+  onCancel(): void;
+  onConfirm(): void;
+}
+
+function DeleteControl({
+  confirming,
+  onRequest,
+  onCancel,
+  onConfirm,
+}: DeleteControlProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    if (confirming) {
+      if (!dialogRef.current?.open) dialogRef.current?.showModal();
+    } else {
+      dialogRef.current?.close();
+    }
+  }, [confirming]);
+
+  return (
+    <>
+      <button
+        className="cursor-pointer border-0 bg-transparent p-0 font-mono text-[11px] uppercase tracking-[.2em] text-muted hover:text-danger"
+        onClick={onRequest}
+      >
+        Delete lesson
+      </button>
+      <dialog
+        ref={dialogRef}
+        className="fixed top-1/2 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 border border-line bg-page p-6 text-ink shadow-[0_40px_100px_-30px_rgba(0,0,0,0.7)]"
+        onClose={onCancel}
+        onClick={(event) => {
+          if (event.target === dialogRef.current) onCancel();
+        }}
+      >
+        <p className="text-base leading-relaxed">
+          Delete this lesson? This can&rsquo;t be undone.
+        </p>
+        <div className="mt-6 flex justify-end gap-5 font-mono text-[11px] uppercase tracking-[.2em]">
+          <button
+            className="cursor-pointer border-0 bg-transparent p-0 text-muted hover:text-ink"
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button
+            className="cursor-pointer border-0 bg-transparent p-0 font-bold text-danger hover:underline"
+            onClick={onConfirm}
+          >
+            Delete
+          </button>
+        </div>
+      </dialog>
+    </>
   );
 }
