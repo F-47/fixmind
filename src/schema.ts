@@ -15,6 +15,7 @@ export const lessons = sqliteTable("lessons", {
   fixSummary: text("fix_summary").notNull(),
   takeaway: text("takeaway"),
   mistakePattern: text("mistake_pattern"),
+  whenNotApplicable: text("when_not_applicable"),
   concepts: text("concepts", { mode: "json" }).$type<string[]>().notNull(),
   filesChanged: text("files_changed", { mode: "json" }).$type<string[]>().notNull(),
   codeExample: text("code_example"),

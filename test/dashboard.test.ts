@@ -19,6 +19,7 @@ test("dashboard renders local data and saves reviews", async () => {
     fixSummary: "Load browser state after hydration",
     takeaway: "Keep server and browser output identical until hydration finishes.",
     mistakePattern: "Hydration timing",
+    whenNotApplicable: "Does not apply to values that are identical on server and client, like static labels.",
     concepts: ["Next.js hydration"],
     badCodeExample: "const theme = localStorage.getItem('theme')",
     goodCodeExample: "useEffect(() => loadTheme(), [])",
@@ -45,7 +46,7 @@ test("dashboard renders local data and saves reviews", async () => {
     const styleResponse = await fetch(`${dashboard.url}${stylePath}`);
     assert.equal(scriptResponse.status, 200);
     assert.equal(styleResponse.status, 200);
-    assert.match(await scriptResponse.text(), /What should you learn next/);
+    assert.match(await scriptResponse.text(), /Learn from it/);
     const stylesheet = await styleResponse.text();
     assert.match(stylesheet, /tailwindcss/);
     assert.match(stylesheet, /\.grid/);
@@ -82,6 +83,19 @@ test("dashboard renders local data and saves reviews", async () => {
     assert.equal(updated?.understanding, "understood");
     assert.equal(updated?.reviewCount, 1);
 
+    const jsonExport = await fetch(`${dashboard.url}/api/export?format=json`);
+    assert.equal(jsonExport.status, 200);
+    assert.match(jsonExport.headers.get("content-type") ?? "", /application\/json/);
+    assert.match(jsonExport.headers.get("content-disposition") ?? "", /attachment; filename="fixmind-lessons-.*\.json"/);
+    const exported = await jsonExport.json() as Array<{ id: string }>;
+    assert.equal(exported[0].id, saved.id);
+
+    const mdExport = await fetch(`${dashboard.url}/api/export?format=md`);
+    assert.equal(mdExport.status, 200);
+    assert.match(mdExport.headers.get("content-type") ?? "", /text\/markdown/);
+    assert.match(mdExport.headers.get("content-disposition") ?? "", /attachment; filename="fixmind-lessons-.*\.md"/);
+    assert.match(await mdExport.text(), /# Hydration mismatch/);
+
     const missingDelete = await fetch(`${dashboard.url}/api/lessons/does-not-exist`, { method: "DELETE" });
     assert.equal(missingDelete.status, 404);
 
@@ -89,6 +103,25 @@ test("dashboard renders local data and saves reviews", async () => {
     assert.equal(deleteResponse.status, 200);
     assert.deepEqual(await deleteResponse.json(), { ok: true });
     assert.equal(store.get(saved.id), undefined);
+
+    store.save(validateLessonInput({
+      tool: "codex",
+      title: "Second lesson",
+      problem: "Another problem",
+      mistake: "Another mistake",
+      rootCause: "Another root cause",
+      fixSummary: "Another fix",
+      takeaway: "Another takeaway.",
+      whenNotApplicable: "Does not apply elsewhere.",
+      concepts: ["Testing"],
+      reviewQuestions: [{ question: "Why?", expectedAnswer: "Because." }],
+    }));
+    assert.equal(store.list().length, 1);
+
+    const resetResponse = await fetch(`${dashboard.url}/api/reset`, { method: "POST" });
+    assert.equal(resetResponse.status, 200);
+    assert.deepEqual(await resetResponse.json(), { ok: true });
+    assert.equal(store.list().length, 0);
   } finally {
     await dashboard.close();
     store.close();

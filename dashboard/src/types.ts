@@ -25,6 +25,7 @@ export interface DashboardLesson {
   fixSummary: string;
   takeaway?: string;
   mistakePattern?: string;
+  whenNotApplicable?: string;
   concepts: string[];
   filesChanged: string[];
   tags: Tag[];

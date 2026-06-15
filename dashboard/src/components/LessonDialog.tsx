@@ -1,8 +1,11 @@
-import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Check, ChevronDown, Minus, X } from "lucide-react";
 import { formatDate, statusColor, statusLabel } from "../format";
+import { recallCoverage } from "../lib/recall";
 import { CodeBlock } from "./CodeBlock";
 import type { DashboardLesson, Understanding } from "../types";
+
+type SelfCheck = "got" | "partial" | "missed";
 
 interface Props {
   lesson: DashboardLesson | null;
@@ -22,6 +25,143 @@ const fieldLabel = "font-mono text-[10px] uppercase tracking-[.2em] text-muted";
 const tagClass =
   "border border-line px-2 py-0.5 font-mono text-[11px] text-ink";
 
+function SelfCheckButtons({
+  value,
+  onChange,
+}: {
+  value?: SelfCheck;
+  onChange(value: SelfCheck): void;
+}) {
+  const base =
+    "flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 transition";
+  return (
+    <div className="mt-3 mb-1 flex gap-5 font-mono text-[10px] uppercase tracking-[.2em]">
+      <button
+        className={`${base} ${value === "got" ? "text-positive" : "text-muted hover:text-ink"}`}
+        onClick={() => onChange("got")}
+      >
+        <Check className="size-3" /> Nailed it
+      </button>
+      <button
+        className={`${base} ${value === "partial" ? "text-accent" : "text-muted hover:text-ink"}`}
+        onClick={() => onChange("partial")}
+      >
+        <Minus className="size-3" /> Partly
+      </button>
+      <button
+        className={`${base} ${value === "missed" ? "text-danger" : "text-muted hover:text-ink"}`}
+        onClick={() => onChange("missed")}
+      >
+        <X className="size-3" /> Missed it
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Compares a free-text recall answer against the reference text it's being
+ * checked against, and gives a self-assessment nudge - not a grade. Helps
+ * catch the "I recognized it but couldn't explain it" case, where a reader
+ * reveals the answer, thinks "yep, that's right", and self-checks "Nailed it"
+ * without having actually produced the reasoning themselves.
+ */
+function ExplanationCoverageHint({
+  answer,
+  reference,
+}: {
+  answer: string;
+  reference: string;
+}) {
+  const trimmed = answer.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.split(/\s+/).length < 4) {
+    return (
+      <p className="mt-3 text-sm leading-relaxed text-muted italic">
+        That&rsquo;s a short answer - before you self-check, try writing a full sentence explaining
+        the reasoning, not just naming the topic.
+      </p>
+    );
+  }
+
+  const { ratio, missingTerms, hasSignal } = recallCoverage(trimmed, reference);
+  if (!hasSignal || ratio >= 0.5) return null;
+
+  return (
+    <p className="mt-3 text-sm leading-relaxed text-muted italic">
+      Your answer may not cover: {missingTerms.slice(0, 4).join(", ")}. Re-read the explanation
+      above - if your reasoning gets to the same idea in different words, "Nailed it" is still
+      fair, but if it doesn&rsquo;t, mark this "Partly" or "Missed it" instead.
+    </p>
+  );
+}
+
+interface RecallToggleProps {
+  prompt: string;
+  reveal: ReactNode;
+  /** Plain-text version of `reveal`, compared against `answer` for a self-assessment hint. */
+  referenceText: string;
+  reviewMode: boolean;
+  answer: string;
+  onAnswerChange(value: string): void;
+  revealed: boolean;
+  onToggleReveal(): void;
+  check?: SelfCheck;
+  onCheck(value: SelfCheck): void;
+}
+
+/**
+ * In review mode, hides `reveal` behind a recall prompt so the developer has
+ * to attempt an answer before seeing the lesson's content. Outside review
+ * mode, `reveal` is shown directly (normal article reading).
+ */
+function RecallToggle({
+  prompt,
+  reveal,
+  referenceText,
+  reviewMode,
+  answer,
+  onAnswerChange,
+  revealed,
+  onToggleReveal,
+  check,
+  onCheck,
+}: RecallToggleProps) {
+  if (!reviewMode) return <>{reveal}</>;
+
+  return (
+    <div>
+      <p className="text-base leading-relaxed text-muted">{prompt}</p>
+      <textarea
+        className="mt-3 min-h-24 w-full border border-line bg-surface p-3 text-ink outline-none focus:border-accent"
+        value={answer}
+        onChange={(event) => onAnswerChange(event.target.value)}
+        placeholder="Answer in your own words before revealing"
+      />
+      <button
+        className="mt-3 flex cursor-pointer items-center gap-2 border-0 bg-transparent p-0 font-mono text-[10px] uppercase tracking-[.2em] text-muted transition hover:text-accent"
+        onClick={onToggleReveal}
+      >
+        <ChevronDown
+          className={`size-3 transition-transform ${revealed ? "rotate-180" : ""}`}
+        />
+        {revealed ? "Hide" : "Reveal"}
+      </button>
+      <div
+        className={`mt-3 grid transition-[grid-template-rows] duration-300 ease-out ${
+          revealed ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          {reveal}
+          <ExplanationCoverageHint answer={answer} reference={referenceText} />
+          <SelfCheckButtons value={check} onChange={onCheck} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LessonDialog({
   lesson,
   reviewMode,
@@ -36,9 +176,7 @@ export function LessonDialog({
   const [error, setError] = useState("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
-  const [selfChecks, setSelfChecks] = useState<
-    Record<string, "got" | "missed">
-  >({});
+  const [selfChecks, setSelfChecks] = useState<Record<string, SelfCheck>>({});
 
   useEffect(() => {
     if (lesson) {
@@ -86,9 +224,18 @@ export function LessonDialog({
   const checkedCount = lesson.reviewQuestions.filter(
     (q) => selfChecks[q.id],
   ).length;
-  const gotCount = lesson.reviewQuestions.filter(
-    (q) => selfChecks[q.id] === "got",
-  ).length;
+
+  const recallKeys = [
+    "__rootCause",
+    ...(lesson.whenNotApplicable ? ["__scope"] : []),
+    ...lesson.reviewQuestions.map((q) => q.id),
+  ];
+  const recallScore = recallKeys.reduce((sum, key) => {
+    if (selfChecks[key] === "got") return sum + 1;
+    if (selfChecks[key] === "partial") return sum + 0.5;
+    return sum;
+  }, 0);
+  const recallChecked = recallKeys.filter((key) => selfChecks[key]).length;
 
   return (
     <dialog
@@ -184,26 +331,48 @@ export function LessonDialog({
 
           {/* Why it happened */}
           <h2 className={sectionHeading}>Why it happened</h2>
-          <div className="grid gap-5">
-            <div>
-              <div className={fieldLabel}>What went wrong</div>
-              <p className="mt-1.5 text-base leading-relaxed">
-                {lesson.mistake}
-              </p>
-            </div>
-            <div>
-              <div className={fieldLabel}>Root cause</div>
-              <p className="mt-1.5 text-base leading-relaxed">
-                {lesson.rootCause}
-              </p>
-            </div>
-            <div>
-              <div className={fieldLabel}>Why the fix works</div>
-              <p className="mt-1.5 text-base leading-relaxed">
-                {lesson.fixSummary}
-              </p>
-            </div>
-          </div>
+          <RecallToggle
+            prompt="Before reading on: what was the mistake, and - more importantly - what was the root cause behind it (not just the symptom)?"
+            referenceText={`${lesson.mistake} ${lesson.rootCause} ${lesson.fixSummary}`}
+            reviewMode={reviewMode}
+            answer={answers.__rootCause ?? ""}
+            onAnswerChange={(value) =>
+              setAnswers((prev) => ({ ...prev, __rootCause: value }))
+            }
+            revealed={Boolean(revealed.__rootCause)}
+            onToggleReveal={() =>
+              setRevealed((prev) => ({
+                ...prev,
+                __rootCause: !prev.__rootCause,
+              }))
+            }
+            check={selfChecks.__rootCause}
+            onCheck={(value) =>
+              setSelfChecks((prev) => ({ ...prev, __rootCause: value }))
+            }
+            reveal={
+              <div className="grid gap-5">
+                <div>
+                  <div className={fieldLabel}>What went wrong</div>
+                  <p className="mt-1.5 text-base leading-relaxed">
+                    {lesson.mistake}
+                  </p>
+                </div>
+                <div>
+                  <div className={fieldLabel}>Root cause</div>
+                  <p className="mt-1.5 text-base leading-relaxed">
+                    {lesson.rootCause}
+                  </p>
+                </div>
+                <div>
+                  <div className={fieldLabel}>Why the fix works</div>
+                  <p className="mt-1.5 text-base leading-relaxed">
+                    {lesson.fixSummary}
+                  </p>
+                </div>
+              </div>
+            }
+          />
 
           {/* Code comparison */}
           <h2 className={sectionHeading}>Broken and corrected code</h2>
@@ -237,6 +406,37 @@ export function LessonDialog({
           ) : (
             <p className="text-base leading-relaxed text-muted">
               No useful code comparison was captured for this lesson.
+            </p>
+          )}
+
+          {/* Scope */}
+          <h2 className={sectionHeading}>When this doesn&rsquo;t apply</h2>
+          {lesson.whenNotApplicable ? (
+            <RecallToggle
+              prompt="Before reading on: in what situation would this lesson's advice be wrong or unnecessary?"
+              referenceText={lesson.whenNotApplicable}
+              reviewMode={reviewMode}
+              answer={answers.__scope ?? ""}
+              onAnswerChange={(value) =>
+                setAnswers((prev) => ({ ...prev, __scope: value }))
+              }
+              revealed={Boolean(revealed.__scope)}
+              onToggleReveal={() =>
+                setRevealed((prev) => ({ ...prev, __scope: !prev.__scope }))
+              }
+              check={selfChecks.__scope}
+              onCheck={(value) =>
+                setSelfChecks((prev) => ({ ...prev, __scope: value }))
+              }
+              reveal={
+                <p className="text-base leading-relaxed">
+                  {lesson.whenNotApplicable}
+                </p>
+              }
+            />
+          ) : (
+            <p className="text-base leading-relaxed">
+              Not captured for this lesson.
             </p>
           )}
 
@@ -325,38 +525,21 @@ export function LessonDialog({
                         <p className="text-sm leading-relaxed text-muted">
                           {question.expectedAnswer}
                         </p>
-                        <div className="mt-3 mb-1 flex gap-5 font-mono text-[10px] uppercase tracking-[.2em]">
-                          <button
-                            className={`flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 transition ${
-                              check === "got"
-                                ? "text-positive"
-                                : "text-muted hover:text-ink"
-                            }`}
-                            onClick={() =>
-                              setSelfChecks((prev) => ({
-                                ...prev,
-                                [question.id]: "got",
-                              }))
-                            }
-                          >
-                            <Check className="size-3" /> Got it
-                          </button>
-                          <button
-                            className={`flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 transition ${
-                              check === "missed"
-                                ? "text-danger"
-                                : "text-muted hover:text-ink"
-                            }`}
-                            onClick={() =>
-                              setSelfChecks((prev) => ({
-                                ...prev,
-                                [question.id]: "missed",
-                              }))
-                            }
-                          >
-                            <X className="size-3" /> Missed it
-                          </button>
-                        </div>
+                        {reviewMode && (
+                          <ExplanationCoverageHint
+                            answer={answers[question.id] ?? ""}
+                            reference={question.expectedAnswer}
+                          />
+                        )}
+                        <SelfCheckButtons
+                          value={check}
+                          onChange={(value) =>
+                            setSelfChecks((prev) => ({
+                              ...prev,
+                              [question.id]: value,
+                            }))
+                          }
+                        />
                       </div>
                     </div>
                   </div>
@@ -389,11 +572,9 @@ export function LessonDialog({
 
           {reviewMode ? (
             <div className="mt-8 border-t border-line pt-8">
-              {totalQuestions > 0 && (
-                <p className="mb-4 font-mono text-[11px] uppercase tracking-[.15em] text-muted">
-                  Self-check: {gotCount} / {totalQuestions} got it
-                </p>
-              )}
+              <p className="mb-4 font-mono text-[11px] uppercase tracking-[.15em] text-muted">
+                Self-check score: {recallScore} / {recallKeys.length} ({recallChecked} / {recallKeys.length} checked)
+              </p>
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <select

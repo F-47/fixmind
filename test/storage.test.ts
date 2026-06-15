@@ -15,6 +15,8 @@ function input(overrides: Record<string, unknown> = {}) {
     mistake: "Read localStorage during render",
     rootCause: "Browser APIs are unavailable during SSR",
     fixSummary: "Read localStorage after hydration",
+    takeaway: "Keep server and browser output identical until hydration finishes.",
+    whenNotApplicable: "Does not apply to values that are identical on server and client, like static config.",
     concepts: ["Next.js hydration", "SSR/browser APIs"],
     filesChanged: ["app/theme.tsx"],
     reviewQuestions: [{
@@ -45,6 +47,32 @@ test("saves, lists, and searches lessons", () => {
     assert.equal(store.search("browser APIs")[0].title, "Hydration mismatch");
     assert.equal(store.search("nextjs")[0].id, saved.id);
     assert.deepEqual(store.search("missing"), []);
+  });
+});
+
+test("persists takeaway and whenNotApplicable", () => {
+  withStore((store) => {
+    const saved = store.save(input());
+    assert.equal(saved.takeaway, "Keep server and browser output identical until hydration finishes.");
+    assert.equal(
+      saved.whenNotApplicable,
+      "Does not apply to values that are identical on server and client, like static config.",
+    );
+
+    const reloaded = store.get(saved.id)!;
+    assert.equal(reloaded.takeaway, saved.takeaway);
+    assert.equal(reloaded.whenNotApplicable, saved.whenNotApplicable);
+  });
+});
+
+test("reset clears all lessons", () => {
+  withStore((store) => {
+    store.save(input());
+    store.save(input({ title: "Second occurrence" }));
+    assert.equal(store.list().length, 2);
+
+    store.reset();
+    assert.equal(store.list().length, 0);
   });
 });
 
@@ -129,6 +157,14 @@ test("rejects incomplete lesson input", () => {
   assert.throws(
     () => input({ concepts: [] }),
     /concepts must contain at least one value/,
+  );
+  assert.throws(
+    () => input({ takeaway: "" }),
+    /takeaway is required/,
+  );
+  assert.throws(
+    () => input({ whenNotApplicable: "" }),
+    /whenNotApplicable is required/,
   );
 });
 

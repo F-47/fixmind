@@ -1,6 +1,6 @@
-import { Brain, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { deleteLesson, loadDashboard, saveReview } from "./api";
+import { Brain, Download, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { deleteLesson, exportUrl, loadDashboard, resetAllLessons, saveReview } from "./api";
 import { LessonCard } from "./components/LessonCard";
 import { LessonDialog } from "./components/LessonDialog";
 import { MarginArt } from "./components/MarginArt";
@@ -25,6 +25,16 @@ export default function App() {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [page, setPage] = useState(1);
+  const [confirmingReset, setConfirmingReset] = useState(false);
+  const resetDialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    if (confirmingReset) {
+      if (!resetDialogRef.current?.open) resetDialogRef.current?.showModal();
+    } else {
+      resetDialogRef.current?.close();
+    }
+  }, [confirmingReset]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -92,6 +102,11 @@ export default function App() {
   async function removeLesson(lessonId: string) {
     await deleteLesson(lessonId);
     setSelected(null);
+    setData(await loadDashboard(query));
+  }
+  async function resetAll() {
+    await resetAllLessons();
+    setConfirmingReset(false);
     setData(await loadDashboard(query));
   }
 
@@ -302,6 +317,65 @@ export default function App() {
                 Patterns to work on
               </h2>
               <RankList items={data.patterns} />
+            </section>
+            <section>
+              <h2 className="mb-3 text-lg font-semibold tracking-tight">
+                Backup &amp; export
+              </h2>
+              <p className="mb-3 text-sm leading-relaxed text-muted">
+                Your lessons are stored locally. Export a copy any time.
+              </p>
+              <div className="flex flex-wrap gap-x-5 gap-y-2 font-mono text-[11px] uppercase tracking-[.15em]">
+                <a
+                  className="inline-flex items-center gap-1.5 text-accent hover:underline"
+                  href={exportUrl("json")}
+                  download
+                >
+                  <Download className="size-3.5" />
+                  Export JSON
+                </a>
+                <a
+                  className="inline-flex items-center gap-1.5 text-accent hover:underline"
+                  href={exportUrl("md")}
+                  download
+                >
+                  <Download className="size-3.5" />
+                  Export Markdown
+                </a>
+              </div>
+              <button
+                className="mt-4 cursor-pointer border-0 bg-transparent p-0 font-mono text-[11px] uppercase tracking-[.15em] text-danger hover:underline"
+                onClick={() => setConfirmingReset(true)}
+              >
+                Reset all data
+              </button>
+              <dialog
+                ref={resetDialogRef}
+                className="fixed top-1/2 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 border border-line bg-page p-6 text-ink shadow-[0_40px_100px_-30px_rgba(0,0,0,0.7)]"
+                onClose={() => setConfirmingReset(false)}
+                onClick={(event) => {
+                  if (event.target === resetDialogRef.current) setConfirmingReset(false);
+                }}
+              >
+                <p className="text-base leading-relaxed">
+                  Delete all {data.summary.total} lesson(s)? Export a backup first if you want to
+                  keep them &mdash; this can&rsquo;t be undone.
+                </p>
+                <div className="mt-6 flex justify-end gap-5 font-mono text-[11px] uppercase tracking-[.2em]">
+                  <button
+                    className="cursor-pointer border-0 bg-transparent p-0 text-muted hover:text-ink"
+                    onClick={() => setConfirmingReset(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="cursor-pointer border-0 bg-transparent p-0 font-bold text-danger hover:underline"
+                    onClick={() => void resetAll()}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </dialog>
             </section>
           </aside>
         </div>

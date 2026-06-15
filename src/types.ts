@@ -30,6 +30,7 @@ export interface Lesson {
   fixSummary: string;
   takeaway?: string;
   mistakePattern?: string;
+  whenNotApplicable?: string;
   concepts: string[];
   filesChanged: string[];
   codeExample?: string;
@@ -58,8 +59,9 @@ export interface LessonInput {
   mistake: string;
   rootCause: string;
   fixSummary: string;
-  takeaway?: string;
+  takeaway: string;
   mistakePattern?: string;
+  whenNotApplicable: string;
   concepts: string[];
   filesChanged?: string[];
   codeExample?: string;

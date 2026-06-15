@@ -5,6 +5,7 @@ import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildDashboardData } from "./dashboard-data.js";
+import { lessonsToJson, lessonsToMarkdown } from "./export.js";
 import { createLessonStore, type LessonStore } from "./storage.js";
 import type { ReviewQuestion, Understanding } from "./types.js";
 
@@ -65,6 +66,26 @@ async function handleRequest(
         store.due(),
         store.conceptStats().slice(0, 10),
       ));
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/export") {
+      const format = url.searchParams.get("format") === "md" ? "md" : "json";
+      const lessons = store.list(Number.MAX_SAFE_INTEGER);
+      const content = format === "md" ? lessonsToMarkdown(lessons) : lessonsToJson(lessons);
+      const date = new Date().toISOString().slice(0, 10);
+      sendDownload(
+        response,
+        content,
+        `fixmind-lessons-${date}.${format}`,
+        format === "md" ? "text/markdown; charset=utf-8" : "application/json; charset=utf-8",
+      );
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/reset") {
+      store.reset();
+      sendJson(response, 200, { ok: true });
       return;
     }
 
@@ -141,6 +162,17 @@ function sendJson(response: ServerResponse, status: number, value: unknown): voi
 function send(response: ServerResponse, status: number, contentType: string, body: string): void {
   response.writeHead(status, {
     "Content-Type": contentType,
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'",
+  });
+  response.end(body);
+}
+
+function sendDownload(response: ServerResponse, body: string, filename: string, contentType: string): void {
+  response.writeHead(200, {
+    "Content-Type": contentType,
+    "Content-Disposition": `attachment; filename="${filename}"`,
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
     "Content-Security-Policy": "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'",

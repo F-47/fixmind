@@ -25,3 +25,15 @@ export async function deleteLesson(lessonId: string): Promise<void> {
     throw new Error(result.error ?? "Could not delete lesson.");
   }
 }
+
+export function exportUrl(format: "json" | "md"): string {
+  return `/api/export?format=${format}`;
+}
+
+export async function resetAllLessons(): Promise<void> {
+  const response = await fetch("/api/reset", { method: "POST" });
+  if (!response.ok) {
+    const result = await response.json() as { error?: string };
+    throw new Error(result.error ?? "Could not reset lessons.");
+  }
+}

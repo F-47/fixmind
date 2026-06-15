@@ -7,7 +7,7 @@ import { z } from "zod";
 import { readGitContext } from "./git.js";
 import { databasePath } from "./paths.js";
 import { initializeDataDirectory, createLessonStore, type LessonStore } from "./storage.js";
-import { validateLessonInput } from "./validation.js";
+import { assessLessonQuality, validateLessonInput } from "./validation.js";
 
 export const MCP_INSTRUCTIONS = `
 You are the fixmind learning recorder. Your job is to capture lessons that help developers improve over time.
@@ -17,6 +17,9 @@ BEFORE calling save_learning_lesson, run this checklist:
   2. Does the developer now understand something they did not understand before?
   3. Can you write a concrete badCodeExample showing the wrong pattern?
   4. Can you explain WHY the old code was wrong, not just WHAT changed?
+  5. Can you state when this fix would NOT apply - a different framework/version,
+     a context where the old code is actually correct, or a case that needs a
+     different fix entirely?
 
 If any answer is NO, do NOT call save_learning_lesson.
 
@@ -28,14 +31,61 @@ DO NOT save a lesson for:
   - Adding a comment or doc-string without changing logic
   - Splitting one file into multiple files without changing logic
   - Purely mechanical refactors with no new understanding gained
+  - UI-only or styling-only changes (CSS, className, spacing, color, copy
+    tweaks) that don't change behavior or fix a bug
+  - Any change where you cannot point to a behavior that was wrong before
+    and correct after
 
-STRONGLY RECOMMENDED fields — always provide these when code is involved:
+FIELD GUIDE - each field has a distinct job. Do not let them repeat each other:
+  - problem: The user-visible SYMPTOM. What broke, what error appeared, or
+    what the user/tester observed. This is the "what happened".
+  - mistake: The WRONG ASSUMPTION or approach in the code that caused the
+    symptom - describe the flawed thinking, not just the line that changed.
+  - rootCause: WHY the mistake produced the symptom. This must add new
+    information beyond problem and mistake - if you find yourself repeating
+    either of them, dig one level deeper (e.g. "the API resolves before the
+    body streams" rather than "the data was empty").
+  - fixSummary: WHY the new code avoids the root cause - not just what code
+    changed. A reader should understand why this fix actually works, so they
+    could apply the same reasoning elsewhere.
+
+REQUIRED fields — every lesson must answer these:
   - mistake: What the developer actually did wrong in their thinking (not just what line changed)
-  - badCodeExample: The minimal broken snippet. Example: "const data = await fetch(url)"
-  - goodCodeExample: The corrected version. Example: "const res = await fetch(url); const data = await res.json();"
   - takeaway: One sentence to remember. Example: "fetch() resolves when headers arrive, not when the body is parsed."
+  - whenNotApplicable: When this advice does NOT apply. Example: "Doesn't apply inside Server Components, which can't use useEffect at all."
+
+STRONGLY RECOMMENDED fields — provide these when code is involved:
+  - badCodeExample: The minimal broken snippet. Example: "const data = await fetch(url)"
+  - goodCodeExample: The corrected version, paired with badCodeExample. Example: "const res = await fetch(url); const data = await res.json();"
   - mistakePattern: A 2–4 word reusable category. Examples: "Missing await", "Stale closure", "Off-by-one", "Wrong event lifetime"
   - tags: 1-3 entries naming the APIs/concepts involved, e.g. { "name": "MDN: URL.revokeObjectURL", "url": "https://developer.mozilla.org/en-US/docs/Web/API/URL/revokeObjectURL_static" }. Only set url when you are confident it is a real, official documentation page (MDN, the framework's own docs). If unsure, omit url and the tag is shown as a plain label.
+
+REVIEW QUESTIONS - write TRANSFER questions, not recall questions:
+  - Bad (recall): "What did you change?" / "Summarize the fix."
+  - Good (transfer): a question that asks the developer to apply the same
+    reasoning to a DIFFERENT situation, spot the same mistake in different
+    code, or predict what would happen under slightly different conditions.
+  - expectedAnswer should reference the underlying principle (rootCause /
+    takeaway), not just describe the diff.
+
+THE SAVE CAN BE REJECTED. If save_learning_lesson returns an error, it means
+the lesson didn't clear the quality bar. Common reasons, with the fix for each:
+  - rootCause or fixSummary just repeated another field word-for-word - rewrite
+    it to add the missing WHY (the mechanism, not a restatement).
+  - mistake and fixSummary both read as a pure refactor with no code comparison
+    - add badCodeExample/goodCodeExample, or don't save this as a lesson.
+  - problem/mistake/fixSummary read as a UI-only or styling-only change (colors,
+    spacing, className, fonts, etc.) with no described behavior change - say
+    what BROKE (an element became unclickable, content overflowed and hid other
+    content, etc.), not just what looked different.
+  - mistake, rootCause, or fixSummary is a generic placeholder like "fixed the
+    bug" or "the code was wrong" - name the actual function, condition, or
+    value involved.
+  - every reviewQuestion is a recall question ("what did you change") - rewrite
+    or add one TRANSFER question per the REVIEW QUESTIONS section above.
+Re-read the FIELD GUIDE above, rewrite the offending field with real new
+information, and try again. If you genuinely cannot explain a root cause beyond
+the symptom, this was probably not a learning-worthy fix - do not save it.
 
 For codeExample, badCodeExample, and goodCodeExample: write multi-line snippets
 with real line breaks and normal indentation, the same way you'd write the code
@@ -58,8 +108,8 @@ Write as a teacher, not as an agent log. Keep lessons short and human-readable.
 `.trim();
 
 const reviewQuestionSchema = z.object({
-  question: z.string().trim().min(1),
-  expectedAnswer: z.string().trim().min(1),
+  question: z.string().trim().min(1).describe("A TRANSFER question - apply the lesson to a different situation, spot the same mistake elsewhere, or predict an outcome. Do not ask 'what did you change' or 'summarize the fix'."),
+  expectedAnswer: z.string().trim().min(1).describe("The reasoning a developer who understood rootCause/takeaway would give - not just a description of the diff."),
 });
 
 export const lessonInputSchema = z.object({
@@ -67,12 +117,13 @@ export const lessonInputSchema = z.object({
   projectPath: z.string().trim().min(1).optional(),
   title: z.string().trim().min(1),
   originalPrompt: z.string().default(""),
-  problem: z.string().trim().min(1),
-  mistake: z.string().trim().min(1),
-  rootCause: z.string().trim().min(1),
-  fixSummary: z.string().trim().min(1),
-  takeaway: z.string().trim().min(1).optional().describe("STRONGLY RECOMMENDED. One plain sentence the developer should memorize. Example: 'Always revoke object URLs when a component unmounts.'"),
+  problem: z.string().trim().min(1).describe("The user-visible SYMPTOM - what broke, what error appeared, or what was observed. The 'what happened', not the 'why'."),
+  mistake: z.string().trim().min(1).describe("The wrong assumption or approach in the code that caused the symptom - the flawed thinking, not just the line that changed."),
+  rootCause: z.string().trim().min(1).describe("WHY the mistake produced the symptom. Must add information beyond problem and mistake, not restate either of them."),
+  fixSummary: z.string().trim().min(1).describe("WHY the new code avoids the root cause - not just what code changed."),
+  takeaway: z.string().trim().min(1).describe("REQUIRED. One plain sentence the developer should memorize. Example: 'Always revoke object URLs when a component unmounts.'"),
   mistakePattern: z.string().trim().min(1).optional().describe("STRONGLY RECOMMENDED. A 2–4 word reusable category. Examples: Missing cleanup, Stale closure, Off-by-one, Wrong event lifetime."),
+  whenNotApplicable: z.string().trim().min(1).describe("REQUIRED. When would this fix/advice NOT apply - a different framework version, a context where the same code is actually correct, or a case needing a different fix. Forces the lesson to state its scope, not just the one fix."),
   concepts: z.array(z.string().trim().min(1)).min(1),
   filesChanged: z.array(z.string().trim().min(1)).default([]),
   codeExample: z.string().optional(),
@@ -94,21 +145,6 @@ export const lessonInputSchema = z.object({
     "Use together with supersedesLessonId. One sentence on what was wrong with the old lesson and why this one replaces it.",
   ),
 });
-
-const REFACTOR_PATTERN = /\b(mov(e|ing|ed)|extract(ed|ing)?|split(ting)?|rename(d|ing)?|refactor(ed|ing)?|reorganiz(e|ed|ing)|relocat(e|ed|ing))\b/i;
-
-function detectRefactorWarning(input: ReturnType<typeof validateLessonInput>): string | null {
-  const hasCodeExamples = Boolean(input.badCodeExample || input.goodCodeExample);
-  if (hasCodeExamples) return null;
-  const text = `${input.mistake} ${input.mistakePattern ?? ""}`;
-  if (REFACTOR_PATTERN.test(text)) {
-    return "Quality notice: This lesson has no code examples and the mistake description sounds like a structural change. If this was a pure refactor (moving/renaming code), do not save it. If a real bug was fixed, add badCodeExample and goodCodeExample so the lesson is useful for future review.";
-  }
-  if ((input.filesChanged ?? []).length > 0) {
-    return "Quality notice: No code examples were captured. Add badCodeExample and goodCodeExample to make this lesson useful for future review.";
-  }
-  return null;
-}
 
 export function createLearningLessonServer(
   store: LessonStore = createLessonStore(),
@@ -143,7 +179,20 @@ export function createLearningLessonServer(
         }
 
         const input = validateLessonInput({ ...candidate, projectPath });
-        const warning = detectRefactorWarning(input);
+        const quality = assessLessonQuality(input);
+        if (quality.errors.length > 0) {
+          return {
+            isError: true,
+            content: [{
+              type: "text" as const,
+              text: [
+                "This lesson was not saved - it doesn't look like a learning-worthy fix yet:",
+                ...quality.errors.map((message) => `- ${message}`),
+              ].join("\n"),
+            }],
+          };
+        }
+
         const supersedeTarget = input.supersedesLessonId ? store.get(input.supersedesLessonId) : undefined;
         const saved = store.save(input);
 
@@ -165,7 +214,7 @@ export function createLearningLessonServer(
               `Next review: ${saved.nextReviewAt}`,
               `Database: ${databasePath()}`,
               ...(supersedeLines.length ? ["", ...supersedeLines] : []),
-              ...(warning ? ["", warning] : []),
+              ...(quality.warnings.length ? ["", ...quality.warnings] : []),
             ].join("\n"),
           }],
         };

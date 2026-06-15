@@ -26,6 +26,7 @@ export interface LessonStore {
   updateReview(id: string, questions: ReviewQuestion[], understanding: Understanding): Lesson;
   update(id: string, partial: Partial<LessonInput>): Lesson;
   delete(id: string): boolean;
+  reset(): void;
   supersede(oldId: string, newId: string, reason?: string): { old: Lesson; new: Lesson };
   conceptStats(): ConceptStat[];
   mistakeStats(): MistakeStat[];
@@ -65,6 +66,7 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
       fix_summary TEXT NOT NULL,
       takeaway TEXT,
       mistake_pattern TEXT,
+      when_not_applicable TEXT,
       concepts TEXT NOT NULL,
       files_changed TEXT NOT NULL,
       code_example TEXT,
@@ -98,6 +100,7 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
   ensureColumn("good_code_example", "TEXT");
   ensureColumn("takeaway", "TEXT");
   ensureColumn("mistake_pattern", "TEXT");
+  ensureColumn("when_not_applicable", "TEXT");
   ensureColumn("code_explanation", "TEXT");
   ensureColumn("practice_task", "TEXT");
   ensureColumn("status", "TEXT NOT NULL DEFAULT 'active'");
@@ -122,6 +125,7 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
         fixSummary: input.fixSummary,
         takeaway: input.takeaway,
         mistakePattern: input.mistakePattern,
+        whenNotApplicable: input.whenNotApplicable,
         concepts: input.concepts,
         filesChanged: input.filesChanged ?? [],
         codeExample: input.codeExample,
@@ -146,6 +150,7 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
         ...lesson,
         takeaway: lesson.takeaway ?? null,
         mistakePattern: lesson.mistakePattern ?? null,
+        whenNotApplicable: lesson.whenNotApplicable ?? null,
         codeExample: lesson.codeExample ?? null,
         badCodeExample: lesson.badCodeExample ?? null,
         goodCodeExample: lesson.goodCodeExample ?? null,
@@ -245,7 +250,7 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
       }
 
       const optionalStringFields = [
-        "takeaway", "mistakePattern", "codeExample", "badCodeExample",
+        "takeaway", "mistakePattern", "whenNotApplicable", "codeExample", "badCodeExample",
         "goodCodeExample", "codeExplanation", "practiceTask",
       ] as const;
       const codeFields = new Set(["codeExample", "badCodeExample", "goodCodeExample"]);
@@ -274,6 +279,10 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
       if (!existing) return false;
       db.delete(lessonsTable).where(eq(lessonsTable.id, id)).run();
       return true;
+    },
+
+    reset(): void {
+      db.delete(lessonsTable).run();
     },
 
     supersede(oldId: string, newId: string, reason?: string): { old: Lesson; new: Lesson } {
@@ -346,6 +355,7 @@ function fromDb(row: DbRow): Lesson {
     tags: normalizeTags(row.tags as Tag[] | string[]),
     takeaway: row.takeaway ?? undefined,
     mistakePattern: row.mistakePattern ?? undefined,
+    whenNotApplicable: row.whenNotApplicable ?? undefined,
     codeExample: row.codeExample ?? undefined,
     badCodeExample: row.badCodeExample ?? undefined,
     goodCodeExample: row.goodCodeExample ?? undefined,

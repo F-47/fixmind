@@ -47,6 +47,10 @@ export function lessonToMarkdown(lesson: Lesson): string {
   lines.push(lesson.takeaway || NOT_CAPTURED);
   lines.push("");
 
+  lines.push("## When this doesn't apply");
+  lines.push(lesson.whenNotApplicable || NOT_CAPTURED);
+  lines.push("");
+
   if (lesson.badCodeExample || lesson.goodCodeExample || lesson.codeExample) {
     lines.push("## Code comparison");
     lines.push("");

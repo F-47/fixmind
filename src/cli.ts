@@ -26,7 +26,7 @@ import {
   type LessonStore,
 } from "./storage.js";
 import type { Lesson, LessonInput, ReviewQuestion, Understanding } from "./types.js";
-import { validateLessonInput } from "./validation.js";
+import { assessLessonQuality, validateLessonInput } from "./validation.js";
 
 interface ParsedArgs {
   command?: string;
@@ -238,6 +238,10 @@ async function saveLesson(
       fixSummary: await get("fix-summary", "Fix summary"),
       takeaway: await get("takeaway", "One-sentence takeaway"),
       mistakePattern: await get("mistake-pattern", "Short mistake pattern"),
+      whenNotApplicable: await get(
+        "when-not-applicable",
+        "When this advice doesn't apply",
+      ),
       concepts: parseList(await get("concepts", "Concepts (comma-separated)")),
       filesChanged: parseList(
         await get(
@@ -301,8 +305,20 @@ async function saveLessonFromSummary(
   }
   const input = validateLessonInput(parsed);
   input.projectPath ??= process.cwd();
+
+  const quality = assessLessonQuality(input);
+  if (quality.errors.length > 0) {
+    throw new Error(
+      [
+        "This lesson was not saved - it doesn't look like a learning-worthy fix yet:",
+        ...quality.errors.map((message) => `- ${message}`),
+      ].join("\n"),
+    );
+  }
+
   const saved = store.save(input);
   console.log(`Saved lesson ${saved.id}: ${saved.title}`);
+  for (const warning of quality.warnings) console.log(warning);
 }
 
 async function review(store: LessonStore): Promise<void> {
@@ -509,6 +525,13 @@ async function editLesson(
     );
     if (mistakePattern !== undefined) partial.mistakePattern = mistakePattern;
 
+    const whenNotApplicable = await get(
+      "when-not-applicable",
+      "When this advice doesn't apply",
+      lesson.whenNotApplicable ?? "",
+    );
+    if (whenNotApplicable !== undefined) partial.whenNotApplicable = whenNotApplicable;
+
     const codeExample = await get("code-example", "Small code example", lesson.codeExample ?? "");
     if (codeExample !== undefined) partial.codeExample = codeExample;
 
@@ -648,7 +671,7 @@ async function readStdin(): Promise<string> {
 
 function printHelp(): void {
   console.log(
-    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --concepts --files-changed --code-example\n  --bad-code-example --good-code-example --code-explanation --practice-task\n  --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
+    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
   );
 }
 

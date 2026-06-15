@@ -18,6 +18,7 @@ function lesson(overrides: Partial<Lesson> = {}): Lesson {
     fixSummary: "Read localStorage after hydration",
     takeaway: "Keep server and browser output identical until hydration finishes.",
     mistakePattern: "Hydration timing",
+    whenNotApplicable: "Does not apply to values that are identical on server and client, like static labels.",
     concepts: ["Next.js hydration", "SSR/browser APIs"],
     filesChanged: ["app/theme.tsx"],
     codeExample: undefined,
@@ -55,6 +56,7 @@ test("lessonToMarkdown renders all sections for a fully-populated lesson", () =>
   assert.match(markdown, /## Root cause\nBrowser APIs are unavailable during SSR/);
   assert.match(markdown, /## Fix\nRead localStorage after hydration/);
   assert.match(markdown, /## Takeaway\nKeep server and browser output identical/);
+  assert.match(markdown, /## When this doesn't apply\nDoes not apply to values that are identical/);
   assert.match(markdown, /## Code comparison/);
   assert.match(markdown, /const theme = localStorage\.getItem\('theme'\)/);
   assert.match(markdown, /useEffect\(\(\) => loadTheme\(\), \[\]\)/);
@@ -68,6 +70,7 @@ test("lessonToMarkdown handles missing optional fields without throwing", () => 
   const markdown = lessonToMarkdown(lesson({
     takeaway: undefined,
     mistakePattern: undefined,
+    whenNotApplicable: undefined,
     codeExample: undefined,
     badCodeExample: undefined,
     goodCodeExample: undefined,
@@ -84,6 +87,7 @@ test("lessonToMarkdown handles missing optional fields without throwing", () => 
   }));
 
   assert.match(markdown, /## Takeaway\n_Not captured\._/);
+  assert.match(markdown, /## When this doesn't apply\n_Not captured\._/);
   assert.match(markdown, /## Practice task\n_Not captured\._/);
   assert.doesNotMatch(markdown, /## Code comparison/);
   assert.doesNotMatch(markdown, /## Files changed/);
