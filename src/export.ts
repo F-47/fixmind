@@ -1,5 +1,8 @@
-import { formatDate } from "./format.js";
 import type { Lesson } from "./types.js";
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
+}
 
 const NOT_CAPTURED = "_Not captured._";
 

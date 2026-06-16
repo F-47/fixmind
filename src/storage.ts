@@ -1,10 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { drizzle } from "drizzle-orm/node-sqlite";
-import { eq, or, and, ne, desc, asc, lte, sql } from "drizzle-orm";
+import { DatabaseSync } from "node:sqlite";
 import { configPath, dataDirectory, databasePath } from "./paths.js";
-import { lessons as lessonsTable } from "./schema.js";
 import { assertRealLineBreaks } from "./validation.js";
 import type {
   Lesson,
@@ -33,6 +31,40 @@ export interface LessonStore {
   close(): void;
 }
 
+interface RawRow {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  tool: string;
+  project_path: string;
+  title: string;
+  original_prompt: string;
+  problem: string;
+  mistake: string;
+  root_cause: string;
+  fix_summary: string;
+  takeaway: string | null;
+  mistake_pattern: string | null;
+  when_not_applicable: string | null;
+  concepts: string;
+  files_changed: string;
+  code_example: string | null;
+  bad_code_example: string | null;
+  good_code_example: string | null;
+  code_explanation: string | null;
+  practice_task: string | null;
+  review_questions: string;
+  understanding: string;
+  next_review_at: string;
+  review_count: number;
+  source_diff: string | null;
+  tags: string;
+  status: string;
+  superseded_by: string | null;
+  supersedes: string | null;
+  supersede_reason: string | null;
+}
+
 export function initializeDataDirectory(): { directory: string; database: string; config: string } {
   const directory = dataDirectory();
   fs.mkdirSync(directory, { recursive: true });
@@ -49,9 +81,9 @@ export function initializeDataDirectory(): { directory: string; database: string
 
 export function createLessonStore(filePath = databasePath()): LessonStore {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  const db = drizzle(filePath);
+  const db = new DatabaseSync(filePath);
 
-  db.$client.exec(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS lessons (
       id TEXT PRIMARY KEY,
       created_at TEXT NOT NULL,
@@ -88,25 +120,6 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
     CREATE INDEX IF NOT EXISTS idx_lessons_created_at ON lessons(created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_lessons_next_review_at ON lessons(next_review_at);
   `);
-
-  function ensureColumn(name: string, definition: string): void {
-    const columns = db.$client.prepare("PRAGMA table_info(lessons)").all() as Array<{ name: string }>;
-    if (!columns.some((col) => col.name === name)) {
-      db.$client.exec(`ALTER TABLE lessons ADD COLUMN ${name} ${definition}`);
-    }
-  }
-
-  ensureColumn("bad_code_example", "TEXT");
-  ensureColumn("good_code_example", "TEXT");
-  ensureColumn("takeaway", "TEXT");
-  ensureColumn("mistake_pattern", "TEXT");
-  ensureColumn("when_not_applicable", "TEXT");
-  ensureColumn("code_explanation", "TEXT");
-  ensureColumn("practice_task", "TEXT");
-  ensureColumn("status", "TEXT NOT NULL DEFAULT 'active'");
-  ensureColumn("superseded_by", "TEXT");
-  ensureColumn("supersedes", "TEXT");
-  ensureColumn("supersede_reason", "TEXT");
 
   return {
     save(input: LessonInput): Lesson {
@@ -146,21 +159,29 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
         status: "active",
       };
 
-      db.insert(lessonsTable).values({
-        ...lesson,
-        takeaway: lesson.takeaway ?? null,
-        mistakePattern: lesson.mistakePattern ?? null,
-        whenNotApplicable: lesson.whenNotApplicable ?? null,
-        codeExample: lesson.codeExample ?? null,
-        badCodeExample: lesson.badCodeExample ?? null,
-        goodCodeExample: lesson.goodCodeExample ?? null,
-        codeExplanation: lesson.codeExplanation ?? null,
-        practiceTask: lesson.practiceTask ?? null,
-        sourceDiff: lesson.sourceDiff ?? null,
-        supersededBy: null,
-        supersedes: null,
-        supersedeReason: null,
-      }).run();
+      db.prepare(`
+        INSERT INTO lessons (
+          id, created_at, updated_at, tool, project_path, title, original_prompt,
+          problem, mistake, root_cause, fix_summary, takeaway, mistake_pattern,
+          when_not_applicable, concepts, files_changed, code_example, bad_code_example,
+          good_code_example, code_explanation, practice_task, review_questions,
+          understanding, next_review_at, review_count, source_diff, tags,
+          status, superseded_by, supersedes, supersede_reason
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL
+        )
+      `).run(
+        lesson.id, lesson.createdAt, lesson.updatedAt, lesson.tool, lesson.projectPath,
+        lesson.title, lesson.originalPrompt, lesson.problem, lesson.mistake,
+        lesson.rootCause, lesson.fixSummary,
+        lesson.takeaway ?? null, lesson.mistakePattern ?? null, lesson.whenNotApplicable ?? null,
+        JSON.stringify(lesson.concepts), JSON.stringify(lesson.filesChanged),
+        lesson.codeExample ?? null, lesson.badCodeExample ?? null, lesson.goodCodeExample ?? null,
+        lesson.codeExplanation ?? null, lesson.practiceTask ?? null,
+        JSON.stringify(lesson.reviewQuestions),
+        lesson.understanding, lesson.nextReviewAt, lesson.reviewCount,
+        lesson.sourceDiff ?? null, JSON.stringify(lesson.tags), lesson.status,
+      );
 
       if (input.supersedesLessonId && this.get(input.supersedesLessonId)) {
         this.supersede(input.supersedesLessonId, lesson.id, input.supersedeReason);
@@ -172,142 +193,115 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
     },
 
     get(id: string): Lesson | undefined {
-      const row = db.select().from(lessonsTable).where(eq(lessonsTable.id, id)).get();
+      const row = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id) as unknown as RawRow | undefined;
       return row ? fromDb(row) : undefined;
     },
 
     list(limit = 20): Lesson[] {
-      return db.select().from(lessonsTable)
-        .orderBy(desc(lessonsTable.createdAt))
-        .limit(limit)
-        .all()
-        .map(fromDb);
+      return (db.prepare("SELECT * FROM lessons ORDER BY created_at DESC LIMIT ?").all(limit) as unknown as RawRow[]).map(fromDb);
     },
 
     search(query: string, options: { includeSuperseded?: boolean } = {}): Lesson[] {
       const pattern = `%${query.toLowerCase()}%`;
-      const textMatch = or(
-        sql`lower(${lessonsTable.title}) like ${pattern}`,
-        sql`lower(${lessonsTable.problem}) like ${pattern}`,
-        sql`lower(${lessonsTable.rootCause}) like ${pattern}`,
-        sql`lower(${lessonsTable.fixSummary}) like ${pattern}`,
-        sql`lower(${lessonsTable.takeaway}) like ${pattern}`,
-        sql`lower(${lessonsTable.mistakePattern}) like ${pattern}`,
-        sql`lower(${lessonsTable.concepts}) like ${pattern}`,
-        sql`lower(${lessonsTable.tags}) like ${pattern}`,
-      );
-      const where = options.includeSuperseded
-        ? textMatch
-        : and(textMatch, ne(lessonsTable.status, "superseded"));
-      return db.select().from(lessonsTable).where(where)
-        .orderBy(desc(lessonsTable.createdAt)).all().map(fromDb);
+      const cols = ["title", "problem", "root_cause", "fix_summary", "takeaway", "mistake_pattern", "concepts", "tags"];
+      const textWhere = cols.map((c) => `lower(${c}) LIKE ?`).join(" OR ");
+      const sql = options.includeSuperseded
+        ? `SELECT * FROM lessons WHERE (${textWhere}) ORDER BY created_at DESC`
+        : `SELECT * FROM lessons WHERE (${textWhere}) AND status != 'superseded' ORDER BY created_at DESC`;
+      return (db.prepare(sql).all(...Array<string>(cols.length).fill(pattern)) as unknown as RawRow[]).map(fromDb);
     },
 
     due(now = new Date()): Lesson[] {
-      return db.select().from(lessonsTable)
-        .where(and(
-          lte(lessonsTable.nextReviewAt, now.toISOString()),
-          ne(lessonsTable.status, "superseded"),
-        ))
-        .orderBy(asc(lessonsTable.nextReviewAt))
-        .all()
-        .map(fromDb);
+      return (db.prepare(
+        "SELECT * FROM lessons WHERE next_review_at <= ? AND status != 'superseded' ORDER BY next_review_at ASC",
+      ).all(now.toISOString()) as unknown as RawRow[]).map(fromDb);
     },
 
     updateReview(id: string, questions: ReviewQuestion[], understanding: Understanding): Lesson {
-      const current = db.select().from(lessonsTable).where(eq(lessonsTable.id, id)).get();
+      const current = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id) as unknown as RawRow | undefined;
       if (!current) throw new Error(`Lesson not found: ${id}`);
 
-      const count = current.reviewCount + 1;
-      const interval = reviewIntervalDays(understanding, count);
+      const count = current.review_count + 1;
       const updatedAt = new Date();
+      const nextReviewAt = addDays(updatedAt, reviewIntervalDays(understanding, count));
 
-      db.update(lessonsTable).set({
-        reviewQuestions: questions,
-        understanding,
-        updatedAt: updatedAt.toISOString(),
-        nextReviewAt: addDays(updatedAt, interval).toISOString(),
-        reviewCount: count,
-      }).where(eq(lessonsTable.id, id)).run();
+      db.prepare(
+        "UPDATE lessons SET review_questions=?, understanding=?, updated_at=?, next_review_at=?, review_count=? WHERE id=?",
+      ).run(JSON.stringify(questions), understanding, updatedAt.toISOString(), nextReviewAt.toISOString(), count, id);
 
-      return fromDb(db.select().from(lessonsTable).where(eq(lessonsTable.id, id)).get()!);
+      return fromDb(db.prepare("SELECT * FROM lessons WHERE id = ?").get(id) as unknown as RawRow);
     },
 
     update(id: string, partial: Partial<LessonInput>): Lesson {
-      const current = db.select().from(lessonsTable).where(eq(lessonsTable.id, id)).get();
-      if (!current) throw new Error(`Lesson not found: ${id}`);
-
-      const updates: Record<string, unknown> = {};
-
-      const requiredFields = ["title", "problem", "mistake", "rootCause", "fixSummary"] as const;
-      for (const field of requiredFields) {
-        const value = partial[field];
-        if (value === undefined) continue;
-        if (typeof value !== "string" || value.trim() === "") {
-          throw new Error(`Invalid lesson: ${field} is required.`);
-        }
-        updates[field] = value.trim();
+      if (!(db.prepare("SELECT id FROM lessons WHERE id = ?").get(id))) {
+        throw new Error(`Lesson not found: ${id}`);
       }
 
-      const optionalStringFields = [
-        "takeaway", "mistakePattern", "whenNotApplicable", "codeExample", "badCodeExample",
-        "goodCodeExample", "codeExplanation", "practiceTask",
+      const sets: string[] = ["updated_at = ?"];
+      const params: (string | number | null)[] = [new Date().toISOString()];
+
+      const reqFields = ["title", "problem", "mistake", "rootCause", "fixSummary"] as const;
+      const reqCols: Record<typeof reqFields[number], string> = {
+        title: "title", problem: "problem", mistake: "mistake",
+        rootCause: "root_cause", fixSummary: "fix_summary",
+      };
+      for (const f of reqFields) {
+        const v = partial[f];
+        if (v === undefined) continue;
+        if (v.trim() === "") throw new Error(`Invalid lesson: ${f} is required.`);
+        params.push(v.trim()); sets.push(`${reqCols[f]} = ?`);
+      }
+
+      const optFields = [
+        "takeaway", "mistakePattern", "whenNotApplicable",
+        "codeExample", "badCodeExample", "goodCodeExample",
+        "codeExplanation", "practiceTask",
       ] as const;
-      const codeFields = new Set(["codeExample", "badCodeExample", "goodCodeExample"]);
-      for (const field of optionalStringFields) {
-        const value = partial[field];
-        if (value === undefined) continue;
-        const trimmed = value.trim();
-        if (trimmed && codeFields.has(field)) assertRealLineBreaks(trimmed, field);
-        updates[field] = trimmed || null;
+      const optCols: Record<typeof optFields[number], string> = {
+        takeaway: "takeaway", mistakePattern: "mistake_pattern",
+        whenNotApplicable: "when_not_applicable", codeExample: "code_example",
+        badCodeExample: "bad_code_example", goodCodeExample: "good_code_example",
+        codeExplanation: "code_explanation", practiceTask: "practice_task",
+      };
+      const codeFs = new Set<string>(["codeExample", "badCodeExample", "goodCodeExample"]);
+      for (const f of optFields) {
+        const v = partial[f];
+        if (v === undefined) continue;
+        const trimmed = v.trim();
+        if (trimmed && codeFs.has(f)) assertRealLineBreaks(trimmed, f);
+        params.push(trimmed || null); sets.push(`${optCols[f]} = ?`);
       }
 
-      if (partial.concepts !== undefined) updates.concepts = partial.concepts;
-      if (partial.filesChanged !== undefined) updates.filesChanged = partial.filesChanged;
-      if (partial.tags !== undefined) updates.tags = partial.tags;
-      if (partial.understanding !== undefined) updates.understanding = partial.understanding;
+      if (partial.concepts !== undefined) { params.push(JSON.stringify(partial.concepts)); sets.push("concepts = ?"); }
+      if (partial.filesChanged !== undefined) { params.push(JSON.stringify(partial.filesChanged)); sets.push("files_changed = ?"); }
+      if (partial.tags !== undefined) { params.push(JSON.stringify(partial.tags)); sets.push("tags = ?"); }
+      if (partial.understanding !== undefined) { params.push(partial.understanding); sets.push("understanding = ?"); }
 
-      updates.updatedAt = new Date().toISOString();
-
-      db.update(lessonsTable).set(updates).where(eq(lessonsTable.id, id)).run();
-
-      return fromDb(db.select().from(lessonsTable).where(eq(lessonsTable.id, id)).get()!);
+      db.prepare(`UPDATE lessons SET ${sets.join(", ")} WHERE id = ?`).run(...params, id);
+      return fromDb(db.prepare("SELECT * FROM lessons WHERE id = ?").get(id) as unknown as RawRow);
     },
 
     delete(id: string): boolean {
-      const existing = db.select().from(lessonsTable).where(eq(lessonsTable.id, id)).get();
-      if (!existing) return false;
-      db.delete(lessonsTable).where(eq(lessonsTable.id, id)).run();
+      if (!db.prepare("SELECT id FROM lessons WHERE id = ?").get(id)) return false;
+      db.prepare("DELETE FROM lessons WHERE id = ?").run(id);
       return true;
     },
 
     reset(): void {
-      db.delete(lessonsTable).run();
+      db.exec("DELETE FROM lessons");
     },
 
     supersede(oldId: string, newId: string, reason?: string): { old: Lesson; new: Lesson } {
-      const old = db.select().from(lessonsTable).where(eq(lessonsTable.id, oldId)).get();
-      if (!old) throw new Error(`Lesson not found: ${oldId}`);
-      const next = db.select().from(lessonsTable).where(eq(lessonsTable.id, newId)).get();
-      if (!next) throw new Error(`Lesson not found: ${newId}`);
+      if (!db.prepare("SELECT id FROM lessons WHERE id = ?").get(oldId)) throw new Error(`Lesson not found: ${oldId}`);
+      if (!db.prepare("SELECT id FROM lessons WHERE id = ?").get(newId)) throw new Error(`Lesson not found: ${newId}`);
 
       const updatedAt = new Date().toISOString();
-      db.update(lessonsTable).set({
-        status: "superseded",
-        supersededBy: newId,
-        supersedeReason: reason ?? null,
-        updatedAt,
-      }).where(eq(lessonsTable.id, oldId)).run();
-
-      db.update(lessonsTable).set({
-        supersedes: oldId,
-        supersedeReason: reason ?? null,
-        updatedAt,
-      }).where(eq(lessonsTable.id, newId)).run();
+      db.prepare("UPDATE lessons SET status='superseded', superseded_by=?, supersede_reason=?, updated_at=? WHERE id=?").run(newId, reason ?? null, updatedAt, oldId);
+      db.prepare("UPDATE lessons SET supersedes=?, supersede_reason=?, updated_at=? WHERE id=?").run(oldId, reason ?? null, updatedAt, newId);
 
       return {
-        old: fromDb(db.select().from(lessonsTable).where(eq(lessonsTable.id, oldId)).get()!),
-        new: fromDb(db.select().from(lessonsTable).where(eq(lessonsTable.id, newId)).get()!),
+        old: fromDb(db.prepare("SELECT * FROM lessons WHERE id = ?").get(oldId) as unknown as RawRow),
+        new: fromDb(db.prepare("SELECT * FROM lessons WHERE id = ?").get(newId) as unknown as RawRow),
       };
     },
 
@@ -336,36 +330,50 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
     },
 
     close(): void {
-      db.$client.close();
+      db.close();
     },
   };
 }
 
-type DbRow = typeof lessonsTable.$inferSelect;
-
-function normalizeTags(raw: Tag[] | string[]): Tag[] {
+function normalizeTags(raw: unknown): Tag[] {
   return (raw as Array<Tag | string>).map((item) =>
     typeof item === "string" ? { name: item } : item,
   );
 }
 
-function fromDb(row: DbRow): Lesson {
+function fromDb(row: RawRow): Lesson {
   return {
-    ...row,
-    tags: normalizeTags(row.tags as Tag[] | string[]),
+    id: row.id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    tool: row.tool,
+    projectPath: row.project_path,
+    title: row.title,
+    originalPrompt: row.original_prompt,
+    problem: row.problem,
+    mistake: row.mistake,
+    rootCause: row.root_cause,
+    fixSummary: row.fix_summary,
     takeaway: row.takeaway ?? undefined,
-    mistakePattern: row.mistakePattern ?? undefined,
-    whenNotApplicable: row.whenNotApplicable ?? undefined,
-    codeExample: row.codeExample ?? undefined,
-    badCodeExample: row.badCodeExample ?? undefined,
-    goodCodeExample: row.goodCodeExample ?? undefined,
-    codeExplanation: row.codeExplanation ?? undefined,
-    practiceTask: row.practiceTask ?? undefined,
-    sourceDiff: row.sourceDiff ?? undefined,
+    mistakePattern: row.mistake_pattern ?? undefined,
+    whenNotApplicable: row.when_not_applicable ?? undefined,
+    concepts: JSON.parse(row.concepts) as string[],
+    filesChanged: JSON.parse(row.files_changed) as string[],
+    codeExample: row.code_example ?? undefined,
+    badCodeExample: row.bad_code_example ?? undefined,
+    goodCodeExample: row.good_code_example ?? undefined,
+    codeExplanation: row.code_explanation ?? undefined,
+    practiceTask: row.practice_task ?? undefined,
+    reviewQuestions: JSON.parse(row.review_questions) as ReviewQuestion[],
+    understanding: row.understanding as Understanding,
+    nextReviewAt: row.next_review_at,
+    reviewCount: row.review_count,
+    sourceDiff: row.source_diff ?? undefined,
+    tags: normalizeTags(JSON.parse(row.tags)),
     status: row.status as LessonStatus,
-    supersededBy: row.supersededBy ?? undefined,
+    supersededBy: row.superseded_by ?? undefined,
     supersedes: row.supersedes ?? undefined,
-    supersedeReason: row.supersedeReason ?? undefined,
+    supersedeReason: row.supersede_reason ?? undefined,
   };
 }
 

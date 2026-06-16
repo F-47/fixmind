@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "@fontsource-variable/fraunces";
 
 @theme {
   --color-page: #14171a;
@@ -12,7 +11,7 @@
   --color-warn: #d6ab5f;
   --color-danger: #d9594f;
 
-  --font-serif: "Fraunces Variable", Georgia, "Times New Roman", serif;
+  --font-serif: "Fraunces", Georgia, "Times New Roman", serif;
 }
 
 @layer base {

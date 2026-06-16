@@ -1,17 +1,21 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import { stdin, stdout } from "node:process";
+import { parseArgs as nodeParseArgs } from "node:util";
 import {
-  numberOption,
-  optionalPort,
-  optionString,
-  parseList,
-} from "./cli-options.js";
-import { supportedClientOptions } from "./client-options.js";
-import { formatLessonList } from "./format.js";
+  cancel,
+  confirm,
+  intro,
+  isCancel,
+  log,
+  multiselect,
+  note,
+  outro,
+  select,
+  text,
+} from "@clack/prompts";
 import { lessonsToJson, lessonsToMarkdown } from "./export.js";
 import { readGitContext } from "./git.js";
-import { createPrompter } from "./prompts.js";
 import {
   configureClients,
   configureInstructions,
@@ -27,6 +31,65 @@ import {
 } from "./storage.js";
 import type { Lesson, LessonInput, ReviewQuestion, Understanding } from "./types.js";
 import { assessLessonQuality, validateLessonInput } from "./validation.js";
+
+const common = { input: stdin, output: stdout };
+
+function unwrap<T>(value: T | symbol): T {
+  if (isCancel(value)) { cancel("Operation cancelled."); process.exit(0); }
+  return value as T;
+}
+
+function optionString(value: string | boolean | undefined): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function numberOption(value: string | boolean | undefined, fallback: number): number {
+  if (value === undefined) return fallback;
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0)
+    throw new Error("--limit must be a positive integer.");
+  return parsed;
+}
+
+function optionalPort(value: string | boolean | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 0 || port > 65535)
+    throw new Error("--port must be an integer from 0 to 65535.");
+  return port;
+}
+
+function parseList(value?: string): string[] {
+  return value?.split(",").map((item) => item.trim()).filter(Boolean) ?? [];
+}
+
+function formatDate(value: string): string {
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
+}
+
+function formatLessonList(lessons: Lesson[]): string {
+  if (lessons.length === 0) return "No lessons found.";
+  return lessons.map((lesson) => {
+    const concepts = lesson.concepts.join(", ") || "none";
+    const suffix = lesson.status === "superseded" ? " [superseded]" : "";
+    return [
+      `${lesson.id.slice(0, 8)}  ${lesson.title}${suffix}`,
+      `  concepts: ${concepts}`,
+      `  understanding: ${lesson.understanding} | next review: ${formatDate(lesson.nextReviewAt)}`,
+    ].join("\n");
+  }).join("\n\n");
+}
+
+function supportedClientOptions(
+  detected: SupportedClient[],
+): Array<{ value: SupportedClient; label: string; hint?: string }> {
+  const detectedSet = new Set(detected);
+  return [
+    { value: "codex", label: "Codex", hint: detectedSet.has("codex") ? "detected" : undefined },
+    { value: "claude", label: "Claude", hint: detectedSet.has("claude") ? "detected" : undefined },
+    { value: "cursor", label: "Cursor", hint: detectedSet.has("cursor") ? "detected" : undefined },
+  ];
+}
 
 interface ParsedArgs {
   command?: string;
@@ -140,22 +203,16 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
   let clients = supplied.length ? validateClients(supplied) : detected;
 
   if (!supplied.length && stdin.isTTY && stdout.isTTY) {
-    const prompt = createPrompter();
-    try {
-      prompt.intro("Configure Learning Lessons");
-      prompt.note(
-        "Pick the AI clients that should receive the MCP server configuration.",
-        "Setup",
-      );
-      const selected = await prompt.chooseMany(
-        "Clients to configure",
-        supportedClientOptions(detected),
-        detected,
-      );
-      clients = validateClients(selected);
-    } finally {
-      prompt.close();
-    }
+    intro("Configure Learning Lessons", common);
+    note("Pick the AI clients that should receive the MCP server configuration.", "Setup", common);
+    const selected = unwrap(await multiselect({
+      message: "Clients to configure",
+      options: supportedClientOptions(detected),
+      initialValues: detected,
+      required: false,
+      ...common,
+    }));
+    clients = validateClients(selected);
   }
 
   if (clients.length === 0) {
@@ -198,90 +255,79 @@ async function saveLesson(
 ): Promise<void> {
   const git = readGitContext();
   const interactive = stdin.isTTY && stdout.isTTY;
-  const prompt = interactive ? createPrompter() : undefined;
-  try {
-    if (prompt) {
-      prompt.intro("Save a learning lesson");
-      prompt.note(
-        "Save the reusable lesson, not just the one-off bug report.",
-        "Focus",
-      );
-    }
 
-    const get = async (
-      key: string,
-      label: string,
-      fallback = "",
-    ): Promise<string> => {
-      const supplied = optionString(options[key]);
-      if (supplied !== undefined) return supplied;
-      if (!prompt) return fallback;
-      return prompt.ask(label, fallback);
-    };
+  if (interactive) {
+    intro("Save a learning lesson", common);
+    note("Save the reusable lesson, not just the one-off bug report.", "Focus", common);
+  }
 
-    if (git.stat) {
-      if (prompt) {
-        prompt.note(git.stat, "Working tree changes");
-      } else {
-        console.log(`Detected working tree changes:\n${git.stat}\n`);
-      }
-    }
-    const reviewQuestion = await get("review-question", "Review question");
-    const input = validateLessonInput({
-      tool: optionString(options.tool) ?? "manual",
-      projectPath: process.cwd(),
-      title: await get("title", "Title"),
-      originalPrompt: await get("original-prompt", "Original prompt"),
-      problem: await get("problem", "Problem"),
-      mistake: await get("mistake", "Mistake"),
-      rootCause: await get("root-cause", "Root cause"),
-      fixSummary: await get("fix-summary", "Fix summary"),
-      takeaway: await get("takeaway", "One-sentence takeaway"),
-      mistakePattern: await get("mistake-pattern", "Short mistake pattern"),
-      whenNotApplicable: await get(
-        "when-not-applicable",
-        "When this advice doesn't apply",
-      ),
-      concepts: parseList(await get("concepts", "Concepts (comma-separated)")),
-      filesChanged: parseList(
-        await get(
-          "files-changed",
-          "Files changed (comma-separated)",
-          git.filesChanged.join(","),
-        ),
-      ),
-      codeExample: await get("code-example", "Small code example"),
-      badCodeExample: await get(
-        "bad-code-example",
-        "Minimal wrong code example",
-      ),
-      goodCodeExample: await get(
-        "good-code-example",
-        "Minimal corrected code example",
-      ),
-      codeExplanation: await get(
-        "code-explanation",
-        "Why the corrected example works",
-      ),
-      practiceTask: await get("practice-task", "Small practice task"),
-      reviewQuestions: [
-        {
-          question: reviewQuestion,
-          expectedAnswer: await get("expected-answer", "Expected answer"),
-        },
-      ],
-      understanding: optionString(options.understanding) ?? "unknown",
-      sourceDiff: git.sourceDiff,
-      tags: parseList(await get("tags", "Tags (comma-separated)")).map((name) => ({ name })),
-    });
-    const saved = store.save(input);
-    if (prompt) {
-      prompt.outro(`Saved lesson ${saved.id}: ${saved.title}`);
+  const get = async (key: string, label: string, fallback = ""): Promise<string> => {
+    const supplied = optionString(options[key]);
+    if (supplied !== undefined) return supplied;
+    if (!interactive) return fallback;
+    return unwrap(await text({ message: label, defaultValue: fallback || undefined, ...common }));
+  };
+
+  if (git.stat) {
+    if (interactive) {
+      note(git.stat, "Working tree changes", common);
     } else {
-      console.log(`Saved lesson ${saved.id}: ${saved.title}`);
+      console.log(`Detected working tree changes:\n${git.stat}\n`);
     }
-  } finally {
-    prompt?.close();
+  }
+  const reviewQuestion = await get("review-question", "Review question");
+  const input = validateLessonInput({
+    tool: optionString(options.tool) ?? "manual",
+    projectPath: process.cwd(),
+    title: await get("title", "Title"),
+    originalPrompt: await get("original-prompt", "Original prompt"),
+    problem: await get("problem", "Problem"),
+    mistake: await get("mistake", "Mistake"),
+    rootCause: await get("root-cause", "Root cause"),
+    fixSummary: await get("fix-summary", "Fix summary"),
+    takeaway: await get("takeaway", "One-sentence takeaway"),
+    mistakePattern: await get("mistake-pattern", "Short mistake pattern"),
+    whenNotApplicable: await get(
+      "when-not-applicable",
+      "When this advice doesn't apply",
+    ),
+    concepts: parseList(await get("concepts", "Concepts (comma-separated)")),
+    filesChanged: parseList(
+      await get(
+        "files-changed",
+        "Files changed (comma-separated)",
+        git.filesChanged.join(","),
+      ),
+    ),
+    codeExample: await get("code-example", "Small code example"),
+    badCodeExample: await get(
+      "bad-code-example",
+      "Minimal wrong code example",
+    ),
+    goodCodeExample: await get(
+      "good-code-example",
+      "Minimal corrected code example",
+    ),
+    codeExplanation: await get(
+      "code-explanation",
+      "Why the corrected example works",
+    ),
+    practiceTask: await get("practice-task", "Small practice task"),
+    reviewQuestions: [
+      {
+        question: reviewQuestion,
+        expectedAnswer: await get("expected-answer", "Expected answer"),
+      },
+    ],
+    understanding: optionString(options.understanding) ?? "unknown",
+    sourceDiff: git.sourceDiff,
+    tags: parseList(await get("tags", "Tags (comma-separated)")).map((name) => ({ name })),
+  });
+  const saved = store.save(input);
+  if (interactive) {
+    outro(`Saved lesson ${saved.id}: ${saved.title}`, common);
+  } else {
+    console.log(`Saved lesson ${saved.id}: ${saved.title}`);
   }
 }
 
@@ -331,50 +377,41 @@ async function review(store: LessonStore): Promise<void> {
     return;
   }
 
-  const prompt = createPrompter();
-  try {
-    prompt.intro("Review learning lessons");
-    prompt.info(`${due.length} lesson(s) due.`);
-    for (const lesson of due) {
-      prompt.note(
-        `Problem: ${lesson.problem}\nTakeaway: ${lesson.takeaway ?? lesson.fixSummary}`,
-        lesson.title,
-      );
-      const questions: ReviewQuestion[] = [];
-      for (const question of lesson.reviewQuestions) {
-        const answer = await prompt.ask(
-          `${question.question}\nYour answer (or "skip")`,
-        );
-        const skipped = answer.toLocaleLowerCase() === "skip";
-        questions.push({
-          ...question,
-          userAnswer: skipped ? undefined : answer,
-          status: skipped ? "skipped" : "answered",
-        });
-        if (!skipped) {
-          prompt.info(`Expected: ${question.expectedAnswer}`);
-        }
+  intro("Review learning lessons", common);
+  log.info(`${due.length} lesson(s) due.`, common);
+  for (const lesson of due) {
+    note(
+      `Problem: ${lesson.problem}\nTakeaway: ${lesson.takeaway ?? lesson.fixSummary}`,
+      lesson.title,
+      common,
+    );
+    const questions: ReviewQuestion[] = [];
+    for (const question of lesson.reviewQuestions) {
+      const answer = unwrap(await text({
+        message: `${question.question}\nYour answer (or "skip")`,
+        ...common,
+      }));
+      const skipped = answer.toLocaleLowerCase() === "skip";
+      questions.push({
+        ...question,
+        userAnswer: skipped ? undefined : answer,
+        status: skipped ? "skipped" : "answered",
+      });
+      if (!skipped) {
+        log.info(`Expected: ${question.expectedAnswer}`, common);
       }
-      const understanding = await askUnderstanding(prompt);
-      const updated = store.updateReview(
-        lesson.id,
-        questions,
-        understanding,
-      );
-      prompt.info(`Review saved. Next review: ${updated.nextReviewAt}`);
     }
-    prompt.outro("Review session complete.");
-  } finally {
-    prompt.close();
+    const understanding = await askUnderstanding();
+    const updated = store.updateReview(lesson.id, questions, understanding);
+    log.info(`Review saved. Next review: ${updated.nextReviewAt}`, common);
   }
+  outro("Review session complete.", common);
 }
 
-async function askUnderstanding(
-  prompt: ReturnType<typeof createPrompter>,
-): Promise<Understanding> {
-  return prompt.chooseOne(
-    "How well do you understand this lesson now?",
-    [
+async function askUnderstanding(): Promise<Understanding> {
+  return unwrap(await select({
+    message: "How well do you understand this lesson now?",
+    options: [
       {
         value: "understood",
         label: "I understand it",
@@ -391,8 +428,9 @@ async function askUnderstanding(
         hint: "I can repeat the fix but not generalize it yet.",
       },
     ],
-    "partial",
-  );
+    initialValue: "partial",
+    ...common,
+  }));
 }
 
 function showStats(store: LessonStore): void {
@@ -447,15 +485,11 @@ async function deleteLesson(
 
   let confirmed = Boolean(options.yes);
   if (!confirmed && interactive) {
-    const prompt = createPrompter();
-    try {
-      confirmed = await prompt.confirm(
-        `Delete "${lesson.title}"? This cannot be undone.`,
-        false,
-      );
-    } finally {
-      prompt.close();
-    }
+    confirmed = unwrap(await confirm({
+      message: `Delete "${lesson.title}"? This cannot be undone.`,
+      initialValue: false,
+      ...common,
+    }));
   }
 
   if (!confirmed) {
@@ -479,122 +513,113 @@ async function editLesson(
 ): Promise<void> {
   const lesson = findLesson(store, idOrPrefix);
   const interactive = stdin.isTTY && stdout.isTTY;
-  const prompt = interactive ? createPrompter() : undefined;
 
-  try {
-    if (prompt) {
-      prompt.intro(`Edit lesson: ${lesson.title}`);
-      prompt.note("Press Enter to keep the current value.", "Tip");
-    }
+  if (interactive) {
+    intro(`Edit lesson: ${lesson.title}`, common);
+    note("Press Enter to keep the current value.", "Tip", common);
+  }
 
-    const get = async (
-      key: string,
-      label: string,
-      current: string,
-    ): Promise<string | undefined> => {
-      const supplied = optionString(options[key]);
-      if (supplied !== undefined) return supplied;
-      if (!prompt) return undefined;
-      return prompt.ask(label, current);
-    };
+  const get = async (key: string, label: string, current: string): Promise<string | undefined> => {
+    const supplied = optionString(options[key]);
+    if (supplied !== undefined) return supplied;
+    if (!interactive) return undefined;
+    return unwrap(await text({ message: label, defaultValue: current, ...common }));
+  };
 
-    const partial: Partial<LessonInput> = {};
+  const partial: Partial<LessonInput> = {};
 
-    const title = await get("title", "Title", lesson.title);
-    if (title !== undefined) partial.title = title;
+  const title = await get("title", "Title", lesson.title);
+  if (title !== undefined) partial.title = title;
 
-    const problem = await get("problem", "Problem", lesson.problem);
-    if (problem !== undefined) partial.problem = problem;
+  const problem = await get("problem", "Problem", lesson.problem);
+  if (problem !== undefined) partial.problem = problem;
 
-    const mistake = await get("mistake", "Mistake", lesson.mistake);
-    if (mistake !== undefined) partial.mistake = mistake;
+  const mistake = await get("mistake", "Mistake", lesson.mistake);
+  if (mistake !== undefined) partial.mistake = mistake;
 
-    const rootCause = await get("root-cause", "Root cause", lesson.rootCause);
-    if (rootCause !== undefined) partial.rootCause = rootCause;
+  const rootCause = await get("root-cause", "Root cause", lesson.rootCause);
+  if (rootCause !== undefined) partial.rootCause = rootCause;
 
-    const fixSummary = await get("fix-summary", "Fix summary", lesson.fixSummary);
-    if (fixSummary !== undefined) partial.fixSummary = fixSummary;
+  const fixSummary = await get("fix-summary", "Fix summary", lesson.fixSummary);
+  if (fixSummary !== undefined) partial.fixSummary = fixSummary;
 
-    const takeaway = await get("takeaway", "One-sentence takeaway", lesson.takeaway ?? "");
-    if (takeaway !== undefined) partial.takeaway = takeaway;
+  const takeaway = await get("takeaway", "One-sentence takeaway", lesson.takeaway ?? "");
+  if (takeaway !== undefined) partial.takeaway = takeaway;
 
-    const mistakePattern = await get(
-      "mistake-pattern",
-      "Short mistake pattern",
-      lesson.mistakePattern ?? "",
-    );
-    if (mistakePattern !== undefined) partial.mistakePattern = mistakePattern;
+  const mistakePattern = await get(
+    "mistake-pattern",
+    "Short mistake pattern",
+    lesson.mistakePattern ?? "",
+  );
+  if (mistakePattern !== undefined) partial.mistakePattern = mistakePattern;
 
-    const whenNotApplicable = await get(
-      "when-not-applicable",
-      "When this advice doesn't apply",
-      lesson.whenNotApplicable ?? "",
-    );
-    if (whenNotApplicable !== undefined) partial.whenNotApplicable = whenNotApplicable;
+  const whenNotApplicable = await get(
+    "when-not-applicable",
+    "When this advice doesn't apply",
+    lesson.whenNotApplicable ?? "",
+  );
+  if (whenNotApplicable !== undefined) partial.whenNotApplicable = whenNotApplicable;
 
-    const codeExample = await get("code-example", "Small code example", lesson.codeExample ?? "");
-    if (codeExample !== undefined) partial.codeExample = codeExample;
+  const codeExample = await get("code-example", "Small code example", lesson.codeExample ?? "");
+  if (codeExample !== undefined) partial.codeExample = codeExample;
 
-    const badCodeExample = await get(
-      "bad-code-example",
-      "Minimal wrong code example",
-      lesson.badCodeExample ?? "",
-    );
-    if (badCodeExample !== undefined) partial.badCodeExample = badCodeExample;
+  const badCodeExample = await get(
+    "bad-code-example",
+    "Minimal wrong code example",
+    lesson.badCodeExample ?? "",
+  );
+  if (badCodeExample !== undefined) partial.badCodeExample = badCodeExample;
 
-    const goodCodeExample = await get(
-      "good-code-example",
-      "Minimal corrected code example",
-      lesson.goodCodeExample ?? "",
-    );
-    if (goodCodeExample !== undefined) partial.goodCodeExample = goodCodeExample;
+  const goodCodeExample = await get(
+    "good-code-example",
+    "Minimal corrected code example",
+    lesson.goodCodeExample ?? "",
+  );
+  if (goodCodeExample !== undefined) partial.goodCodeExample = goodCodeExample;
 
-    const codeExplanation = await get(
-      "code-explanation",
-      "Why the corrected example works",
-      lesson.codeExplanation ?? "",
-    );
-    if (codeExplanation !== undefined) partial.codeExplanation = codeExplanation;
+  const codeExplanation = await get(
+    "code-explanation",
+    "Why the corrected example works",
+    lesson.codeExplanation ?? "",
+  );
+  if (codeExplanation !== undefined) partial.codeExplanation = codeExplanation;
 
-    const practiceTask = await get(
-      "practice-task",
-      "Small practice task",
-      lesson.practiceTask ?? "",
-    );
-    if (practiceTask !== undefined) partial.practiceTask = practiceTask;
+  const practiceTask = await get(
+    "practice-task",
+    "Small practice task",
+    lesson.practiceTask ?? "",
+  );
+  if (practiceTask !== undefined) partial.practiceTask = practiceTask;
 
-    const concepts = await get(
-      "concepts",
-      "Concepts (comma-separated)",
-      lesson.concepts.join(", "),
-    );
-    if (concepts !== undefined) partial.concepts = parseList(concepts);
+  const concepts = await get(
+    "concepts",
+    "Concepts (comma-separated)",
+    lesson.concepts.join(", "),
+  );
+  if (concepts !== undefined) partial.concepts = parseList(concepts);
 
-    const filesChanged = await get(
-      "files-changed",
-      "Files changed (comma-separated)",
-      lesson.filesChanged.join(", "),
-    );
-    if (filesChanged !== undefined) partial.filesChanged = parseList(filesChanged);
+  const filesChanged = await get(
+    "files-changed",
+    "Files changed (comma-separated)",
+    lesson.filesChanged.join(", "),
+  );
+  if (filesChanged !== undefined) partial.filesChanged = parseList(filesChanged);
 
-    const tags = await get(
-      "tags",
-      "Tags (comma-separated)",
-      lesson.tags.map((tag) => tag.name).join(", "),
-    );
-    if (tags !== undefined) partial.tags = parseList(tags).map((name) => ({ name }));
+  const tags = await get(
+    "tags",
+    "Tags (comma-separated)",
+    lesson.tags.map((tag) => tag.name).join(", "),
+  );
+  if (tags !== undefined) partial.tags = parseList(tags).map((name) => ({ name }));
 
-    const understanding = optionString(options.understanding);
-    if (understanding !== undefined) partial.understanding = understanding as Understanding;
+  const understanding = optionString(options.understanding);
+  if (understanding !== undefined) partial.understanding = understanding as Understanding;
 
-    const updated = store.update(lesson.id, partial);
-    if (prompt) {
-      prompt.outro(`Updated lesson ${updated.id}: ${updated.title}`);
-    } else {
-      console.log(`Updated lesson ${updated.id}: ${updated.title}`);
-    }
-  } finally {
-    prompt?.close();
+  const updated = store.update(lesson.id, partial);
+  if (interactive) {
+    outro(`Updated lesson ${updated.id}: ${updated.title}`, common);
+  } else {
+    console.log(`Updated lesson ${updated.id}: ${updated.title}`);
   }
 }
 
@@ -637,30 +662,25 @@ function exportLessons(
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
-  const command = argv[0]?.startsWith("-") ? undefined : argv[0];
-  const rest = command ? argv.slice(1) : argv;
-  const options: Record<string, string | boolean> = {};
-  const positionals: string[] = [];
-  for (let index = 0; index < rest.length; index += 1) {
-    const argument = rest[index];
-    if (argument === "-y") {
-      options.yes = true;
-      continue;
-    }
-    if (!argument.startsWith("--")) {
-      positionals.push(argument);
-      continue;
-    }
-    const [name, inline] = argument.slice(2).split("=", 2);
-    if (inline !== undefined) {
-      options[name] = inline;
-    } else if (rest[index + 1] && !rest[index + 1].startsWith("--")) {
-      options[name] = rest[++index];
-    } else {
-      options[name] = true;
-    }
-  }
-  return { command, positionals, options };
+  const S = { type: "string" as const };
+  const B = { type: "boolean" as const };
+  const { values, positionals } = nodeParseArgs({
+    args: argv,
+    allowPositionals: true,
+    strict: false,
+    options: {
+      title: S, "original-prompt": S, problem: S, mistake: S, "root-cause": S,
+      "fix-summary": S, takeaway: S, "mistake-pattern": S, "when-not-applicable": S,
+      concepts: S, "files-changed": S, "code-example": S, "bad-code-example": S,
+      "good-code-example": S, "code-explanation": S, "practice-task": S,
+      "review-question": S, "expected-answer": S, tool: S, understanding: S,
+      tags: S, file: S, format: S, output: S, id: S, limit: S, port: S,
+      client: S, reason: S,
+      yes: { ...B, short: "y" }, "include-superseded": B, "no-open": B, "dry-run": B, help: B,
+    },
+  });
+  const command = positionals[0];
+  return { command, positionals: positionals.slice(1), options: values as Record<string, string | boolean> };
 }
 
 async function readStdin(): Promise<string> {
