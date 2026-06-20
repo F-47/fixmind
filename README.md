@@ -16,6 +16,15 @@ fixmind setup
 
 `fixmind setup` detects Claude Code, Cursor, and Codex, and wires the MCP server into whichever ones you pick — globally on this device, or scoped to a single project with `--scope project`. Full usage lives in [packages/core/README.md](packages/core/README.md).
 
+## Documentation
+
+| Doc | Covers |
+|---|---|
+| [docs/cli-reference.md](docs/cli-reference.md) | Every command and flag — setup, capture, browse, review, edit, export. |
+| [docs/lesson-schema.md](docs/lesson-schema.md) | What a lesson contains, the quality gate that rejects shallow ones, the spaced-repetition schedule, and where it's all stored. |
+| [docs/faq.md](docs/faq.md) | Troubleshooting: agents not saving lessons, backups, resets, scope quirks per client. |
+| [packages/core/docs/mcp-integration.md](packages/core/docs/mcp-integration.md) | The MCP server itself — the tool schema, token overhead, configuring clients fixmind doesn't autodetect. |
+
 ## Repository layout
 
 This is an npm workspaces monorepo.

@@ -147,6 +147,13 @@ Understanding (understood, partial, copied_blindly): understood
 Review saved.
 ```
 
+## More documentation
+
+- [Full CLI reference](../../docs/cli-reference.md) — every command and flag, including `edit`, `delete`, `supersede`, and `export`, which aren't covered above.
+- [What a lesson contains](../../docs/lesson-schema.md) — required vs. optional fields, the quality gate that rejects shallow lessons, and the exact spaced-repetition schedule.
+- [FAQ / troubleshooting](../../docs/faq.md) — agents not saving lessons, backups, resets, per-client scope quirks.
+- [MCP integration](docs/mcp-integration.md) — the tool schema in full, token/context overhead, configuring clients fixmind doesn't autodetect.
+
 ## Scope
 
 This MVP has no accounts, cloud sync, teams, public sharing, browser extension, or bundled AI client. The dashboard is local-only, and MCP is write-only for agents; lesson history and reviews remain controlled by the human.

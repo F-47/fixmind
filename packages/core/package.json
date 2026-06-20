@@ -3,6 +3,12 @@
   "version": "0.2.0",
   "description": "Local-first learning lessons for developers working with AI coding agents.",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/F-47/fixmind.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/F-47/fixmind#readme",
   "bin": {
     "fixmind": "dist/src/cli.js"
   },
