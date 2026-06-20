@@ -12,7 +12,7 @@ import { assessLessonQuality, validateLessonInput } from "./validation.js";
 export const MCP_INSTRUCTIONS = `
 You are the fixmind learning recorder. Your job is to capture lessons that help developers improve over time.
 
-BEFORE calling save_learning_lesson, run this checklist:
+BEFORE calling save_lesson, run this checklist:
   1. Was real logic fixed? (a bug, an incorrect assumption, a missing guard, wrong API usage, bad state management, etc.)
   2. Does the developer now understand something they did not understand before?
   3. Can you write a concrete badCodeExample showing the wrong pattern?
@@ -21,7 +21,7 @@ BEFORE calling save_learning_lesson, run this checklist:
      a context where the old code is actually correct, or a case that needs a
      different fix entirely?
 
-If any answer is NO, do NOT call save_learning_lesson.
+If any answer is NO, do NOT call save_lesson.
 
 DO NOT save a lesson for:
   - Moving code to a different file (pure relocation, no logic change)
@@ -68,7 +68,7 @@ REVIEW QUESTIONS - write TRANSFER questions, not recall questions:
   - expectedAnswer should reference the underlying principle (rootCause /
     takeaway), not just describe the diff.
 
-THE SAVE CAN BE REJECTED. If save_learning_lesson returns an error, it means
+THE SAVE CAN BE REJECTED. If save_lesson returns an error, it means
 the lesson didn't clear the quality bar. Common reasons, with the fix for each:
   - rootCause or fixSummary just repeated another field word-for-word - rewrite
     it to add the missing WHY (the mechanism, not a restatement).
@@ -94,7 +94,7 @@ in a file. Do not flatten the snippet onto one line using the two characters
 verbatim, so literal "\n" text shows up as "\n" instead of a line break.
 
 SUPERSEDING A PREVIOUS LESSON:
-If you previously called save_learning_lesson for a fix that turned out NOT to
+If you previously called save_lesson for a fix that turned out NOT to
 work, and you are now saving a lesson for the CORRECT fix, set:
   - supersedesLessonId: the id of the earlier (wrong) lesson, from its
     "Saved learning lesson <id>" response in this conversation.
@@ -155,9 +155,9 @@ export function createLearningLessonServer(
   );
 
   server.registerTool(
-    "save_learning_lesson",
+    "save_lesson",
     {
-      title: "Save Learning Lesson",
+      title: "Save Lesson",
       description: "Save a concise local learning lesson after a meaningful coding fix.",
       inputSchema: lessonInputSchema,
       annotations: {

@@ -99,14 +99,14 @@ test("injects instructions into Claude, Codex, and Cursor files", () => {
 
     const claudeMd = fs.readFileSync(path.join(home, ".claude", "CLAUDE.md"), "utf8");
     assert.ok(claudeMd.includes("fixmind:instructions:start"));
-    assert.ok(claudeMd.includes("save_learning_lesson"));
+    assert.ok(claudeMd.includes("save_lesson"));
 
     const agentsMd = fs.readFileSync(path.join(home, "AGENTS.md"), "utf8");
     assert.ok(agentsMd.includes("fixmind:instructions:start"));
 
     const cursorMdc = fs.readFileSync(path.join(home, ".cursor", "rules", "fixmind.mdc"), "utf8");
     assert.ok(cursorMdc.includes("alwaysApply: true"));
-    assert.ok(cursorMdc.includes("save_learning_lesson"));
+    assert.ok(cursorMdc.includes("save_lesson"));
   } finally {
     fs.rmSync(home, { recursive: true, force: true });
   }
@@ -165,7 +165,7 @@ test("configures Claude permissions in a fresh settings.json", () => {
     assert.equal(results[0].status, "configured");
     const filePath = path.join(home, ".claude", "settings.json");
     const config = JSON.parse(fs.readFileSync(filePath, "utf8")) as Record<string, any>;
-    assert.deepEqual(config.permissions.allow, ["mcp__fixmind__save_learning_lesson"]);
+    assert.deepEqual(config.permissions.allow, ["mcp__fixmind__save_lesson"]);
   } finally {
     fs.rmSync(home, { recursive: true, force: true });
   }
@@ -211,7 +211,7 @@ test("merges Claude permissions without clobbering existing settings", () => {
     assert.equal(config.autoUpdatesChannel, "latest");
     assert.equal(config.theme, "dark-daltonized");
     assert.deepEqual(config.mcpServers.context7.args, ["/c", "npx", "-y", "@upstash/context7-mcp@latest"]);
-    assert.deepEqual(config.permissions.allow, ["mcp__context7__resolve-library-id", "mcp__fixmind__save_learning_lesson"]);
+    assert.deepEqual(config.permissions.allow, ["mcp__context7__resolve-library-id", "mcp__fixmind__save_lesson"]);
     assert.deepEqual(config.permissions.deny, ["Bash(rm -rf *)"]);
   } finally {
     fs.rmSync(home, { recursive: true, force: true });

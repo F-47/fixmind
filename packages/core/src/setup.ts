@@ -5,6 +5,11 @@ import { execFileSync } from "node:child_process";
 
 export type SupportedClient = "codex" | "claude" | "cursor";
 
+// "user" configures the client globally, so the MCP server is available in every
+// project on this device. "project" scopes the configuration to a single project
+// directory instead, so it only applies there (and can be checked into version control).
+export type SetupScope = "user" | "project";
+
 export interface ServerCommand {
   command: string;
   args: string[];
@@ -18,6 +23,8 @@ export interface SetupResult {
 
 export interface SetupOptions {
   clients: SupportedClient[];
+  scope?: SetupScope;
+  projectDirectory?: string;
   dryRun?: boolean;
   homeDirectory?: string;
   platform?: NodeJS.Platform;
@@ -40,14 +47,16 @@ export function detectClients(homeDirectory = os.homedir()): SupportedClient[] {
 
 export function configureClients(options: SetupOptions): SetupResult[] {
   const homeDirectory = options.homeDirectory ?? os.homedir();
+  const projectDirectory = options.projectDirectory ?? process.cwd();
+  const scope = options.scope ?? "user";
   const platform = options.platform ?? process.platform;
   const run = options.run ?? runCommand;
   const serverCommand = mcpServerCommand(platform);
   return options.clients.map((client) => {
     if (client === "cursor") {
-      return configureCursor(homeDirectory, serverCommand, Boolean(options.dryRun));
+      return configureCursor(homeDirectory, projectDirectory, scope, serverCommand, Boolean(options.dryRun));
     }
-    return configureCliClient(client, serverCommand, Boolean(options.dryRun), run);
+    return configureCliClient(client, serverCommand, Boolean(options.dryRun), run, scope);
   });
 }
 
@@ -70,6 +79,7 @@ function configureCliClient(
   server: ServerCommand,
   dryRun: boolean,
   run: (command: string, args: string[]) => string,
+  scope: SetupScope,
 ): SetupResult {
   const getArgs = ["mcp", "get", "fixmind"];
   try {
@@ -90,8 +100,10 @@ function configureCliClient(
     // The client reports a non-zero status when the named server is absent.
   }
 
+  // The Codex CLI has no project-scope flag for `mcp add`, so a project-scoped
+  // request still registers the server globally; the detail message says so.
   const addArgs = client === "claude"
-    ? ["mcp", "add", "--scope", "user", "fixmind", "--", server.command, ...server.args]
+    ? ["mcp", "add", "--scope", scope, "fixmind", "--", server.command, ...server.args]
     : ["mcp", "add", "fixmind", "--", server.command, ...server.args];
   if (!dryRun) {
     try {
@@ -107,15 +119,24 @@ function configureCliClient(
       throw error;
     }
   }
+  const note = client === "codex" && scope === "project"
+    ? " (codex has no project scope; registered globally instead)"
+    : "";
   return {
     client,
     status: dryRun ? "dry_run" : "configured",
-    detail: formatCommand(client, addArgs),
+    detail: `${formatCommand(client, addArgs)}${note}`,
   };
 }
 
-function configureCursor(homeDirectory: string, server: ServerCommand, dryRun: boolean): SetupResult {
-  const directory = path.join(homeDirectory, ".cursor");
+function configureCursor(
+  homeDirectory: string,
+  projectDirectory: string,
+  scope: SetupScope,
+  server: ServerCommand,
+  dryRun: boolean,
+): SetupResult {
+  const directory = path.join(scope === "project" ? projectDirectory : homeDirectory, ".cursor");
   const filePath = path.join(directory, "mcp.json");
   let config: Record<string, unknown> = {};
   if (fs.existsSync(filePath)) {
@@ -155,7 +176,7 @@ const INSTRUCTION_MARKER = "fixmind:instructions";
 
 const INSTRUCTION_BODY = `\
 After fixing any meaningful bug or resolving a real coding mistake, always call \
-the fixmind save_learning_lesson MCP tool before finishing your response.
+the fixmind save_lesson MCP tool before finishing your response.
 
 Call it for: bugs, incorrect API usage, wrong assumptions, bad state management, \
 logic errors, missing cleanup, security issues.
@@ -200,12 +221,24 @@ export interface InstructionResult {
 
 export function configureInstructions(options: SetupOptions): InstructionResult[] {
   const homeDirectory = options.homeDirectory ?? os.homedir();
+  const projectDirectory = options.projectDirectory ?? process.cwd();
+  const scope = options.scope ?? "user";
   return options.clients.map((client) =>
-    injectInstruction(client, homeDirectory, Boolean(options.dryRun)),
+    injectInstruction(client, homeDirectory, projectDirectory, scope, Boolean(options.dryRun)),
   );
 }
 
-function instructionFilePath(client: SupportedClient, homeDirectory: string): string {
+function instructionFilePath(
+  client: SupportedClient,
+  homeDirectory: string,
+  projectDirectory: string,
+  scope: SetupScope,
+): string {
+  if (scope === "project") {
+    if (client === "claude") return path.join(projectDirectory, "CLAUDE.md");
+    if (client === "codex") return path.join(projectDirectory, "AGENTS.md");
+    return path.join(projectDirectory, ".cursor", "rules", "fixmind.mdc");
+  }
   if (client === "claude") return path.join(homeDirectory, ".claude", "CLAUDE.md");
   if (client === "codex") return path.join(homeDirectory, "AGENTS.md");
   return path.join(homeDirectory, ".cursor", "rules", "fixmind.mdc");
@@ -214,9 +247,11 @@ function instructionFilePath(client: SupportedClient, homeDirectory: string): st
 function injectInstruction(
   client: SupportedClient,
   homeDirectory: string,
+  projectDirectory: string,
+  scope: SetupScope,
   dryRun: boolean,
 ): InstructionResult {
-  const filePath = instructionFilePath(client, homeDirectory);
+  const filePath = instructionFilePath(client, homeDirectory, projectDirectory, scope);
   const block = instructionBlock(client);
   const marker = client === "cursor" ? "alwaysApply: true" : `${INSTRUCTION_MARKER}:start`;
 
@@ -239,7 +274,7 @@ function injectInstruction(
   return { client, status: dryRun ? "dry_run" : "written", filePath };
 }
 
-const FIXMIND_SAVE_TOOL = "mcp__fixmind__save_learning_lesson";
+const FIXMIND_SAVE_TOOL = "mcp__fixmind__save_lesson";
 
 export interface PermissionResult {
   client: "claude";
@@ -249,17 +284,21 @@ export interface PermissionResult {
 
 export function configurePermissions(options: SetupOptions): PermissionResult[] {
   const homeDirectory = options.homeDirectory ?? os.homedir();
+  const projectDirectory = options.projectDirectory ?? process.cwd();
+  const scope = options.scope ?? "user";
   return options.clients
     .filter((client): client is "claude" => client === "claude")
-    .map((client) => configureClaudePermissions(client, homeDirectory, Boolean(options.dryRun)));
+    .map((client) => configureClaudePermissions(client, homeDirectory, projectDirectory, scope, Boolean(options.dryRun)));
 }
 
 function configureClaudePermissions(
   client: "claude",
   homeDirectory: string,
+  projectDirectory: string,
+  scope: SetupScope,
   dryRun: boolean,
 ): PermissionResult {
-  const directory = path.join(homeDirectory, ".claude");
+  const directory = path.join(scope === "project" ? projectDirectory : homeDirectory, ".claude");
   const filePath = path.join(directory, "settings.json");
   let config: Record<string, unknown> = {};
   if (fs.existsSync(filePath)) {

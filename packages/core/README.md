@@ -40,7 +40,7 @@ Set `FIXMIND_DATA_DIR` to override the data directory.
 ```text
 AI coding client
       |
-      | MCP: save_learning_lesson
+      | MCP: save_lesson
       v
 Local Fixmind server
       |
@@ -61,7 +61,7 @@ fixmind setup --client codex,claude,cursor
 fixmind setup --client cursor --dry-run
 ```
 
-For Claude Code, setup also adds `mcp__fixmind__save_learning_lesson` to `permissions.allow` in `~/.claude/settings.json` (with a `.backup` copy of any prior file), so the agent can save lessons without a permission prompt.
+For Claude Code, setup also adds `mcp__fixmind__save_lesson` to `permissions.allow` in `~/.claude/settings.json` (with a `.backup` copy of any prior file), so the agent can save lessons without a permission prompt.
 
 The MCP process can also be started directly:
 
@@ -103,7 +103,7 @@ fixmind dashboard --no-open
 
 ## Next.js hydration example
 
-After fixing a hydration mismatch, the AI calls `save_learning_lesson` with content similar to (the `tool` field is optional and auto-detected from the connected MCP client, so it's normally omitted):
+After fixing a hydration mismatch, the AI calls `save_lesson` with content similar to (the `tool` field is optional and auto-detected from the connected MCP client, so it's normally omitted):
 
 ```json
 {

@@ -2,7 +2,7 @@
 
 Fixmind exposes a local stdio MCP server. Any MCP-compatible AI coding client can start it and call one tool:
 
-`save_learning_lesson`
+`save_lesson`
 
 The tool stores a lesson locally. It does not call an AI API, upload code, or expose lesson history to the agent.
 
@@ -31,7 +31,7 @@ fixmind setup --client cursor --dry-run
 
 Setup is idempotent. Existing MCP entries are preserved. Before changing Cursor's JSON configuration, the previous file is copied to `mcp.json.backup`.
 
-For Claude Code, setup additionally pre-approves the `mcp__fixmind__save_learning_lesson` tool by adding it to `permissions.allow` in `~/.claude/settings.json`, so the agent isn't blocked by a runtime permission prompt when saving a lesson. Existing settings and other permission entries are preserved, and a `.backup` copy of `settings.json` is made before the first change.
+For Claude Code, setup additionally pre-approves the `mcp__fixmind__save_lesson` tool by adding it to `permissions.allow` in `~/.claude/settings.json`, so the agent isn't blocked by a runtime permission prompt when saving a lesson. Existing settings and other permission entries are preserved, and a `.backup` copy of `settings.json` is made before the first change.
 
 ## Other MCP clients
 
@@ -58,8 +58,8 @@ Automatic use is best-effort because each MCP client decides when to call availa
 
 Connecting the fixmind MCP server adds a small, mostly one-time cost to an agent's context:
 
-- The server's instructions and the `save_learning_lesson` tool schema are sent once when the client connects. Clients that support prompt caching reuse this across subsequent turns in the same session.
-- `save_learning_lesson` is called only when the agent determines a meaningful fix occurred, per the checklist in its instructions — not on every turn. Sessions with no qualifying fixes add nothing beyond the initial connection cost.
+- The server's instructions and the `save_lesson` tool schema are sent once when the client connects. Clients that support prompt caching reuse this across subsequent turns in the same session.
+- `save_lesson` is called only when the agent determines a meaningful fix occurred, per the checklist in its instructions — not on every turn. Sessions with no qualifying fixes add nothing beyond the initial connection cost.
 - When a lesson is saved, the generated payload (problem, root cause, fix summary, takeaway, code examples, review questions) is comparable in size to a short commit message or code review comment.
 
 In practice, this overhead is negligible relative to the tokens used by the coding work itself.

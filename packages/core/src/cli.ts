@@ -22,6 +22,7 @@ import {
   configurePermissions,
   detectClients,
   genericMcpConfiguration,
+  type SetupScope,
   type SupportedClient,
 } from "./setup.js";
 import {
@@ -202,7 +203,12 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
   const supplied = parseList(optionString(options.client));
   let clients = supplied.length ? validateClients(supplied) : detected;
 
-  if (!supplied.length && stdin.isTTY && stdout.isTTY) {
+  const suppliedScope = optionString(options.scope);
+  let scope: SetupScope = suppliedScope ? validateScope(suppliedScope) : "user";
+  const projectDirectory = process.cwd();
+
+  const interactive = stdin.isTTY && stdout.isTTY;
+  if (!supplied.length && interactive) {
     intro("Configure Learning Lessons", common);
     note("Pick the AI clients that should receive the MCP server configuration.", "Setup", common);
     const selected = unwrap(await multiselect({
@@ -215,6 +221,27 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
     clients = validateClients(selected);
   }
 
+  if (!suppliedScope && interactive) {
+    const selectedScope = unwrap(await select({
+      message: "Where should fixmind be configured?",
+      options: [
+        {
+          value: "user",
+          label: "This device",
+          hint: "Available in every project (~/.claude, ~/.cursor, ...)",
+        },
+        {
+          value: "project",
+          label: "This project only",
+          hint: `Stored inside ${projectDirectory}`,
+        },
+      ],
+      initialValue: "user",
+      ...common,
+    }));
+    scope = selectedScope as SetupScope;
+  }
+
   if (clients.length === 0) {
     console.log(
       "No supported clients detected. Add this configuration to any stdio MCP client:",
@@ -224,10 +251,16 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
   }
 
   const dryRun = Boolean(options["dry-run"]);
-  const results = configureClients({ clients, dryRun });
-  const instructions = configureInstructions({ clients, dryRun });
-  const permissions = configurePermissions({ clients, dryRun });
+  const setupOptions = { clients, scope, projectDirectory, dryRun };
+  const results = configureClients(setupOptions);
+  const instructions = configureInstructions(setupOptions);
+  const permissions = configurePermissions(setupOptions);
   console.log(`Local data initialized at ${paths.directory}.`);
+  console.log(
+    scope === "project"
+      ? `Scope: this project only (${projectDirectory}).`
+      : "Scope: this device (every project).",
+  );
   for (const result of results)
     console.log(`${result.client}: ${result.status} - ${result.detail}`);
   for (const result of instructions)
@@ -235,6 +268,12 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
   for (const result of permissions)
     console.log(`${result.client} permissions: ${result.status} - ${result.filePath}`);
   console.log("Restart configured AI clients so they discover the MCP server.");
+}
+
+function validateScope(value: string): SetupScope {
+  if (value !== "user" && value !== "project")
+    throw new Error(`Unsupported scope: ${value}. Use user or project.`);
+  return value;
 }
 
 function validateClients(values: string[]): SupportedClient[] {
@@ -675,7 +714,7 @@ function parseArgs(argv: string[]): ParsedArgs {
       "good-code-example": S, "code-explanation": S, "practice-task": S,
       "review-question": S, "expected-answer": S, tool: S, understanding: S,
       tags: S, file: S, format: S, output: S, id: S, limit: S, port: S,
-      client: S, reason: S,
+      client: S, scope: S, reason: S,
       yes: { ...B, short: "y" }, "include-superseded": B, "no-open": B, "dry-run": B, help: B,
     },
   });
@@ -691,7 +730,7 @@ async function readStdin(): Promise<string> {
 
 function printHelp(): void {
   console.log(
-    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
+    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
   );
 }
 

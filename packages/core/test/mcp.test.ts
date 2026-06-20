@@ -20,10 +20,10 @@ test("MCP exposes one save tool and persists a lesson", async () => {
   try {
     await client.connect(transport);
     const tools = await client.listTools();
-    assert.deepEqual(tools.tools.map((tool) => tool.name), ["save_learning_lesson"]);
+    assert.deepEqual(tools.tools.map((tool) => tool.name), ["save_lesson"]);
 
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "windsurf",
         projectPath: dataDirectory,
@@ -86,7 +86,7 @@ test("MCP infers tool name from MCP client info when omitted", async () => {
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         projectPath: dataDirectory,
         title: "Detect tool from clientInfo",
@@ -133,7 +133,7 @@ test("MCP rejects a mechanical move/extract refactor with no code comparison", a
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "claude",
         projectPath: dataDirectory,
@@ -176,7 +176,7 @@ test("MCP appends quality warning when a real fix has no code examples", async (
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "claude",
         projectPath: dataDirectory,
@@ -214,10 +214,10 @@ test("MCP supersedes a previous lesson via supersedesLessonId", async () => {
   try {
     await client.connect(transport);
     const tools = await client.listTools();
-    assert.deepEqual(tools.tools.map((tool) => tool.name), ["save_learning_lesson"]);
+    assert.deepEqual(tools.tools.map((tool) => tool.name), ["save_lesson"]);
 
     const first = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "claude",
         projectPath: dataDirectory,
@@ -243,7 +243,7 @@ test("MCP supersedes a previous lesson via supersedesLessonId", async () => {
     assert.ok(oldId, `Expected lesson id in: ${firstText}`);
 
     const second = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "claude",
         projectPath: dataDirectory,
@@ -306,7 +306,7 @@ test("MCP warns when supersedesLessonId does not match an existing lesson", asyn
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "claude",
         projectPath: dataDirectory,
@@ -348,7 +348,7 @@ test("MCP rejects incomplete lesson input", async () => {
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: { title: "Incomplete" },
     });
     assert.equal(result.isError, true);
@@ -370,7 +370,7 @@ test("MCP rejects a lesson missing whenNotApplicable", async () => {
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         title: "Missing scope",
         problem: "Initial markup differed",
@@ -404,7 +404,7 @@ test("MCP rejects a lesson where rootCause just repeats mistake", async () => {
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "claude",
         projectPath: dataDirectory,
@@ -450,7 +450,7 @@ test("MCP rejects a styling-only change with no described behavior bug", async (
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "claude",
         projectPath: dataDirectory,
@@ -493,7 +493,7 @@ test("MCP rejects a lesson whose only review question is recall-only", async () 
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "claude",
         projectPath: dataDirectory,
@@ -538,7 +538,7 @@ test("MCP rejects a lesson whose only review question asks how the bug was fixed
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "claude",
         projectPath: dataDirectory,
@@ -583,7 +583,7 @@ test("MCP saves a real interaction bug described with styling vocabulary (overla
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "claude",
         projectPath: dataDirectory,
@@ -629,7 +629,7 @@ test("MCP rejects a lesson where fixSummary just repeats mistake", async () => {
   try {
     await client.connect(transport);
     const result = await client.callTool({
-      name: "save_learning_lesson",
+      name: "save_lesson",
       arguments: {
         tool: "claude",
         projectPath: dataDirectory,
