@@ -5,12 +5,7 @@
 
 A local-first CLI and MCP server that turns every AI-assisted bug fix into a lesson you actually remember. No cloud, no account, no paid AI API — everything lives in a SQLite database on your machine.
 
-<!--
-  docs/demo.gif is intentionally not recorded yet — see "Recording the demo GIF"
-  in CONTRIBUTING.md for the shot list. Once it exists, this image just works.
--->
-
-![fixmind demo](docs/demo.gif)
+![fixmind demo: fixmind setup registering the MCP server, fixmind list showing a saved lesson, and fixmind review walking through a recall question](docs/demo.gif)
 
 ## Quick start
 

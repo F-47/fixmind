@@ -43,14 +43,14 @@ The site is a small client-side-routed SPA (`src/router.tsx` — no router depen
 
 This repo uses short, conventional-ish commit subjects: `feat: ...`, `fix: ...`, `refactor: ...`, `docs: ...`. Describe the *why* in the body if it's not obvious from the subject.
 
-## Recording the demo GIF
+## Re-recording the demo GIF
 
-`docs/demo.gif`, linked from the root README, isn't recorded yet. If you're picking this up:
+`docs/demo.gif` (linked from the root README) is a real, scripted terminal session — not staged screenshots — showing: `fixmind setup --scope project --dry-run` registering the MCP server, `fixmind list` showing a saved lesson, and `fixmind review` answering its recall question end to end.
 
-1. Record a terminal session that shows the actual loop, not just commands running:
-   - `fixmind setup` detecting a client and registering the MCP server.
-   - An agent (any MCP client) calling `save_lesson` after a real fix — the saved-lesson confirmation message is the payoff shot.
-   - `fixmind review` answering one recall question.
-2. Keep it under ~15 seconds and under a few MB — GitHub renders inline GIFs, but large files load slowly on the repo's front page.
-3. Tools that work well for this: [vhs](https://github.com/charmbracelet/vhs) (scripted, reproducible) or `asciinema` + `agg` (real recording, converted to GIF). Either is fine; scripted is easier to redo when the CLI's output changes.
-4. Drop the file at `docs/demo.gif` — the README link already points there.
+If the CLI's output changes enough that the GIF looks stale, re-record it:
+
+1. Seed one due lesson in a scratch `FIXMIND_DATA_DIR` (`fixmind save-from-summary --file lesson.json`, then back-date `next_review_at` directly in the SQLite file with `node:sqlite` so it's due — a freshly-saved lesson is due the next day, not immediately).
+2. Drive the real CLI through a pty (`node-pty`) with a small driver script that fake-types each command (so it reads as a typed session) and then runs it for real via `execFileSync({ stdio: "inherit" })`, scripting the interactive `review` prompts (the recall answer, then an up-arrow + enter to pick "I understand it").
+3. Record that driver with [terminalizer](https://github.com/faressoft/terminalizer) — note its `record` command needs its *own* stdin to be a real TTY (it calls `setRawMode`), so drive `terminalizer record` itself through an outer `node-pty`, not a plain pipe. It auto-stops and saves once the inner command process exits.
+4. Render with `terminalizer render demo -o demo.gif --step 2` — `--step 2` roughly halves both file size and runtime by dropping every other frame, which also makes the typing read a bit snappier.
+5. Sanity-check the rendered file before trusting it: parse its Graphic Control Extension blocks to sum real frame delays (`frames: N, seconds: ...`) rather than assuming the renderer's logged "completed" timing matches what got flushed to disk — the gif-encoding stream can still be writing after that log line prints.
