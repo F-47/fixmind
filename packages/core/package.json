@@ -1,0 +1,36 @@
+{
+  "name": "fixmind",
+  "version": "0.2.0",
+  "description": "Local-first learning lessons for developers working with AI coding agents.",
+  "type": "module",
+  "bin": {
+    "fixmind": "dist/src/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "docs"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && npm run build:server && npm run copy:dashboard",
+    "build:server": "tsc -p tsconfig.json",
+    "copy:dashboard": "node -e \"require('fs').cpSync('../dashboard/dist','dist/dashboard',{recursive:true})\"",
+    "test": "npm run build && node --no-warnings --test dist/test/*.test.js",
+    "prepack": "npm run build",
+    "fixmind": "NODE_OPTIONS=--disable-warning=ExperimentalWarning node dist/src/cli.js"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.5.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.3"
+  },
+  "license": "MIT"
+}

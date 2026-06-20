@@ -1,47 +1,24 @@
 {
-  "name": "fixmind",
-  "version": "0.2.0",
-  "description": "Local-first learning lessons for developers working with AI coding agents.",
+  "name": "fixmind-monorepo",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
-  "bin": {
-    "fixmind": "dist/src/cli.js"
-  },
-  "files": [
-    "dist",
-    "README.md",
-    "docs"
+  "workspaces": [
+    "packages/*",
+    "apps/*"
   ],
-  "scripts": {
-    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
-    "build": "npm run clean && npm run build:server && npm run build:dashboard",
-    "build:server": "tsc -p tsconfig.json",
-    "build:dashboard": "tsc -p dashboard/tsconfig.json --noEmit && vite build --config dashboard/vite.config.ts",
-    "dev:dashboard": "vite --config dashboard/vite.config.ts",
-    "test": "npm run build && node --no-warnings --test dist/test/*.test.js",
-    "prepack": "npm run build",
-    "fixmind": "NODE_OPTIONS=--disable-warning=ExperimentalWarning node dist/src/cli.js"
-  },
-  "dependencies": {
-    "@clack/prompts": "^1.5.1",
-    "@modelcontextprotocol/sdk": "^1.29.0",
-    "highlight.js": "^11.11.1",
-    "lucide-react": "^1.17.0",
-    "zod": "^4.4.3"
-  },
   "engines": {
     "node": ">=22.5.0"
   },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.3.0",
-    "@types/node": "^22.15.0",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.2",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "tailwindcss": "^4.3.0",
-    "typescript": "^5.8.3",
-    "vite": "^8.0.16"
+  "scripts": {
+    "build": "npm run build -w @fixmind/dashboard && npm run build -w fixmind && npm run build -w @fixmind/website",
+    "test": "npm run test -w fixmind",
+    "dev:dashboard": "npm run dev -w @fixmind/dashboard",
+    "dev:website": "npm run dev -w @fixmind/website",
+    "build:website": "npm run build -w @fixmind/website"
   },
-  "license": "MIT"
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.3"
+  }
 }

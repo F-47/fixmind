@@ -11,7 +11,7 @@ export default defineConfig({
   base: "/",
   plugins: [react(), tailwindcss()],
   build: {
-    outDir: path.resolve(directory, "../dist/dashboard"),
+    outDir: path.resolve(directory, "dist"),
     emptyOutDir: true,
     cssMinify: false,
   },
