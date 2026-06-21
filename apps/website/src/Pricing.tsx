@@ -60,7 +60,8 @@ const PLANS: Plan[] = [
     status: "roadmap",
     cta: "checkout",
     checkoutUrl: TEAM_CHECKOUT_URL,
-    tagline: "For teams that don't want the same mistake fixed twice by two people.",
+    tagline:
+      "For teams that don't want the same mistake fixed twice by two people.",
     features: [
       "Everything in Pro",
       "Shared lesson library, tagged by project",
@@ -74,7 +75,8 @@ const PLANS: Plan[] = [
     price: "Custom",
     status: "roadmap",
     cta: "contact",
-    tagline: "Self-hosted, for orgs that can't let lesson data leave the network.",
+    tagline:
+      "Self-hosted, for orgs that can't let lesson data leave the network.",
     features: [
       "Everything in Team",
       "Self-hosted (Docker / Kubernetes)",
@@ -88,25 +90,35 @@ const PLANS: Plan[] = [
 function PlanCard({ plan }: { plan: Plan }) {
   return (
     <div
-      className={`flex flex-col rounded-xl border p-6 ${plan.highlight ? "border-accent/50 bg-surface shadow-[0_0_60px_-25px_var(--color-accent-dim)]" : "border-line bg-surface"
-        }`}
+      className={`flex flex-col rounded-xl border p-6 ${
+        plan.highlight
+          ? "border-accent/50 bg-surface shadow-[0_0_60px_-25px_var(--color-accent-dim)]"
+          : "border-line bg-surface"
+      }`}
     >
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg font-semibold text-ink">{plan.name}</h3>
+        <h3 className="font-display text-lg font-semibold text-ink">
+          {plan.name}
+        </h3>
         <span
-          className={`font-mono text-[10px] uppercase tracking-[0.15em] ${plan.status === "available" ? "text-good" : "text-muted"
-            }`}
+          className={`font-mono text-[10px] uppercase tracking-[0.15em] ${
+            plan.status === "available" ? "text-good" : "text-muted"
+          }`}
         >
           {plan.status === "available" ? "Available now" : "Roadmap"}
         </span>
       </div>
 
       <div className="mt-4 flex items-baseline gap-1.5">
-        <span className="font-display text-3xl font-semibold text-ink">{plan.price}</span>
+        <span className="font-display text-3xl font-semibold text-ink">
+          {plan.price}
+        </span>
         {plan.unit && <span className="text-xs text-muted">{plan.unit}</span>}
       </div>
       {plan.note && (
-        <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">{plan.note}</p>
+        <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
+          {plan.note}
+        </p>
       )}
       <p className="mt-3 text-sm leading-relaxed text-muted">{plan.tagline}</p>
 
@@ -125,7 +137,11 @@ function PlanCard({ plan }: { plan: Plan }) {
             <p className="break-all rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-[11px] leading-relaxed text-muted">
               <span className="text-ink">$</span> {INSTALL_CMD}
             </p>
-            <CopyButton text={INSTALL_CMD} label="Copy install command" variant="block" />
+            <CopyButton
+              text={INSTALL_CMD}
+              label="Copy install command"
+              variant="block"
+            />
           </div>
         )}
         {plan.cta === "checkout" && (
@@ -165,33 +181,39 @@ export default function Pricing() {
     <div>
       <Nav />
 
-      <section className="relative overflow-hidden bg-grid">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-accent/15 blur-[130px]"
-        />
-        <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">Pricing</p>
-          <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-            Free forever, until you need more than your own machine.
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-muted">
-            The core learning loop &mdash; capturing and reviewing lessons &mdash; stays free for
-            individual developers. Paid plans add what an org needs on top: sync, sharing, and self-hosting.
-          </p>
-          <p className="mx-auto mt-4 max-w-xl rounded-md border border-line bg-surface px-4 py-2 font-mono text-xs text-muted">
-            Free is available today. Pro, Team, and Enterprise are on the roadmap.
-          </p>
-        </div>
-      </section>
+      <div className="relative overflow-hidden bg-grid">
+        <section>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-accent/15 blur-[130px]"
+          />
+          <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
+              Pricing
+            </p>
+            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+              Free forever, until you need more than your own machine.
+            </h1>
+            <p className="mx-auto mt-5 max-w-xl text-muted">
+              The core learning loop &mdash; capturing and reviewing lessons
+              &mdash; stays free for individual developers. Paid plans add what
+              an org needs on top: sync, sharing, and self-hosting.
+            </p>
+            <p className="mx-auto mt-4 max-w-xl rounded-md border border-line bg-surface px-4 py-2 font-mono text-xs text-muted">
+              Free is available today. Pro, Team, and Enterprise are on the
+              roadmap.
+            </p>
+          </div>
+        </section>
 
-      <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {PLANS.map((plan) => (
-            <PlanCard key={plan.name} plan={plan} />
-          ))}
-        </div>
-      </section>
+        <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {PLANS.map((plan) => (
+              <PlanCard key={plan.name} plan={plan} />
+            ))}
+          </div>
+        </section>
+      </div>
 
       <section className="border-y border-line bg-surface/40">
         <div className="mx-auto max-w-6xl px-6 py-24">
@@ -209,8 +231,8 @@ export default function Pricing() {
                 Free is the whole loop
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                Capturing a lesson and reviewing it later is the entire point of fixmind.
-                That never moves behind a paywall.
+                Capturing a lesson and reviewing it later is the entire point of
+                fixmind. That never moves behind a paywall.
               </p>
             </div>
             <div className="rounded-xl border border-line bg-surface p-6">
@@ -219,8 +241,8 @@ export default function Pricing() {
                 Paid plans are convenience
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                Sync across machines, more recall modes, AI enrichment &mdash; useful, but
-                never required to learn from a fix.
+                Sync across machines, more recall modes, AI enrichment &mdash;
+                useful, but never required to learn from a fix.
               </p>
             </div>
             <div className="rounded-xl border border-line bg-surface p-6">
@@ -229,8 +251,8 @@ export default function Pricing() {
                 Team plans monetize org pain
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                Shared libraries and analytics solve a problem only orgs have: knowledge
-                walking out the door when someone leaves.
+                Shared libraries and analytics solve a problem only orgs have:
+                knowledge walking out the door when someone leaves.
               </p>
             </div>
           </div>

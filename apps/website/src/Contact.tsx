@@ -16,7 +16,9 @@ function ContactForm() {
         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-good/10 text-good">
           <Check size={18} />
         </div>
-        <h3 className="mt-4 font-display text-lg font-semibold text-ink">Message sent</h3>
+        <h3 className="mt-4 font-display text-lg font-semibold text-ink">
+          Message sent
+        </h3>
         <p className="mt-2 text-sm text-muted">
           Thanks - we'll reply by email as soon as we can.
         </p>
@@ -43,10 +45,17 @@ function ContactForm() {
         }}
       />
       <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
-      <input type="hidden" name="subject" value="New message from fixmind.dev/contact" />
+      <input
+        type="hidden"
+        name="subject"
+        value="New message from fixmind.dev/contact"
+      />
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label htmlFor="name" className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted">
+          <label
+            htmlFor="name"
+            className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted"
+          >
             Name
           </label>
           <input
@@ -59,7 +68,10 @@ function ContactForm() {
           />
         </div>
         <div>
-          <label htmlFor="email" className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted">
+          <label
+            htmlFor="email"
+            className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted"
+          >
             Email
           </label>
           <input
@@ -73,7 +85,10 @@ function ContactForm() {
         </div>
       </div>
       <div className="mt-4">
-        <label htmlFor="message" className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted">
+        <label
+          htmlFor="message"
+          className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted"
+        >
           Message
         </label>
         <textarea
@@ -105,7 +120,8 @@ const REASONS: Reason[] = [
   {
     email: SUPPORT_EMAIL,
     title: "Something's broken",
-    description: "A bug in the CLI, the MCP server, or the dashboard - include your OS and fixmind version if you can.",
+    description:
+      "A bug in the CLI, the MCP server, or the dashboard - include your OS and fixmind version if you can.",
   },
   {
     email: CONTACT_EMAIL,
@@ -123,7 +139,9 @@ function ReasonCard({ reason }: { reason: Reason }) {
       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10 text-accent">
         <Mail size={16} />
       </div>
-      <h3 className="font-display text-base font-semibold text-ink">{reason.title}</h3>
+      <h3 className="font-display text-base font-semibold text-ink">
+        {reason.title}
+      </h3>
       <p className="text-sm leading-relaxed text-muted">{reason.description}</p>
       <span className="font-mono text-sm text-accent transition-colors group-hover:text-ink">
         {reason.email}
@@ -140,35 +158,39 @@ export default function Contact() {
   return (
     <div>
       <Nav />
-
-      <section className="relative overflow-hidden bg-grid">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-accent/15 blur-[130px]"
-        />
-        <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">Contact</p>
-          <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-            Talk to a person, not a ticket queue.
-          </h1>
-          <p className="mx-auto mt-5 max-w-xl text-muted">
-            Fixmind is a small, solo-maintained project. Email goes straight to the person
-            building it - expect a real reply, not an auto-responder.
-          </p>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
-        <div className="grid gap-5 sm:grid-cols-2">
-          {REASONS.map((reason) => (
-            <ReasonCard key={reason.email} reason={reason} />
-          ))}
-        </div>
-      </section>
-
+      <div className="relative overflow-hidden bg-grid">
+        <section>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-accent/15 blur-[130px]"
+          />
+          <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
+              Contact
+            </p>
+            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+              Talk to a person, not a ticket queue.
+            </h1>
+            <p className="mx-auto mt-5 max-w-xl text-muted">
+              Fixmind is a small, solo-maintained project. Email goes straight
+              to the person building it - expect a real reply, not an
+              auto-responder.
+            </p>
+          </div>
+        </section>
+        <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
+          <div className="grid gap-5 sm:grid-cols-2">
+            {REASONS.map((reason) => (
+              <ReasonCard key={reason.email} reason={reason} />
+            ))}
+          </div>
+        </section>
+      </div>
       <section className="border-t border-line bg-surface/40">
         <div className="mx-auto max-w-3xl px-6 py-24">
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">Or send a message</p>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
+            Or send a message
+          </p>
           <h2 className="mt-3 font-display text-2xl font-semibold tracking-tight text-ink">
             Prefer a form to your email client?
           </h2>
@@ -177,7 +199,6 @@ export default function Contact() {
           </div>
         </div>
       </section>
-
       <Footer />
     </div>
   );
