@@ -381,7 +381,10 @@ export default function App() {
         </div>
 
         <footer className="border-t border-line pt-6 text-center font-mono text-[11px] uppercase tracking-[.2em] text-muted">
-          &copy; {new Date().getFullYear()} Fixmind
+          &copy; {new Date().getFullYear()} Fixmind &mdash;{" "}
+          <a className="hover:text-ink" href="mailto:support@fixmind.dev">
+            support@fixmind.dev
+          </a>
         </footer>
 
         <LessonDialog

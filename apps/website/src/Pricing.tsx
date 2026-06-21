@@ -1,7 +1,7 @@
 import { Check, Lock } from "lucide-react";
 import { CopyButton } from "./components/CopyButton";
 import { usePageMeta } from "./router";
-import { Footer, INSTALL_CMD, Nav, REPO_URL } from "./shared";
+import { CONTACT_EMAIL, Footer, INSTALL_CMD, Nav } from "./shared";
 
 interface Plan {
   name: string;
@@ -131,9 +131,7 @@ function PlanCard({ plan }: { plan: Plan }) {
         )}
         {plan.cta === "contact" && (
           <a
-            href={REPO_URL}
-            target="_blank"
-            rel="noreferrer"
+            href={`mailto:${CONTACT_EMAIL}`}
             className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
           >
             Contact us

@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import Contact from "./Contact";
 import Pricing from "./Pricing";
 import { RouterProvider, useRouter } from "./router";
 import "./styles.css";
@@ -8,6 +9,7 @@ import "./styles.css";
 function Routes() {
   const { path } = useRouter();
   if (path === "/pricing") return <Pricing />;
+  if (path === "/contact") return <Contact />;
   return <App />;
 }
 

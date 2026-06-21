@@ -2,6 +2,8 @@ import { Link, useRouter } from "./router";
 
 export const INSTALL_CMD = "npm install -g fixmind && fixmind setup";
 export const REPO_URL = "https://github.com/F-47/fixmind";
+export const CONTACT_EMAIL = "hello@fixmind.dev";
+export const SUPPORT_EMAIL = "support@fixmind.dev";
 
 export function Nav() {
   const { path } = useRouter();
@@ -34,6 +36,12 @@ export function Nav() {
           >
             Pricing
           </Link>
+          <Link
+            to="/contact"
+            className={`transition-colors hover:text-ink ${path === "/contact" ? "text-ink" : ""}`}
+          >
+            Contact
+          </Link>
         </nav>
         <div className="flex items-center gap-3">
           <Link
@@ -58,6 +66,12 @@ export function Footer() {
             fixmind
           </div>
           <p className="text-sm text-muted">Local-first learning lessons for AI-assisted fixes.</p>
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="text-sm text-muted transition-colors hover:text-ink"
+          >
+            {CONTACT_EMAIL}
+          </a>
         </div>
         <p className="mt-6 border-t border-line pt-6 text-center font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
           MIT licensed · No telemetry · Node 22.5+
