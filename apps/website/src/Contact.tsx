@@ -1,14 +1,13 @@
-import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
+import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { Check, Mail } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
 import { usePageMeta } from "./router";
 import { CONTACT_EMAIL, Footer, Nav, SUPPORT_EMAIL } from "./shared";
 
 const WEB3FORMS_ACCESS_KEY = "9ea2eed4-81f4-4dc3-b5d8-feac9d67b566";
-// Cloudflare's published "always passes" test key - swap for your own Turnstile
-// site key from the Cloudflare dashboard before going live. The matching secret
-// key also needs to be pasted into Web3Forms' Block Spam settings (Turnstile).
-const TURNSTILE_SITE_KEY = "1x00000000000000000000AA";
+// Web3Forms' shared sitekey for free-plan hCaptcha - see their hCaptcha integration docs.
+// Requires fixmind.dev to be listed in the form's Security Settings domain field.
+const HCAPTCHA_SITEKEY = "50b2fe65-b00b-4b9e-ad62-3ba471098be2";
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
@@ -16,14 +15,14 @@ function ContactForm() {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [captchaToken, setCaptchaToken] = useState("");
-  const captchaRef = useRef<TurnstileInstance>(null);
+  const captchaRef = useRef<HCaptcha>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!captchaToken) {
       setStatus("error");
-      setErrorMessage("Please complete the verification check.");
+      setErrorMessage("Please complete the captcha.");
       return;
     }
 
@@ -33,7 +32,7 @@ function ContactForm() {
     const formData = new FormData(event.currentTarget);
     formData.append("access_key", WEB3FORMS_ACCESS_KEY);
     formData.append("subject", "New message from fixmind.dev/contact");
-    formData.append("cf-turnstile-response", captchaToken);
+    formData.append("h-captcha-response", captchaToken);
 
     try {
       const response = await fetch("https://api.web3forms.com/submit", {
@@ -48,13 +47,13 @@ function ContactForm() {
       } else {
         setStatus("error");
         setErrorMessage(result.message ?? "Something went wrong. Try emailing us directly instead.");
-        captchaRef.current?.reset();
+        captchaRef.current?.resetCaptcha();
         setCaptchaToken("");
       }
     } catch {
       setStatus("error");
       setErrorMessage("Couldn't reach the form service. Try emailing us directly instead.");
-      captchaRef.current?.reset();
+      captchaRef.current?.resetCaptcha();
       setCaptchaToken("");
     }
   }
@@ -117,11 +116,12 @@ function ContactForm() {
         />
       </div>
       <div className="mt-4">
-        <Turnstile
+        <HCaptcha
           ref={captchaRef}
-          siteKey={TURNSTILE_SITE_KEY}
-          options={{ theme: "dark" }}
-          onSuccess={(token) => setCaptchaToken(token)}
+          sitekey={HCAPTCHA_SITEKEY}
+          reCaptchaCompat={false}
+          theme="dark"
+          onVerify={(token) => setCaptchaToken(token)}
           onExpire={() => setCaptchaToken("")}
         />
       </div>
