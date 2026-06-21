@@ -1,38 +1,24 @@
-import HCaptcha from "@hcaptcha/react-hcaptcha";
 import { Check, Mail } from "lucide-react";
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { usePageMeta } from "./router";
 import { CONTACT_EMAIL, Footer, Nav, SUPPORT_EMAIL } from "./shared";
 
 const WEB3FORMS_ACCESS_KEY = "9ea2eed4-81f4-4dc3-b5d8-feac9d67b566";
-// Web3Forms' shared sitekey for free-plan hCaptcha - see their hCaptcha integration docs.
-// Requires fixmind.dev to be listed in the form's Security Settings domain field.
-const HCAPTCHA_SITEKEY = "50b2fe65-b00b-4b9e-ad62-3ba471098be2";
 
 type FormStatus = "idle" | "submitting" | "success" | "error";
 
 function ContactForm() {
   const [status, setStatus] = useState<FormStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const [captchaToken, setCaptchaToken] = useState("");
-  const captchaRef = useRef<HCaptcha>(null);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    if (!captchaToken) {
-      setStatus("error");
-      setErrorMessage("Please complete the captcha.");
-      return;
-    }
-
     setStatus("submitting");
     setErrorMessage("");
 
     const formData = new FormData(event.currentTarget);
     formData.append("access_key", WEB3FORMS_ACCESS_KEY);
     formData.append("subject", "New message from fixmind.dev/contact");
-    formData.append("h-captcha-response", captchaToken);
 
     try {
       const response = await fetch("https://api.web3forms.com/submit", {
@@ -47,14 +33,10 @@ function ContactForm() {
       } else {
         setStatus("error");
         setErrorMessage(result.message ?? "Something went wrong. Try emailing us directly instead.");
-        captchaRef.current?.resetCaptcha();
-        setCaptchaToken("");
       }
     } catch {
       setStatus("error");
       setErrorMessage("Couldn't reach the form service. Try emailing us directly instead.");
-      captchaRef.current?.resetCaptcha();
-      setCaptchaToken("");
     }
   }
 
@@ -113,16 +95,6 @@ function ContactForm() {
           rows={5}
           className="mt-2 w-full resize-none rounded-md border border-line bg-surface-2 px-3 py-2.5 text-sm text-ink outline-none focus:border-accent"
           placeholder="What's going on?"
-        />
-      </div>
-      <div className="mt-4">
-        <HCaptcha
-          ref={captchaRef}
-          sitekey={HCAPTCHA_SITEKEY}
-          reCaptchaCompat={false}
-          theme="dark"
-          onVerify={(token) => setCaptchaToken(token)}
-          onExpire={() => setCaptchaToken("")}
         />
       </div>
       {status === "error" && <p className="mt-4 text-sm text-bad">{errorMessage}</p>}
