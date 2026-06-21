@@ -5,10 +5,8 @@ import { CopyButton } from "./components/CopyButton";
 import { usePageMeta } from "./router";
 import { CONTACT_EMAIL, Footer, INSTALL_CMD, Nav } from "./shared";
 
-const PRO_CHECKOUT_URL =
-  "https://sandbox-api.polar.sh/v1/checkout-links/polar_cl_3KrkFxlwodH9orWADKAv4GTr0rBwvNaMuoy1u3Frocj/redirect";
-const TEAM_CHECKOUT_URL =
-  "https://sandbox-api.polar.sh/v1/checkout-links/polar_cl_sLTF7fZDIywm6rncXyUVZA4AozExcuWImBQ8O02nZQj/redirect";
+const PRO_CHECKOUT_URL = import.meta.env.VITE_PRO_CHECKOUT_URL;
+const TEAM_CHECKOUT_URL = import.meta.env.VITE_TEAM_CHECKOUT_URL;
 
 interface Plan {
   name: string;

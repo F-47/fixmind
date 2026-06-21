@@ -1,47 +1,117 @@
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useRouter } from "./router";
+
+const SECTION_IDS = ["loop", "features", "tokens", "how", "commands"];
+
+const NAV_OFFSET = 80; // sticky nav height (64px) + a little breathing room
+
+function useActiveSection(enabled: boolean): string | null {
+  const [active, setActive] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!enabled) {
+      setActive(null);
+      return;
+    }
+    const sections = SECTION_IDS.map((id) => document.getElementById(id)).filter(
+      (el): el is HTMLElement => el !== null,
+    );
+    if (sections.length === 0) return;
+
+    function update() {
+      let current: string | null = null;
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top <= NAV_OFFSET) current = section.id;
+      }
+      setActive(current);
+    }
+
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [enabled]);
+
+  return active;
+}
 
 export const INSTALL_CMD = "npm install -g fixmind && fixmind setup";
 export const REPO_URL = "https://github.com/F-47/fixmind";
 export const CONTACT_EMAIL = "hello@fixmind.dev";
 export const SUPPORT_EMAIL = "support@fixmind.dev";
 
+export function Logo({ size = 20 }: { size?: number }) {
+  return (
+    <img
+      src="/logo.jpeg"
+      alt=""
+      aria-hidden="true"
+      width={size}
+      height={size}
+      className="rounded-[7px]"
+      style={{ width: size, height: size }}
+    />
+  );
+}
+
+function NavLink({
+  to,
+  isActive,
+  children,
+}: {
+  to: string;
+  isActive: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Link to={to} className={`relative pb-0.5 transition-colors hover:text-ink ${isActive ? "text-ink" : ""}`}>
+      {children}
+      <span
+        aria-hidden="true"
+        className={`absolute inset-x-0 -bottom-px h-[2px] origin-left scale-x-0 bg-accent transition-transform duration-300 ${
+          isActive ? "scale-x-100" : ""
+        }`}
+      />
+    </Link>
+  );
+}
+
 export function Nav() {
   const { path } = useRouter();
+  const active = useActiveSection(path === "/");
+
   return (
     <header className="sticky top-0 z-50 h-16 border-b border-line/60 bg-bg/60 backdrop-blur-md">
       <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
         <Link to="/" className="flex items-center gap-2 font-mono text-sm font-medium text-ink">
-          <span className="text-accent">▌</span>
+          <Logo />
           fixmind
         </Link>
         <nav className="hidden items-center gap-8 text-sm text-muted sm:flex">
-          <Link to="/#loop" className="transition-colors hover:text-ink">
+          <NavLink to="/#loop" isActive={active === "loop"}>
             The loop
-          </Link>
-          <Link to="/#features" className="transition-colors hover:text-ink">
+          </NavLink>
+          <NavLink to="/#features" isActive={active === "features"}>
             Features
-          </Link>
-          <Link to="/#tokens" className="transition-colors hover:text-ink">
+          </NavLink>
+          <NavLink to="/#tokens" isActive={active === "tokens"}>
             Token cost
-          </Link>
-          <Link to="/#how" className="transition-colors hover:text-ink">
+          </NavLink>
+          <NavLink to="/#how" isActive={active === "how"}>
             How it works
-          </Link>
-          <Link to="/#commands" className="transition-colors hover:text-ink">
+          </NavLink>
+          <NavLink to="/#commands" isActive={active === "commands"}>
             Commands
-          </Link>
-          <Link
-            to="/pricing"
-            className={`transition-colors hover:text-ink ${path === "/pricing" ? "text-ink" : ""}`}
-          >
+          </NavLink>
+          <NavLink to="/pricing" isActive={path === "/pricing"}>
             Pricing
-          </Link>
-          <Link
-            to="/contact"
-            className={`transition-colors hover:text-ink ${path === "/contact" ? "text-ink" : ""}`}
-          >
+          </NavLink>
+          <NavLink to="/contact" isActive={path === "/contact"}>
             Contact
-          </Link>
+          </NavLink>
         </nav>
         <div className="flex items-center gap-3">
           <Link
@@ -62,7 +132,7 @@ export function Footer() {
       <div className="mx-auto max-w-6xl px-6 py-10">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
           <div className="flex items-center gap-2 font-mono text-ink">
-            <span className="text-accent">▌</span>
+            <Logo size={18} />
             fixmind
           </div>
           <p className="text-sm text-muted">Local-first learning lessons for AI-assisted fixes.</p>
