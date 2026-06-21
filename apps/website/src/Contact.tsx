@@ -1,23 +1,14 @@
 import { Check, Mail } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { usePageMeta } from "./router";
 import { CONTACT_EMAIL, Footer, Nav, SUPPORT_EMAIL } from "./shared";
 
 const WEB3FORMS_ACCESS_KEY = "9ea2eed4-81f4-4dc3-b5d8-feac9d67b566";
+const FRAME_NAME = "contact-form-frame";
 
 function ContactForm() {
-  // A real (non-fetch) form POST: Web3Forms' API doesn't send back CORS
-  // headers, so JS can never read a fetch() response from it - the request
-  // still reaches them either way, but a plain browser submission sidesteps
-  // CORS entirely since it's a navigation, not a script reading a response.
   const [sent, setSent] = useState(false);
-
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("sent") === "true") {
-      setSent(true);
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
+  const submittedRef = useRef(false);
 
   if (sent) {
     return (
@@ -37,15 +28,22 @@ function ContactForm() {
     <form
       action="https://api.web3forms.com/submit"
       method="POST"
+      target={FRAME_NAME}
+      onSubmit={() => {
+        submittedRef.current = true;
+      }}
       className="rounded-xl border border-line bg-surface p-6 sm:p-8"
     >
+      <iframe
+        name={FRAME_NAME}
+        className="hidden"
+        title="Form submission"
+        onLoad={() => {
+          if (submittedRef.current) setSent(true);
+        }}
+      />
       <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
       <input type="hidden" name="subject" value="New message from fixmind.dev/contact" />
-      <input
-        type="hidden"
-        name="redirect"
-        value={`${window.location.origin}${window.location.pathname}?sent=true`}
-      />
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="name" className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted">
