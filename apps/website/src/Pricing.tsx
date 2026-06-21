@@ -5,8 +5,6 @@ import { CopyButton } from "./components/CopyButton";
 import { usePageMeta } from "./router";
 import { CONTACT_EMAIL, Footer, INSTALL_CMD, Nav } from "./shared";
 
-// Sandbox checkout links - swap for live (non-sandbox) links from Polar before
-// this goes to production. Sandbox links don't process real payments.
 const PRO_CHECKOUT_URL =
   "https://sandbox-api.polar.sh/v1/checkout-links/polar_cl_3KrkFxlwodH9orWADKAv4GTr0rBwvNaMuoy1u3Frocj/redirect";
 const TEAM_CHECKOUT_URL =
