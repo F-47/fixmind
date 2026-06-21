@@ -1,46 +1,25 @@
 import { Check, Mail } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { usePageMeta } from "./router";
 import { CONTACT_EMAIL, Footer, Nav, SUPPORT_EMAIL } from "./shared";
 
 const WEB3FORMS_ACCESS_KEY = "9ea2eed4-81f4-4dc3-b5d8-feac9d67b566";
 
-type FormStatus = "idle" | "submitting" | "success" | "error";
-
 function ContactForm() {
-  const [status, setStatus] = useState<FormStatus>("idle");
-  const [errorMessage, setErrorMessage] = useState("");
+  // A real (non-fetch) form POST: Web3Forms' API doesn't send back CORS
+  // headers, so JS can never read a fetch() response from it - the request
+  // still reaches them either way, but a plain browser submission sidesteps
+  // CORS entirely since it's a navigation, not a script reading a response.
+  const [sent, setSent] = useState(false);
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setStatus("submitting");
-    setErrorMessage("");
-
-    const formData = new FormData(event.currentTarget);
-    formData.append("access_key", WEB3FORMS_ACCESS_KEY);
-    formData.append("subject", "New message from fixmind.dev/contact");
-
-    try {
-      const response = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        body: formData,
-      });
-      const result = (await response.json()) as { success?: boolean; message?: string };
-      if (result.success) {
-        setStatus("success");
-        event.currentTarget.reset();
-      } else {
-        setStatus("error");
-        setErrorMessage(result.message ?? "Something went wrong. Try emailing us directly instead.");
-      }
-    } catch {
-      setStatus("error");
-      setErrorMessage("Couldn't reach the form service. Try emailing us directly instead.");
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("sent") === "true") {
+      setSent(true);
+      window.history.replaceState({}, "", window.location.pathname);
     }
-  }
+  }, []);
 
-  if (status === "success") {
+  if (sent) {
     return (
       <div className="rounded-xl border border-line bg-surface p-8 text-center">
         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-good/10 text-good">
@@ -55,7 +34,18 @@ function ContactForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="rounded-xl border border-line bg-surface p-6 sm:p-8">
+    <form
+      action="https://api.web3forms.com/submit"
+      method="POST"
+      className="rounded-xl border border-line bg-surface p-6 sm:p-8"
+    >
+      <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
+      <input type="hidden" name="subject" value="New message from fixmind.dev/contact" />
+      <input
+        type="hidden"
+        name="redirect"
+        value={`${window.location.origin}${window.location.pathname}?sent=true`}
+      />
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label htmlFor="name" className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted">
@@ -97,13 +87,11 @@ function ContactForm() {
           placeholder="What's going on?"
         />
       </div>
-      {status === "error" && <p className="mt-4 text-sm text-bad">{errorMessage}</p>}
       <button
         type="submit"
-        disabled={status === "submitting"}
-        className="mt-5 rounded-md border border-line px-4 py-2.5 text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-5 rounded-md border border-line px-4 py-2.5 text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
       >
-        {status === "submitting" ? "Sending…" : "Send message"}
+        Send message
       </button>
     </form>
   );
