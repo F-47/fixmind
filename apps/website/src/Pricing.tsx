@@ -1,7 +1,16 @@
+import { PolarEmbedCheckout } from "@polar-sh/checkout/embed";
 import { Check, Lock } from "lucide-react";
+import { useEffect } from "react";
 import { CopyButton } from "./components/CopyButton";
 import { usePageMeta } from "./router";
 import { CONTACT_EMAIL, Footer, INSTALL_CMD, Nav } from "./shared";
+
+// Sandbox checkout links - swap for live (non-sandbox) links from Polar before
+// this goes to production. Sandbox links don't process real payments.
+const PRO_CHECKOUT_URL =
+  "https://sandbox-api.polar.sh/v1/checkout-links/polar_cl_3KrkFxlwodH9orWADKAv4GTr0rBwvNaMuoy1u3Frocj/redirect";
+const TEAM_CHECKOUT_URL =
+  "https://sandbox-api.polar.sh/v1/checkout-links/polar_cl_sLTF7fZDIywm6rncXyUVZA4AozExcuWImBQ8O02nZQj/redirect";
 
 interface Plan {
   name: string;
@@ -9,7 +18,8 @@ interface Plan {
   unit?: string;
   note?: string;
   status: "available" | "roadmap";
-  cta: "install" | "soon" | "contact";
+  cta: "install" | "checkout" | "contact";
+  checkoutUrl?: string;
   tagline: string;
   features: string[];
   highlight?: boolean;
@@ -34,7 +44,8 @@ const PLANS: Plan[] = [
     price: "$9",
     unit: "/mo per developer",
     status: "roadmap",
-    cta: "soon",
+    cta: "checkout",
+    checkoutUrl: PRO_CHECKOUT_URL,
     tagline: "For developers who switch machines and want more recall modes.",
     features: [
       "Everything in Free",
@@ -51,7 +62,8 @@ const PLANS: Plan[] = [
     unit: "/mo per developer",
     note: "5-seat minimum",
     status: "roadmap",
-    cta: "soon",
+    cta: "checkout",
+    checkoutUrl: TEAM_CHECKOUT_URL,
     tagline: "For teams that don't want the same mistake fixed twice by two people.",
     features: [
       "Everything in Pro",
@@ -120,14 +132,15 @@ function PlanCard({ plan }: { plan: Plan }) {
             <CopyButton text={INSTALL_CMD} label="Copy install command" variant="block" />
           </div>
         )}
-        {plan.cta === "soon" && (
-          <button
-            type="button"
-            disabled
-            className="block w-full cursor-not-allowed rounded-md border border-line px-3 py-2 text-center text-sm text-muted"
+        {plan.cta === "checkout" && (
+          <a
+            href={plan.checkoutUrl}
+            data-polar-checkout
+            data-polar-checkout-theme="dark"
+            className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
           >
-            Coming soon
-          </button>
+            Subscribe
+          </a>
         )}
         {plan.cta === "contact" && (
           <a
@@ -147,6 +160,11 @@ export default function Pricing() {
     "Pricing — fixmind",
     "Fixmind is free and local-first forever. Pro, Team, and Enterprise plans add sync, shared libraries, and self-hosting on top.",
   );
+
+  useEffect(() => {
+    PolarEmbedCheckout.init();
+  }, []);
+
   return (
     <div>
       <Nav />
