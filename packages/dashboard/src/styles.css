@@ -1,17 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --color-page: #14171a;
-  --color-surface: #1b1f23;
-  --color-line: #2f353b;
-  --color-ink: #edf1f3;
-  --color-muted: #8993a0;
-  --color-accent: #4fb3bf;
-  --color-positive: #8bbf8a;
-  --color-warn: #d6ab5f;
-  --color-danger: #d9594f;
+  --color-page: #08090d;
+  --color-surface: #11141b;
+  --color-surface-2: #161a23;
+  --color-line: #232838;
+  --color-ink: #e9ecf4;
+  --color-muted: #828a9c;
+  --color-accent: #7c5cff;
+  --color-accent-dim: #4b3aae;
+  --color-positive: #4ade80;
+  --color-warn: #e8b35f;
+  --color-danger: #ff5c72;
 
-  --font-serif: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-serif: "Space Grotesk", "Inter", sans-serif;
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
 }
 
 @layer base {
@@ -20,18 +24,18 @@
     @apply m-0 min-h-screen bg-page font-sans text-ink;
   }
   button, input, textarea, select { font: inherit; }
-  dialog::backdrop { background: #0a0705d9; backdrop-filter: blur(4px); }
+  dialog::backdrop { background: #050608d9; backdrop-filter: blur(4px); }
 
-  /* highlight.js token colors — tuned for the fixmind editorial theme */
-  .hljs-keyword, .hljs-built_in, .hljs-tag { color: #4fb3bf; }
-  .hljs-string, .hljs-attr { color: #8bbf8a; }
-  .hljs-number, .hljs-literal { color: #d6ab5f; }
-  .hljs-comment { color: #6f7a87; font-style: italic; }
-  .hljs-title, .hljs-class, .hljs-type, .hljs-selector-class { color: #b39ddb; }
+  /* highlight.js token colors — tuned to the fixmind brand palette */
+  .hljs-keyword, .hljs-built_in, .hljs-tag { color: #7c5cff; }
+  .hljs-string, .hljs-attr { color: #4ade80; }
+  .hljs-number, .hljs-literal { color: #e8b35f; }
+  .hljs-comment { color: #5a6275; font-style: italic; }
+  .hljs-title, .hljs-class, .hljs-type, .hljs-selector-class { color: #a78bff; }
   .hljs-function, .hljs-name { color: #c5cdd6; }
-  .hljs-operator, .hljs-punctuation { color: #7e8a99; }
-  .hljs-meta { color: #6f7a87; }
-  .hljs-variable, .hljs-params { color: #edf1f3; }
+  .hljs-operator, .hljs-punctuation { color: #828a9c; }
+  .hljs-meta { color: #5a6275; }
+  .hljs-variable, .hljs-params { color: #e9ecf4; }
 
   /* Word-level diff highlights inside code blocks */
   mark { background: transparent; color: inherit; }
