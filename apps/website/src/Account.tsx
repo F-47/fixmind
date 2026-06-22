@@ -56,10 +56,8 @@ function AuthForm() {
       <h2 className="font-display text-xl font-semibold text-ink">
         {mode === "signIn" ? "Sign in" : "Create your account"}
       </h2>
-      <p className="mt-1 text-sm text-muted">
-        Same account fixmind&rsquo;s CLI uses for{" "}
-        <code className="text-ink">fixmind sync login</code>.
-      </p>
+      <p className="mt-1 text-sm text-muted">Same account fixmind&rsquo;s CLI uses for</p>
+      <code className="mt-0.5 block text-sm text-ink">fixmind sync login</code>
 
       <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
         <input
