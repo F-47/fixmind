@@ -91,6 +91,23 @@ async function handleRequest(
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/sync/pull") {
+      const { createSyncEngine } = await import("./sync.js");
+      try {
+        const result = await createSyncEngine(store).pull();
+        sendJson(response, 200, result);
+      } catch (error) {
+        sendJson(response, 400, { error: error instanceof Error ? error.message : String(error) });
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/sync/status") {
+      const { createSyncEngine } = await import("./sync.js");
+      sendJson(response, 200, createSyncEngine(store).status());
+      return;
+    }
+
     const reviewMatch = request.method === "POST"
       && url.pathname.match(/^\/api\/lessons\/([^/]+)\/review$/);
     if (reviewMatch) {
