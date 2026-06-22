@@ -4,6 +4,12 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.17]
+
+### Fixed
+- The CLI login now retries in the same terminal when the sync passphrase is wrong instead of exiting immediately.
+- The website account handoff now uses a dedicated callback route before showing the account page, which avoids flashing the sign-in form while the CLI session is being applied.
+
 ## [1.0.16]
 
 ### Fixed

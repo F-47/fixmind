@@ -27,7 +27,7 @@ import { configureClients, configureInstructions, configurePermissions, detectCl
 
 const DEFAULT_SUPABASE_URL = "https://jpczzgekindvuivnwjuw.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwY3p6Z2VraW5kdnVpdm53anV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwNzEyMjEsImV4cCI6MjA5NzY0NzIyMX0.qG-9H5BZi3sKHVQrzL3iI9ALmJgoTizLCU4Bxzpw0Bo";
-const ACCOUNT_URL = "https://www.fixmind.dev/account";
+const ACCOUNT_URL = "https://www.fixmind.dev/account/callback";
 
 export async function setup(options: Record<string, string | boolean>): Promise<void> {
   const paths = initializeDataDirectory();
@@ -151,46 +151,64 @@ export async function loginCommand(options: Record<string, string | boolean>): P
     const supabaseAnonKey = optionString(options.key) ?? process.env.FIXMIND_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_ANON_KEY;
 
     if (interactive) intro("Fixmind login", common);
-    const passphrase = optionString(options.passphrase) ?? await promptPassphrase(interactive);
 
     const usePasswordLogin = Boolean(optionString(options.email) || options["password-login"]);
     let result: { email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } };
-    if (usePasswordLogin) {
-      const email = optionString(options.email) ?? (interactive
-        ? unwrap(await text({ message: "Email", ...common }))
-        : (() => { throw new Error("Usage: fixmind login --email <email> --password <password> --passphrase <passphrase>"); })());
-      const userPassword = optionString(options.password) ?? (interactive
-        ? unwrap(await password({ message: "Password", ...common }))
-        : (() => { throw new Error("--password is required outside an interactive terminal."); })());
-      result = await engine.login({ supabaseUrl, supabaseAnonKey, email, password: userPassword, passphrase });
-    } else if (interactive) {
-      let s = startSpinner("Opening your browser to sign in with GitHub...");
-      let fallbackUrl: string | undefined;
+    const fixedPassphrase = optionString(options.passphrase);
+
+    for (;;) {
+      const passphrase = fixedPassphrase ?? await promptPassphrase(interactive);
+
       try {
-        result = await engine.loginWithGithub({
-          supabaseUrl,
-          supabaseAnonKey,
-          passphrase,
-          onAuthUrl: (url) => {
-            fallbackUrl = url;
-            s.stop("Browser opened.");
-            log.message(`Didn't open? ${terminalLink("Click here to sign in", url)}`, common);
-            s = startSpinner("Waiting for sign in to finish in your browser...");
-          },
-        });
-        s.stop("Signed in with GitHub.");
+        if (usePasswordLogin) {
+          const email = optionString(options.email) ?? (interactive
+            ? unwrap(await text({ message: "Email", ...common }))
+            : (() => { throw new Error("Usage: fixmind login --email <email> --password <password> --passphrase <passphrase>"); })());
+          const userPassword = optionString(options.password) ?? (interactive
+            ? unwrap(await password({ message: "Password", ...common }))
+            : (() => { throw new Error("--password is required outside an interactive terminal."); })());
+          result = await engine.login({ supabaseUrl, supabaseAnonKey, email, password: userPassword, passphrase });
+        } else if (interactive) {
+          let s = startSpinner("Opening your browser to sign in with GitHub...");
+          let fallbackUrl: string | undefined;
+          try {
+            result = await engine.loginWithGithub({
+              supabaseUrl,
+              supabaseAnonKey,
+              passphrase,
+              onAuthUrl: (url) => {
+                fallbackUrl = url;
+                s.stop("Browser opened.");
+                log.message(`Didn't open? ${terminalLink("Click here to sign in", url)}`, common);
+                s = startSpinner("Waiting for sign in to finish in your browser...");
+              },
+            });
+            s.stop("Signed in with GitHub.");
+          } catch (error) {
+            s.stop("GitHub sign in failed.");
+            if (fallbackUrl) log.message(`If the browser didn't open: ${terminalLink("Click here to sign in", fallbackUrl)}`, common);
+            if (interactive && isIncorrectPassphraseError(error) && !fixedPassphrase) {
+              log.message("That passphrase did not match this sync account. Try again.", common);
+              continue;
+            }
+            throw error;
+          }
+        } else {
+          result = await engine.loginWithGithub({
+            supabaseUrl,
+            supabaseAnonKey,
+            passphrase,
+            onAuthUrl: (url) => console.log(`Opening your browser to sign in with GitHub...\nIf it doesn't open, visit: ${url}`),
+          });
+        }
+        break;
       } catch (error) {
-        s.stop("GitHub sign in failed.");
-        if (fallbackUrl) log.message(`If the browser didn't open: ${terminalLink("Click here to sign in", fallbackUrl)}`, common);
+        if (interactive && isIncorrectPassphraseError(error) && !fixedPassphrase) {
+          log.message("That passphrase did not match this sync account. Try again.", common);
+          continue;
+        }
         throw error;
       }
-    } else {
-      result = await engine.loginWithGithub({
-        supabaseUrl,
-        supabaseAnonKey,
-        passphrase,
-        onAuthUrl: (url) => console.log(`Opening your browser to sign in with GitHub...\nIf it doesn't open, visit: ${url}`),
-      });
     }
 
     const message = result.entitled
@@ -222,6 +240,11 @@ async function promptPassphrase(interactive: boolean): Promise<string> {
     if (value.trim()) return value;
     log.message("Passphrase cannot be empty. Try again.", common);
   }
+}
+
+function isIncorrectPassphraseError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /Incorrect passphrase for this sync account/i.test(message);
 }
 
 function openAccountPage(session: { accessToken: string; refreshToken: string }): void {

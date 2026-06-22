@@ -172,7 +172,7 @@ function waitForOAuthCode(port: number, authUrl: string): Promise<string> {
           : oauthCallbackPage({
               ok: true,
               message: "You can close this window and return to the terminal.",
-              redirectUrl: "https://www.fixmind.dev/account",
+              redirectUrl: "https://www.fixmind.dev/account/callback",
               redirectLabel: "Open account",
             }),
       );

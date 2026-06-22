@@ -9,6 +9,7 @@ import App from "./App";
 import Contact from "./Contact";
 import Docs from "./Docs";
 import Pricing from "./Pricing";
+import { AccountCallback } from "./account/AccountCallback";
 import "./styles.css";
 
 function ScrollToTop() {
@@ -32,6 +33,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/docs/*" element={<Docs />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/account" element={<Account />} />
+        <Route path="/account/callback" element={<AccountCallback />} />
       </Routes>
     </BrowserRouter>
     <Toaster theme="dark" position="bottom-right" richColors />
