@@ -9,6 +9,8 @@ import { validateLessonInput } from "../src/validation.js";
 
 test("dashboard renders local data and saves reviews", async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-dashboard-"));
+  const previousDataDir = process.env.FIXMIND_DATA_DIR;
+  process.env.FIXMIND_DATA_DIR = directory;
   const store = createLessonStore(path.join(directory, "test.db"));
   const saved = store.save(validateLessonInput({
     tool: "codex",
@@ -126,5 +128,7 @@ test("dashboard renders local data and saves reviews", async () => {
     await dashboard.close();
     store.close();
     fs.rmSync(directory, { recursive: true, force: true });
+    if (previousDataDir === undefined) delete process.env.FIXMIND_DATA_DIR;
+    else process.env.FIXMIND_DATA_DIR = previousDataDir;
   }
 });

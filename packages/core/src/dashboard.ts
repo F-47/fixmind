@@ -26,6 +26,8 @@ const DASHBOARD_DIRECTORY = path.resolve(path.dirname(fileURLToPath(import.meta.
 export async function startDashboard(options: DashboardOptions = {}): Promise<DashboardHandle> {
   const store = options.store ?? createLessonStore();
   const ownsStore = !options.store;
+  const { autoPullOnStart } = await import("./sync.js");
+  await autoPullOnStart(store);
   const server = http.createServer((request, response) => {
     void handleRequest(store, request, response);
   });

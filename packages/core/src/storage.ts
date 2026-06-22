@@ -19,6 +19,8 @@ export interface LessonStore {
   save(input: LessonInput): Lesson;
   get(id: string): Lesson | undefined;
   list(limit?: number): Lesson[];
+  updatedSince(timestamp: string): Lesson[];
+  upsertFromRemote(lesson: Lesson): void;
   search(query: string, options?: { includeSuperseded?: boolean }): Lesson[];
   due(now?: Date): Lesson[];
   updateReview(id: string, questions: ReviewQuestion[], understanding: Understanding): Lesson;
@@ -199,6 +201,53 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
 
     list(limit = 20): Lesson[] {
       return (db.prepare("SELECT * FROM lessons ORDER BY created_at DESC LIMIT ?").all(limit) as unknown as RawRow[]).map(fromDb);
+    },
+
+    updatedSince(timestamp: string): Lesson[] {
+      return (db.prepare(
+        "SELECT * FROM lessons WHERE updated_at > ? ORDER BY updated_at ASC",
+      ).all(timestamp) as unknown as RawRow[]).map(fromDb);
+    },
+
+    upsertFromRemote(lesson: Lesson): void {
+      db.prepare(`
+        INSERT INTO lessons (
+          id, created_at, updated_at, tool, project_path, title, original_prompt,
+          problem, mistake, root_cause, fix_summary, takeaway, mistake_pattern,
+          when_not_applicable, concepts, files_changed, code_example, bad_code_example,
+          good_code_example, code_explanation, practice_task, review_questions,
+          understanding, next_review_at, review_count, source_diff, tags,
+          status, superseded_by, supersedes, supersede_reason
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )
+        ON CONFLICT(id) DO UPDATE SET
+          created_at=excluded.created_at, updated_at=excluded.updated_at, tool=excluded.tool,
+          project_path=excluded.project_path, title=excluded.title, original_prompt=excluded.original_prompt,
+          problem=excluded.problem, mistake=excluded.mistake, root_cause=excluded.root_cause,
+          fix_summary=excluded.fix_summary, takeaway=excluded.takeaway, mistake_pattern=excluded.mistake_pattern,
+          when_not_applicable=excluded.when_not_applicable, concepts=excluded.concepts,
+          files_changed=excluded.files_changed, code_example=excluded.code_example,
+          bad_code_example=excluded.bad_code_example, good_code_example=excluded.good_code_example,
+          code_explanation=excluded.code_explanation, practice_task=excluded.practice_task,
+          review_questions=excluded.review_questions, understanding=excluded.understanding,
+          next_review_at=excluded.next_review_at, review_count=excluded.review_count,
+          source_diff=excluded.source_diff, tags=excluded.tags, status=excluded.status,
+          superseded_by=excluded.superseded_by, supersedes=excluded.supersedes,
+          supersede_reason=excluded.supersede_reason
+      `).run(
+        lesson.id, lesson.createdAt, lesson.updatedAt, lesson.tool, lesson.projectPath,
+        lesson.title, lesson.originalPrompt, lesson.problem, lesson.mistake,
+        lesson.rootCause, lesson.fixSummary,
+        lesson.takeaway ?? null, lesson.mistakePattern ?? null, lesson.whenNotApplicable ?? null,
+        JSON.stringify(lesson.concepts), JSON.stringify(lesson.filesChanged),
+        lesson.codeExample ?? null, lesson.badCodeExample ?? null, lesson.goodCodeExample ?? null,
+        lesson.codeExplanation ?? null, lesson.practiceTask ?? null,
+        JSON.stringify(lesson.reviewQuestions),
+        lesson.understanding, lesson.nextReviewAt, lesson.reviewCount,
+        lesson.sourceDiff ?? null, JSON.stringify(lesson.tags), lesson.status,
+        lesson.supersededBy ?? null, lesson.supersedes ?? null, lesson.supersedeReason ?? null,
+      );
     },
 
     search(query: string, options: { includeSuperseded?: boolean } = {}): Lesson[] {

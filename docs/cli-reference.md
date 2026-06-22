@@ -138,6 +138,52 @@ fixmind supersede 8d7571ed a3f9c021 --reason "The first fix didn't handle the SS
 
 Marks `oldId` as superseded by `newId` — linked, not deleted. Superseded lessons drop out of `list`, `search`, and `review` by default (pass `--include-superseded` to see them), but stay in your history with a link to the corrected lesson. Use this when a fix turned out to be wrong or incomplete, not for simple rewording.
 
+## Sync (Pro)
+
+Encrypted sync across machines via a Supabase project you (or your org) own. See [sync-setup.md](../packages/core/docs/sync-setup.md) for how to create the project and apply the schema.
+
+### `fixmind sync login`
+
+```bash
+fixmind sync login
+fixmind sync login --password-login --email you@example.com --password ... --passphrase ...
+```
+
+By default this opens your browser to sign in with **GitHub** (via Supabase's GitHub OAuth provider — see [sync-setup.md](../packages/core/docs/sync-setup.md) for the one-time GitHub OAuth App setup). Pass `--password-login` to use email/password instead. Either way it stores a session locally at `~/.fixmind/sync.json` and asks for an encryption passphrase: lesson content is encrypted on your machine with a key derived from it before it's ever sent to Supabase — use the **same passphrase on every machine**, since it can't be recovered or changed without losing access to already-synced data.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--url <url>` | `$FIXMIND_SUPABASE_URL` | Supabase project URL. |
+| `--key <key>` | `$FIXMIND_SUPABASE_ANON_KEY` | Supabase anon public key. |
+| `--passphrase` | prompted | Required outside an interactive terminal. |
+| `--password-login` | off | Use email/password instead of the GitHub browser flow. |
+| `--email`, `--password` | prompted | Only used with `--password-login`; required outside an interactive terminal. |
+
+### `fixmind sync push`
+
+Encrypts and uploads every lesson changed since the last push.
+
+### `fixmind sync pull`
+
+Downloads and decrypts lessons changed (on other machines) since the last pull, and applies them locally. If a lesson was also edited locally, the newer `updatedAt` wins — a locally newer edit is kept even if an older remote version arrives.
+
+### Automatic sync
+
+If you're logged in (`fixmind sync login` has been run), two things happen without needing the explicit commands above:
+
+- Saving a lesson — via `fixmind save`, `fixmind save-from-summary`, or the AI agent's `save_lesson` MCP tool call — automatically pushes it.
+- Opening `fixmind dashboard` automatically pulls first, so it shows lessons synced from other machines.
+
+Both are best-effort: a failed auto-push/pull (offline, timeout) logs a one-line warning but never blocks the save or the dashboard from loading. If you're not logged in, neither does anything.
+
+### `fixmind sync status`
+
+Prints whether you're logged in, and the last push/pull times.
+
+### `fixmind sync logout`
+
+Removes the local session at `~/.fixmind/sync.json`. Does not delete anything from Supabase.
+
 ## Backup and export
 
 ### `fixmind export`

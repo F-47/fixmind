@@ -195,6 +195,8 @@ export function createLearningLessonServer(
 
         const supersedeTarget = input.supersedesLessonId ? store.get(input.supersedesLessonId) : undefined;
         const saved = store.save(input);
+        const { autoPushAfterSave } = await import("./sync.js");
+        await autoPushAfterSave(store);
 
         const supersedeLines: string[] = [];
         if (input.supersedesLessonId) {

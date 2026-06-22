@@ -11,6 +11,7 @@ import {
   multiselect,
   note,
   outro,
+  password,
   select,
   text,
 } from "@clack/prompts";
@@ -113,6 +114,11 @@ async function main(): Promise<void> {
 
   if (args.command === "setup") {
     await setup(args.options);
+    return;
+  }
+
+  if (args.command === "sync") {
+    await syncCommand(args.positionals[0], args.options);
     return;
   }
 
@@ -270,6 +276,95 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
   console.log("Restart configured AI clients so they discover the MCP server.");
 }
 
+async function syncCommand(
+  sub: string | undefined,
+  options: Record<string, string | boolean>,
+): Promise<void> {
+  if (!sub || !["login", "logout", "push", "pull", "status"].includes(sub)) {
+    throw new Error("Usage: fixmind sync <login|push|pull|status|logout>");
+  }
+
+  initializeDataDirectory();
+  const { createSyncEngine } = await import("./sync.js");
+  const store = createLessonStore();
+  const interactive = stdin.isTTY && stdout.isTTY;
+  try {
+    const engine = createSyncEngine(store);
+
+    if (sub === "login") {
+      const supabaseUrl = optionString(options.url) ?? process.env.FIXMIND_SUPABASE_URL;
+      const supabaseAnonKey = optionString(options.key) ?? process.env.FIXMIND_SUPABASE_ANON_KEY;
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error(
+          "Set FIXMIND_SUPABASE_URL and FIXMIND_SUPABASE_ANON_KEY (or pass --url/--key). See docs/sync-setup.md.",
+        );
+      }
+
+      if (interactive) intro("Fixmind sync login", common);
+      const passphrase = optionString(options.passphrase) ?? (interactive
+        ? unwrap(await password({
+            message: "Sync encryption passphrase (use the same one on every machine)",
+            ...common,
+          }))
+        : (() => { throw new Error("--passphrase is required outside an interactive terminal."); })());
+
+      const usePasswordLogin = Boolean(optionString(options.email) || options["password-login"]);
+      let email: string;
+      if (usePasswordLogin) {
+        email = optionString(options.email) ?? (interactive
+          ? unwrap(await text({ message: "Email", ...common }))
+          : (() => { throw new Error("Usage: fixmind sync login --email <email> --password <password> --passphrase <passphrase>"); })());
+        const userPassword = optionString(options.password) ?? (interactive
+          ? unwrap(await password({ message: "Password", ...common }))
+          : (() => { throw new Error("--password is required outside an interactive terminal."); })());
+        await engine.login({ supabaseUrl, supabaseAnonKey, email, password: userPassword, passphrase });
+      } else {
+        await engine.loginWithGithub({ supabaseUrl, supabaseAnonKey, passphrase });
+        email = engine.status().email ?? "your GitHub account";
+      }
+
+      if (interactive) {
+        outro(`Logged in as ${email}.`, common);
+      } else {
+        console.log(`Logged in as ${email}.`);
+      }
+      return;
+    }
+
+    if (sub === "logout") {
+      engine.logout();
+      console.log("Logged out of sync.");
+      return;
+    }
+
+    if (sub === "status") {
+      const status = engine.status();
+      if (!status.loggedIn) {
+        console.log("Not logged in to sync. Run `fixmind sync login`.");
+        return;
+      }
+      console.log(`Logged in as ${status.email}.`);
+      console.log(`Last push: ${status.lastPushedAt ?? "never"}`);
+      console.log(`Last pull: ${status.lastPulledAt ?? "never"}`);
+      return;
+    }
+
+    if (sub === "push") {
+      const result = await engine.push();
+      console.log(`Pushed ${result.pushed} lesson(s).`);
+      return;
+    }
+
+    if (sub === "pull") {
+      const result = await engine.pull();
+      console.log(`Pulled ${result.pulled} change(s), applied ${result.applied} update(s) locally.`);
+      return;
+    }
+  } finally {
+    store.close();
+  }
+}
+
 function validateScope(value: string): SetupScope {
   if (value !== "user" && value !== "project")
     throw new Error(`Unsupported scope: ${value}. Use user or project.`);
@@ -363,6 +458,8 @@ async function saveLesson(
     tags: parseList(await get("tags", "Tags (comma-separated)")).map((name) => ({ name })),
   });
   const saved = store.save(input);
+  const { autoPushAfterSave } = await import("./sync.js");
+  await autoPushAfterSave(store);
   if (interactive) {
     outro(`Saved lesson ${saved.id}: ${saved.title}`, common);
   } else {
@@ -402,6 +499,8 @@ async function saveLessonFromSummary(
   }
 
   const saved = store.save(input);
+  const { autoPushAfterSave } = await import("./sync.js");
+  await autoPushAfterSave(store);
   console.log(`Saved lesson ${saved.id}: ${saved.title}`);
   for (const warning of quality.warnings) console.log(warning);
 }
@@ -715,7 +814,9 @@ function parseArgs(argv: string[]): ParsedArgs {
       "review-question": S, "expected-answer": S, tool: S, understanding: S,
       tags: S, file: S, format: S, output: S, id: S, limit: S, port: S,
       client: S, scope: S, reason: S,
+      url: S, key: S, email: S, password: S, passphrase: S,
       yes: { ...B, short: "y" }, "include-superseded": B, "no-open": B, "dry-run": B, help: B,
+      "password-login": B,
     },
   });
   const command = positionals[0];
@@ -730,7 +831,7 @@ async function readStdin(): Promise<string> {
 
 function printHelp(): void {
   console.log(
-    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
+    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind sync login [--url <supabase-url> --key <anon-key> --passphrase ...]  (opens browser for GitHub sign in)\n  fixmind sync login --password-login --email ... --password ... --passphrase ...  (email/password instead)\n  fixmind sync push\n  fixmind sync pull\n  fixmind sync status\n  fixmind sync logout\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
   );
 }
 
