@@ -4,6 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.20]
+
+### Changed
+- The CLI login prompt now says `Waiting for authentication...` and prints the Fixmind account URL explicitly, which makes the browser-first flow feel closer to a device login wait state.
+
 ## [1.0.19]
 
 ### Changed
