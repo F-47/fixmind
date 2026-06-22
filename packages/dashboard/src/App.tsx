@@ -158,19 +158,21 @@ export default function App() {
             <main>
               <div className="mb-5 space-y-4 rounded-3xl">
                 <div className="space-y-2">
-                  {syncMeta && !syncMeta.loggedIn && (
+                  {syncMeta && (!syncMeta.loggedIn || syncMeta.needsReauth) && (
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface-2 px-4 py-3">
                       <div className="space-y-1">
                         <div className="text-xs font-semibold uppercase tracking-[.18em] text-muted">
-                          Sync is off
+                          {syncMeta.needsReauth ? "Sync needs re-login" : "Sync is off"}
                         </div>
                         <p className="text-sm leading-relaxed text-muted">
-                          Sign in on the account page to enable encrypted sync across your devices.
+                          {syncMeta.needsReauth
+                            ? "Your saved sync session expired. Sign in again on the account page to restore encrypted sync."
+                            : "Sign in on the account page to enable encrypted sync across your devices."}
                         </p>
                       </div>
                       <a
                         className="inline-flex items-center justify-center rounded-full border border-line bg-page px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-ink transition-colors hover:border-accent/40 hover:text-accent"
-                        href="/account"
+                        href="https://fixmind.dev/account"
                       >
                         Open account
                       </a>

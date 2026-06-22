@@ -104,7 +104,7 @@ async function handleRequest(
 
     if (request.method === "GET" && url.pathname === "/api/sync/status") {
       const { createSyncEngine } = await import("./sync.js");
-      sendJson(response, 200, createSyncEngine(store).status());
+      sendJson(response, 200, await createSyncEngine(store).status());
       return;
     }
 

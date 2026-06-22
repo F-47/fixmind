@@ -4,6 +4,12 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.9]
+
+### Fixed
+- Dashboard sync status now validates the live session and shows a re-login prompt when the saved refresh token is no longer valid.
+- CLI sync status now reports an expired session separately from a never-logged-in state.
+
 ## [1.0.8]
 
 ### Fixed

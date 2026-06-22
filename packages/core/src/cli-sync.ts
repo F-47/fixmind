@@ -193,9 +193,9 @@ export async function syncCommand(sub: string | undefined): Promise<void> {
     const engine = createSyncEngine(store);
 
     if (sub === "status") {
-      const status = engine.status();
+      const status = await engine.status();
       if (!status.loggedIn) {
-        console.log("Not logged in. Run `fixmind login`.");
+        console.log(status.needsReauth ? "Sync session expired. Run `fixmind login` again." : "Not logged in. Run `fixmind login`.");
         return;
       }
       console.log(`Logged in as ${status.email}.`);

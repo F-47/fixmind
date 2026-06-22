@@ -48,7 +48,7 @@ export interface SyncEngine {
   login(params: { supabaseUrl: string; supabaseAnonKey: string; email: string; password: string; passphrase: string }): Promise<LoginResult>;
   loginWithGithub(params: { supabaseUrl: string; supabaseAnonKey: string; passphrase: string; onAuthUrl?: (url: string) => void }): Promise<LoginResult>;
   logout(): void;
-  status(): { loggedIn: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string };
+  status(): Promise<{ loggedIn: boolean; needsReauth?: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string }>;
   push(): Promise<{ pushed: number }>;
   pull(): Promise<{ pulled: number; applied: number }>;
 }
@@ -66,7 +66,7 @@ async function withTimeout<T>(promise: Promise<T>): Promise<T> {
 
 export async function autoPushAfterSave(store: LessonStore): Promise<void> {
   const engine = createSyncEngine(store);
-  if (!engine.status().loggedIn) return;
+  if (!(await engine.status()).loggedIn) return;
   try {
     await withTimeout(engine.push());
   } catch (error) {
@@ -78,7 +78,7 @@ export async function autoPushAfterSave(store: LessonStore): Promise<void> {
 
 export async function autoPullOnStart(store: LessonStore): Promise<void> {
   const engine = createSyncEngine(store);
-  if (!engine.status().loggedIn) return;
+  if (!(await engine.status()).loggedIn) return;
   try {
     await withTimeout(engine.pull());
   } catch (error) {
@@ -93,6 +93,11 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
     const config = readSyncConfig();
     if (!config) throw new Error("Not logged in to sync. Run `fixmind login` first.");
     return config;
+  }
+
+  function isAuthError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    return /invalid refresh token|refresh token not found|jwt expired|session not found/i.test(message);
   }
 
   function backendFor(config: SyncConfig): SyncBackend {
@@ -234,15 +239,36 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       if (fs.existsSync(file)) fs.rmSync(file);
     },
 
-    status() {
+    async status() {
       const config = readSyncConfig();
       if (!config) return { loggedIn: false };
-      return {
-        loggedIn: true,
-        email: config.email,
-        lastPushedAt: config.lastPushedAt,
-        lastPulledAt: config.lastPulledAt,
-      };
+      const activeBackend = backendFor(config);
+      const session: SessionTokens = { accessToken: config.accessToken, refreshToken: config.refreshToken };
+      try {
+        await activeBackend.verifySession(session);
+        return {
+          loggedIn: true,
+          email: config.email,
+          lastPushedAt: config.lastPushedAt,
+          lastPulledAt: config.lastPulledAt,
+        };
+      } catch (error) {
+        if (!isAuthError(error)) {
+          return {
+            loggedIn: true,
+            email: config.email,
+            lastPushedAt: config.lastPushedAt,
+            lastPulledAt: config.lastPulledAt,
+          };
+        }
+        return {
+          loggedIn: false,
+          needsReauth: true,
+          email: config.email,
+          lastPushedAt: config.lastPushedAt,
+          lastPulledAt: config.lastPulledAt,
+        };
+      }
     },
 
     async push() {

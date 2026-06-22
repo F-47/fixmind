@@ -6,6 +6,7 @@ import type { DashboardData, DashboardLesson, Understanding } from "./types";
 type Filter = "all" | "learning" | "understood";
 type ModelFilter = "all" | `tool:${string}`;
 type Route = { kind: "dashboard" } | { kind: "lesson"; lessonId: string; review: boolean };
+type SyncMeta = { loggedIn: boolean; needsReauth?: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string };
 
 const PAGE_SIZE = 8;
 
@@ -33,7 +34,7 @@ export function useDashboardController() {
   const [route, setRoute] = useState<Route>(() => readRoute());
   const [error, setError] = useState("");
   const [syncNote, setSyncNote] = useState("");
-  const [syncMeta, setSyncMeta] = useState<{ loggedIn: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string } | null>(null);
+  const [syncMeta, setSyncMeta] = useState<SyncMeta | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [page, setPage] = useState(1);
