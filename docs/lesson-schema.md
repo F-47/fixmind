@@ -1,6 +1,6 @@
 # What a lesson actually contains
 
-Every lesson — whether saved by an AI agent through MCP, by `fixmind save-manual`, or piped in through `fixmind save-ai-summary` — is validated against the same shape and stored in the same local SQLite table. This is that shape, and what fixmind does with it afterward.
+Every lesson — whether saved by an AI agent through [MCP](../packages/core/docs/mcp-integration.md), by `fixmind save-manual`, or piped in through `fixmind save-ai-summary` — is validated against the same shape and stored in the same local SQLite table. This is that shape, and what fixmind does with it afterward. For the commands referenced below (`save-manual`, `review`, `supersede`, `export`), see [Commands](cli-reference.md).
 
 ## Fields
 

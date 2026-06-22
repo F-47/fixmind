@@ -20,10 +20,12 @@ fixmind setup
 
 | Doc | Covers |
 |---|---|
+| [docs/quickstart.md](docs/quickstart.md) | Install, setup, and what happens on your first fix. |
 | [docs/cli-reference.md](docs/cli-reference.md) | Every command and flag — setup, capture, browse, review, edit, export. |
 | [docs/lesson-schema.md](docs/lesson-schema.md) | What a lesson contains, the quality gate that rejects shallow ones, the spaced-repetition schedule, and where it's all stored. |
 | [docs/faq.md](docs/faq.md) | Troubleshooting: agents not saving lessons, backups, resets, scope quirks per client. |
 | [packages/core/docs/mcp-integration.md](packages/core/docs/mcp-integration.md) | The MCP server itself — the tool schema, token overhead, configuring clients fixmind doesn't autodetect. |
+| [CHANGELOG.md](CHANGELOG.md) | Notable changes to the published `fixmind` package. |
 
 ## Repository layout
 

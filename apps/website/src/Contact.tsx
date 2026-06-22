@@ -1,7 +1,9 @@
 import { Check, Mail } from "lucide-react";
 import { useRef, useState } from "react";
 import { usePageMeta } from "./router";
-import { CONTACT_EMAIL, Footer, Nav, SUPPORT_EMAIL } from "./shared";
+import { CONTACT_EMAIL, SUPPORT_EMAIL } from "./shared/constants";
+import { Footer } from "./shared/Footer";
+import { Nav } from "./shared/Nav";
 
 const WEB3FORMS_ACCESS_KEY = "9ea2eed4-81f4-4dc3-b5d8-feac9d67b566";
 const FRAME_NAME = "contact-form-frame";
@@ -100,12 +102,14 @@ function ContactForm() {
           placeholder="What's going on?"
         />
       </div>
-      <button
-        type="submit"
-        className="mt-5 rounded-md border border-line px-4 py-2.5 text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
-      >
-        Send message
-      </button>
+      <div className="mt-5 flex justify-end">
+        <button
+          type="submit"
+          className="rounded-md border border-line px-4 py-2.5 text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+        >
+          Send message
+        </button>
+      </div>
     </form>
   );
 }

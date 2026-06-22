@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import Account from "./Account";
 import App from "./App";
 import Contact from "./Contact";
+import Docs from "./Docs";
 import Pricing from "./Pricing";
 import { RouterProvider, useRouter } from "./router";
 import "./styles.css";
@@ -11,6 +12,7 @@ import "./styles.css";
 function Routes() {
   const { path } = useRouter();
   if (path === "/pricing") return <Pricing />;
+  if (path.startsWith("/docs")) return <Docs />;
   if (path === "/contact") return <Contact />;
   if (path === "/account") return <Account />;
   return <App />;

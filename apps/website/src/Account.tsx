@@ -5,7 +5,8 @@ import { toast } from "sonner";
 import { CopyButton } from "./components/CopyButton";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import { usePageMeta } from "./router";
-import { Footer, Nav } from "./shared";
+import { Footer } from "./shared/Footer";
+import { Nav } from "./shared/Nav";
 
 interface Entitlement {
   plan: string;
@@ -160,11 +161,11 @@ function AccountStatus({ session }: { session: Session }) {
       <p className="mt-5 text-sm text-muted">
         Run this on each machine you want to sync from:
       </p>
-      <div className="mt-2 space-y-2">
-        <p className="break-all rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-[11px] leading-relaxed text-muted">
+      <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-line bg-surface-2 px-3 py-2">
+        <p className="font-mono text-[11px] leading-relaxed text-muted">
           <span className="text-ink">$</span> fixmind login
         </p>
-        <CopyButton text="fixmind login" label="Copy command" variant="block" />
+        <CopyButton text="fixmind login" />
       </div>
     </div>
   );

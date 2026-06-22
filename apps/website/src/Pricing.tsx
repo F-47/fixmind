@@ -1,9 +1,10 @@
 import { PolarEmbedCheckout } from "@polar-sh/checkout/embed";
 import { Check, Lock } from "lucide-react";
 import { useEffect } from "react";
-import { CopyButton } from "./components/CopyButton";
-import { usePageMeta } from "./router";
-import { CONTACT_EMAIL, Footer, INSTALL_CMD, Nav } from "./shared";
+import { Link, usePageMeta } from "./router";
+import { CONTACT_EMAIL } from "./shared/constants";
+import { Footer } from "./shared/Footer";
+import { Nav } from "./shared/Nav";
 
 const PRO_CHECKOUT_URL = import.meta.env.VITE_PRO_CHECKOUT_URL;
 const TEAM_CHECKOUT_URL = import.meta.env.VITE_TEAM_CHECKOUT_URL;
@@ -149,16 +150,12 @@ function PlanCard({ plan }: { plan: Plan }) {
         ) : (
           <>
             {plan.cta === "install" && (
-              <div className="space-y-2">
-                <p className="break-all rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-[11px] leading-relaxed text-muted">
-                  <span className="text-ink">$</span> {INSTALL_CMD}
-                </p>
-                <CopyButton
-                  text={INSTALL_CMD}
-                  label="Copy install command"
-                  variant="block"
-                />
-              </div>
+              <Link
+                to="/#install"
+                className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+              >
+                Get started — it&rsquo;s free
+              </Link>
             )}
             {plan.cta === "checkout" && (
               <a

@@ -1,10 +1,16 @@
 # MCP Integration
 
+## Supported clients
+
+![Claude Code](/logos/claude.svg) ![Cursor](/logos/cursor.svg) ![Codex](/logos/codex.svg)
+
+`fixmind setup` detects and configures all three. Any other MCP-compatible client works too — see [Other MCP clients](#other-mcp-clients).
+
 Fixmind exposes a local stdio MCP server. Any MCP-compatible AI coding client can start it and call one tool:
 
 `save_lesson`
 
-The tool stores a lesson locally. It does not call an AI API, upload code, or expose lesson history to the agent.
+The tool stores a lesson locally. It does not call an AI API, upload code, or expose lesson history to the agent. For what gets stored and how it's reviewed afterward, see [Lesson Schema](../../../docs/lesson-schema.md). For the `fixmind setup` flags used below, see [Commands](../../../docs/cli-reference.md#fixmind-setup).
 
 ## Guided setup
 
@@ -63,6 +69,8 @@ Connecting the fixmind MCP server adds a small, mostly one-time cost to an agent
 - When a lesson is saved, the generated payload (problem, root cause, fix summary, takeaway, code examples, review questions) is comparable in size to a short commit message or code review comment.
 
 In practice, this overhead is negligible relative to the tokens used by the coding work itself.
+
+If a client isn't consistently calling `save_lesson`, or you want to know why a save was rejected, see [FAQ & Troubleshooting](../../../docs/faq.md).
 
 ## Tool input
 

@@ -5,15 +5,19 @@ import {
   Lock,
   Plug,
   Repeat,
-  Workflow,
 } from "lucide-react";
 import { CopyButton } from "./components/CopyButton";
 import { usePageMeta } from "./router";
-import { Footer, INSTALL_CMD, Nav } from "./shared";
+import { INSTALL_CMD } from "./shared/constants";
+import { Footer } from "./shared/Footer";
+import { Nav } from "./shared/Nav";
 
 function Hero() {
   return (
-    <section className="relative flex min-h-[calc(100vh-4rem)] items-center overflow-hidden bg-grid">
+    <section
+      id="install"
+      className="relative flex min-h-[calc(100vh-4rem)] scroll-mt-16 items-center overflow-hidden bg-grid"
+    >
       <div
         aria-hidden
         className="animate-pulse-slow pointer-events-none absolute left-1/2 top-0 h-[560px] w-[900px] -translate-x-1/2 rounded-full bg-accent/20 blur-[140px]"
@@ -480,101 +484,6 @@ function HowItWorksSection() {
   );
 }
 
-function CommandRow({ command, children }: { command: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3 first:border-t-0">
-      <div className="flex flex-wrap items-baseline gap-3">
-        <code className="shrink-0 rounded bg-surface-2 px-2 py-1 font-mono text-[12px] text-ink">
-          {command}
-        </code>
-        <span className="text-sm text-muted">{children}</span>
-      </div>
-      <CopyButton text={command} />
-    </div>
-  );
-}
-
-function CommandGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="border-t border-line first:border-t-0">
-      <p className="px-5 pt-5 font-mono text-[11px] uppercase tracking-[0.2em] text-accent">
-        {label}
-      </p>
-      <div className="mt-1">{children}</div>
-    </div>
-  );
-}
-
-function CommandsSection() {
-  return (
-    <section id="commands" className="mx-auto max-w-6xl px-6 py-24">
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
-        CLI reference
-      </p>
-      <h2 className="mt-3 max-w-xl font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-        Every command, in one place.
-      </h2>
-      <p className="mt-4 max-w-lg text-muted">
-        The agent calls the MCP tool. Everything below is what you run yourself.
-      </p>
-
-      <div className="mt-12 overflow-hidden rounded-xl border border-line bg-surface">
-        <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-          <span className="h-2.5 w-2.5 rounded-full bg-bad/70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#e8b35f]/70" />
-          <span className="h-2.5 w-2.5 rounded-full bg-good/70" />
-          <span className="ml-2 font-mono text-xs text-muted">fixmind --help</span>
-        </div>
-
-        <CommandGroup label="Setup">
-          <CommandRow command="fixmind setup">
-            Detect Claude Code, Cursor, and Codex, and connect whichever ones you pick.
-          </CommandRow>
-          <CommandRow command="fixmind setup --scope project">
-            Scope the config to this project only, instead of every project on this
-            device.
-          </CommandRow>
-          <CommandRow command="fixmind setup --client cursor --dry-run">
-            Preview the config change for one client without writing anything.
-          </CommandRow>
-        </CommandGroup>
-
-        <CommandGroup label="Capture">
-          <CommandRow command="fixmind save-manual">
-            Log a lesson yourself, interactively, without going through an agent.
-          </CommandRow>
-          <CommandRow command="fixmind save-ai-summary">
-            Pipe in an AI-generated summary from a script or another tool.
-          </CommandRow>
-        </CommandGroup>
-
-        <CommandGroup label="Browse">
-          <CommandRow command="fixmind list">See your most recent lessons.</CommandRow>
-          <CommandRow command="fixmind list --limit 5">Show only the last 5.</CommandRow>
-          <CommandRow command='fixmind search "hydration"'>
-            Find lessons by keyword, concept, or file.
-          </CommandRow>
-          <CommandRow command="fixmind stats">
-            Counts by recurring concept and mistake pattern.
-          </CommandRow>
-        </CommandGroup>
-
-        <CommandGroup label="Review">
-          <CommandRow command="fixmind review">
-            Answer recall questions for lessons that are due, one at a time.
-          </CommandRow>
-          <CommandRow command="fixmind dashboard">
-            Open the visual dashboard — due reviews, progress, and recurring concepts.
-          </CommandRow>
-          <CommandRow command="fixmind dashboard --port 8080">
-            Run the dashboard on a specific port.
-          </CommandRow>
-        </CommandGroup>
-      </div>
-    </section>
-  );
-}
-
 export default function App() {
   usePageMeta(
     "fixmind — close the loop on AI bug fixes",
@@ -588,7 +497,6 @@ export default function App() {
       <FeaturesSection />
       <TokensSection />
       <HowItWorksSection />
-      <CommandsSection />
       <Footer />
     </div>
   );

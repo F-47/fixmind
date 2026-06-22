@@ -1,10 +1,10 @@
 # FAQ / troubleshooting
 
-## My agent isn't saving any lessons
+## Fixmind isn't saving any lessons
 
-Saving is best-effort: the MCP server only *instructs* the connected client to call `save_lesson` after a meaningful fix (see [mcp-integration.md](../packages/core/docs/mcp-integration.md#agent-behavior)) — it can't force the call, because the client decides which tools to invoke. If a client isn't consistently following the instructions, just ask it directly: "save a learning lesson after this fix."
+Saving is best-effort: the MCP server only *instructs* the connected client to call `save_lesson` after a meaningful fix (see [MCP Integration](../packages/core/docs/mcp-integration.md#agent-behavior)) — it can't force the call, because the client decides which tools to invoke. If a client isn't consistently following the instructions, just ask it directly: "save a learning lesson after this fix."
 
-If it's calling the tool but nothing's showing up in `fixmind list`, the lesson is probably being rejected by the quality gate, not silently dropped — check the agent's tool-call result in your AI client's transcript. It explains exactly which field needs more substance (see [lesson-schema.md](lesson-schema.md#quality-gate)).
+If it's calling the tool but nothing's showing up in `fixmind list`, the lesson is probably being rejected by the quality gate, not silently dropped — check the agent's tool-call result in your AI client's transcript. It explains exactly which field needs more substance (see [Lesson Schema](lesson-schema.md#quality-gate)).
 
 ## Where is my data?
 
@@ -14,7 +14,7 @@ Nothing is ever uploaded anywhere. `fixmind export` (or the dashboard's Backup &
 
 ## What's `config.json` for?
 
-It's written once, by the first command you run, and never read back by anything. It records the version and the spaced-repetition intervals fixmind happened to ship with at the time, as a readable reference — editing it won't change review timing (that logic is in code; see [lesson-schema.md](lesson-schema.md#spaced-repetition)).
+It's written once, by the first command you run, and never read back by anything. It records the version and the spaced-repetition intervals fixmind happened to ship with at the time, as a readable reference — editing it won't change review timing (that logic is in code; see [Lesson Schema](lesson-schema.md#spaced-repetition)).
 
 ## How do I back up or move my lessons to another machine?
 
@@ -30,7 +30,7 @@ There's no CLI command for this on purpose (it's the one truly irreversible acti
 
 ## `fixmind review` says nothing is due, but I just saved a lesson
 
-That's expected — a freshly-saved lesson's first review is the next day, not immediately (see [lesson-schema.md](lesson-schema.md#spaced-repetition)). Check with `fixmind status` or `fixmind list` (which shows each lesson's next review date) rather than assuming it should appear right away.
+That's expected — a freshly-saved lesson's first review is the next day, not immediately (see [Lesson Schema](lesson-schema.md#spaced-repetition)). Check with `fixmind status` or `fixmind list` (which shows each lesson's next review date) rather than assuming it should appear right away.
 
 ## Setup says a client is "unavailable"
 

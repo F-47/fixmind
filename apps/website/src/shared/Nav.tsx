@@ -1,9 +1,12 @@
+import { LogIn, User } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, useRouter } from "./router";
+import { supabase } from "../lib/supabase";
+import { Link, useRouter } from "../router";
+import { Logo } from "./Logo";
 
-const SECTION_IDS = ["loop", "features", "tokens", "how", "commands"];
+const SECTION_IDS = ["loop", "features", "tokens", "how"];
 
-const NAV_OFFSET = 80; // sticky nav height (64px) + a little breathing room
+const NAV_OFFSET = 80;
 
 function useActiveSection(enabled: boolean): string | null {
   const [active, setActive] = useState<string | null>(null);
@@ -39,23 +42,23 @@ function useActiveSection(enabled: boolean): string | null {
   return active;
 }
 
-export const INSTALL_CMD = "npm install -g fixmind && fixmind setup";
-export const REPO_URL = "https://github.com/F-47/fixmind";
-export const CONTACT_EMAIL = "hello@fixmind.dev";
-export const SUPPORT_EMAIL = "support@fixmind.dev";
+function useIsLoggedIn(): boolean {
+  const [loggedIn, setLoggedIn] = useState(false);
 
-export function Logo({ size = 20 }: { size?: number }) {
-  return (
-    <img
-      src="/logo.jpeg"
-      alt=""
-      aria-hidden="true"
-      width={size}
-      height={size}
-      className="rounded-[7px]"
-      style={{ width: size, height: size }}
-    />
-  );
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setLoggedIn(data.session !== null));
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setLoggedIn(session !== null);
+      },
+    );
+    return () => subscription.subscription.unsubscribe();
+  }, []);
+
+  return loggedIn;
 }
 
 function NavLink({
@@ -69,6 +72,15 @@ function NavLink({
   children: ReactNode;
   onClick?: () => void;
 }) {
+  // Starts deactivated so the underline always animates in, even when this
+  // link mounts already-active (e.g. navigating straight to a Docs page).
+  const [underlineOn, setUnderlineOn] = useState(false);
+
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setUnderlineOn(isActive));
+    return () => cancelAnimationFrame(raf);
+  }, [isActive]);
+
   return (
     <Link
       to={to}
@@ -79,7 +91,7 @@ function NavLink({
       <span
         aria-hidden="true"
         className={`absolute inset-x-0 -bottom-px h-[2px] origin-left scale-x-0 bg-accent transition-transform duration-300 ${
-          isActive ? "scale-x-100" : ""
+          underlineOn ? "scale-x-100" : ""
         }`}
       />
     </Link>
@@ -91,16 +103,16 @@ const NAV_LINKS = [
   { to: "/#features", label: "Features", section: "features" },
   { to: "/#tokens", label: "Token cost", section: "tokens" },
   { to: "/#how", label: "How it works", section: "how" },
-  { to: "/#commands", label: "Commands", section: "commands" },
+  { to: "/docs", label: "Docs", section: null as string | null },
   { to: "/pricing", label: "Pricing", section: null as string | null },
   { to: "/contact", label: "Contact", section: null as string | null },
-  { to: "/account", label: "Account", section: null as string | null },
 ];
 
 export function Nav() {
   const { path } = useRouter();
   const active = useActiveSection(path === "/");
   const [menuOpen, setMenuOpen] = useState(false);
+  const loggedIn = useIsLoggedIn();
 
   // Close menu on route change
   useEffect(() => {
@@ -109,6 +121,7 @@ export function Nav() {
 
   function isLinkActive(link: (typeof NAV_LINKS)[0]) {
     if (link.section) return active === link.section;
+    if (link.to === "/docs") return path.startsWith("/docs");
     return path === link.to;
   }
 
@@ -135,10 +148,23 @@ export function Nav() {
 
         <div className="flex items-center gap-3">
           <Link
-            to="/#commands"
+            to="/#install"
             className="rounded-md border border-line px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
           >
             Install
+          </Link>
+
+          <Link
+            to="/account"
+            aria-label={loggedIn ? "Account" : "Sign in"}
+            title={loggedIn ? "Account" : "Sign in"}
+            className={`flex h-8 w-8 items-center justify-center rounded-md border transition-colors hover:border-accent/60 hover:text-accent ${
+              path === "/account"
+                ? "border-accent/60 text-accent"
+                : "border-line text-ink"
+            }`}
+          >
+            {loggedIn ? <User size={16} /> : <LogIn size={16} />}
           </Link>
 
           {/* Hamburger button — mobile only */}
@@ -196,32 +222,5 @@ export function Nav() {
         </nav>
       )}
     </header>
-  );
-}
-
-export function Footer() {
-  return (
-    <footer className="border-t border-line">
-      <div className="mx-auto max-w-6xl px-6 py-10">
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-          <div className="flex items-center gap-2 font-mono text-ink">
-            <Logo size={18} />
-            fixmind
-          </div>
-          <p className="text-sm text-muted">
-            Local-first learning lessons for AI-assisted fixes.
-          </p>
-          <a
-            href={`mailto:${CONTACT_EMAIL}`}
-            className="text-sm text-muted transition-colors hover:text-ink"
-          >
-            {CONTACT_EMAIL}
-          </a>
-        </div>
-        <p className="mt-6 border-t border-line pt-6 text-center font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
-          MIT licensed · No telemetry · Node 22.5+
-        </p>
-      </div>
-    </footer>
   );
 }

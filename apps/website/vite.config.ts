@@ -11,6 +11,13 @@ export default defineConfig({
   envDir: path.resolve(directory, "..", ".."),
   base: "/",
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@docs": path.resolve(directory, "..", "..", "docs"),
+      "@core-docs": path.resolve(directory, "..", "..", "packages", "core", "docs"),
+      "@root": path.resolve(directory, "..", ".."),
+    },
+  },
   build: {
     outDir: path.resolve(directory, "dist"),
     emptyOutDir: true,
