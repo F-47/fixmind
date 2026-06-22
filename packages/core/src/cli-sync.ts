@@ -1,4 +1,4 @@
-import { execFile, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { stdin, stdout } from "node:process";
 import { isCancel, log, outro, password } from "@clack/prompts";
@@ -27,8 +27,6 @@ import { configureClients, configureInstructions, configurePermissions, detectCl
 
 const DEFAULT_SUPABASE_URL = "https://jpczzgekindvuivnwjuw.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwY3p6Z2VraW5kdnVpdm53anV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwNzEyMjEsImV4cCI6MjA5NzY0NzIyMX0.qG-9H5BZi3sKHVQrzL3iI9ALmJgoTizLCU4Bxzpw0Bo";
-const ACCOUNT_URL = "https://www.fixmind.dev/account/callback";
-
 export async function setup(options: Record<string, string | boolean>): Promise<void> {
   const paths = initializeDataDirectory();
   const detected = detectClients();
@@ -217,10 +215,6 @@ export async function loginCommand(options: Record<string, string | boolean>): P
         `Subscribe at ${PRICING_URL} to start syncing - no need to log in again afterward, just run \`npx fixmind sync push\`.`;
 
     if (interactive) {
-      void openAccountPage(result.session);
-    }
-
-    if (interactive) {
       outro(message, common);
     } else {
       console.log(message);
@@ -245,25 +239,6 @@ async function promptPassphrase(interactive: boolean): Promise<string> {
 function isIncorrectPassphraseError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return /Incorrect passphrase for this sync account/i.test(message);
-}
-
-function openAccountPage(session: { accessToken: string; refreshToken: string }): void {
-  const url = new URL(ACCOUNT_URL);
-  url.hash = new URLSearchParams({
-    access_token: session.accessToken,
-    refresh_token: session.refreshToken,
-    token_type: "bearer",
-  }).toString();
-
-  if (process.platform === "win32") {
-    execFile("cmd", ["/c", "start", "", url.toString()], { windowsHide: true }, () => {});
-    return;
-  }
-  if (process.platform === "darwin") {
-    execFile("open", [url.toString()], { windowsHide: true }, () => {});
-    return;
-  }
-  execFile("xdg-open", [url.toString()], { windowsHide: true }, () => {});
 }
 
 export async function logoutCommand(): Promise<void> {
