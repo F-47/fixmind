@@ -10,19 +10,17 @@ A local-first CLI and MCP server that records short learning lessons after AI-as
 
 ## Install
 
-During local development:
-
-```powershell
-npm install
-npm run build
-npm link
+```bash
+npm install -g fixmind
 fixmind setup
 ```
 
-After the package is published:
+For local development against this repo instead of the published package:
 
-```powershell
-npm install -g fixmind
+```bash
+npm install
+npm run build
+npm link
 fixmind setup
 ```
 
@@ -101,6 +99,20 @@ fixmind dashboard --no-open
 
 `fixmind save-manual` is available as a shorthand for interactive manual lessons, and `fixmind save-ai-summary` as a shorthand for piping in AI-generated summaries (scripts and integrations).
 
+## Sync (Pro, optional)
+
+Fixmind is local-first by default — no account needed. If you want your lessons available on more than one machine, `fixmind login` signs in (GitHub or email/password) and encrypts lessons on your machine before syncing them through a Supabase project, so the server only ever sees ciphertext:
+
+```powershell
+fixmind login
+fixmind sync push
+fixmind sync pull
+fixmind sync status
+fixmind logout
+```
+
+Saving a lesson auto-pushes, and opening `fixmind dashboard` auto-pulls, once you're logged in. See the [full CLI reference](../../docs/cli-reference.md#sync-pro) and [sync-setup.md](docs/sync-setup.md) for details.
+
 ## Next.js hydration example
 
 After fixing a hydration mismatch, the AI calls `save_lesson` with content similar to (the `tool` field is optional and auto-detected from the connected MCP client, so it's normally omitted):
@@ -156,4 +168,4 @@ Review saved.
 
 ## Scope
 
-This MVP has no accounts, cloud sync, teams, public sharing, browser extension, or bundled AI client. The dashboard is local-only, and MCP is write-only for agents; lesson history and reviews remain controlled by the human.
+Local-first by default — no account required to use any of the above. Accounts and encrypted sync (above) are opt-in for Pro/Team. There's no team-shared library, public sharing, browser extension, or bundled AI client yet. The dashboard is local-only, and MCP is write-only for agents; lesson history and reviews remain controlled by the human.

@@ -290,6 +290,13 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
   for (const result of permissions)
     console.log(`${result.client} permissions: ${result.status} - ${result.filePath}`);
   console.log("Restart configured AI clients so they discover the MCP server.");
+
+  if (!dryRun && !options["no-dashboard"]) {
+    const { startDashboard } = await import("./dashboard.js");
+    const handle = await startDashboard({ port: optionalPort(options.port), open: true });
+    console.log(`Fixmind dashboard: ${handle.url}`);
+    console.log("Press Ctrl+C to stop.");
+  }
 }
 
 async function loginCommand(options: Record<string, string | boolean>): Promise<void> {
@@ -300,13 +307,10 @@ async function loginCommand(options: Record<string, string | boolean>): Promise<
   try {
     const engine = createSyncEngine(store);
 
-    const supabaseUrl = optionString(options.url) ?? process.env.FIXMIND_SUPABASE_URL;
-    const supabaseAnonKey = optionString(options.key) ?? process.env.FIXMIND_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error(
-        "Set FIXMIND_SUPABASE_URL and FIXMIND_SUPABASE_ANON_KEY (or pass --url/--key). See docs/sync-setup.md.",
-      );
-    }
+    const DEFAULT_SUPABASE_URL = "https://jpczzgekindvuivnwjuw.supabase.co";
+    const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwY3p6Z2VraW5kdnVpdm53anV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwNzEyMjEsImV4cCI6MjA5NzY0NzIyMX0.qG-9H5BZi3sKHVQrzL3iI9ALmJgoTizLCU4Bxzpw0Bo";
+    const supabaseUrl = optionString(options.url) ?? process.env.FIXMIND_SUPABASE_URL ?? DEFAULT_SUPABASE_URL;
+    const supabaseAnonKey = optionString(options.key) ?? process.env.FIXMIND_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_ANON_KEY;
 
     if (interactive) intro("Fixmind login", common);
     const passphrase = optionString(options.passphrase) ?? (interactive
@@ -894,7 +898,7 @@ async function readStdin(): Promise<string> {
 
 function printHelp(): void {
   console.log(
-    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind login [--url <supabase-url> --key <anon-key> --passphrase ...]  (opens browser for GitHub sign in)\n  fixmind login --password-login --email ... --password ... --passphrase ...  (email/password instead)\n  fixmind logout\n  fixmind sync push\n  fixmind sync pull\n  fixmind sync status\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
+    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--dry-run] [--no-dashboard]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind login [--url <supabase-url> --key <anon-key> --passphrase ...]  (opens browser for GitHub sign in)\n  fixmind login --password-login --email ... --password ... --passphrase ...  (email/password instead)\n  fixmind logout\n  fixmind sync push\n  fixmind sync pull\n  fixmind sync status\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
   );
 }
 

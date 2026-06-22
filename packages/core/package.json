@@ -1,6 +1,6 @@
 {
   "name": "fixmind",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "description": "Local-first learning lessons for developers working with AI coding agents.",
   "type": "module",
   "repository": {
@@ -13,14 +13,16 @@
     "fixmind": "dist/src/cli.js"
   },
   "files": [
-    "dist",
+    "dist/src",
+    "dist/dashboard",
     "README.md",
     "docs"
   ],
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
-    "build": "npm run clean && npm run build:server && npm run copy:dashboard",
+    "build": "npm run clean && npm run build:server && npm run copy:dashboard && npm run chmod:bin",
     "build:server": "tsc -p tsconfig.json",
+    "chmod:bin": "node -e \"require('fs').chmodSync('dist/src/cli.js', 0o755)\"",
     "copy:dashboard": "node -e \"require('fs').cpSync('../dashboard/dist','dist/dashboard',{recursive:true})\"",
     "test": "npm run build && node --no-warnings --test dist/test/*.test.js",
     "prepack": "npm run build",

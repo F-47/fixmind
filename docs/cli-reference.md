@@ -151,6 +151,8 @@ fixmind login --password-login --email you@example.com --password ... --passphra
 
 By default this opens your browser to sign in with **GitHub** (via Supabase's GitHub OAuth provider — see [sync-setup.md](../packages/core/docs/sync-setup.md) for the one-time GitHub OAuth App setup). Pass `--password-login` to use email/password instead. Either way it stores a session locally at `~/.fixmind/sync.json` and asks for an encryption passphrase: lesson content is encrypted on your machine with a key derived from it before it's ever sent to Supabase — use the **same passphrase on every machine**, since it can't be recovered or changed without losing access to already-synced data.
 
+`fixmind login` succeeds and saves your session even without an active Pro/Team plan — it just tells you sync isn't active yet. That way subscribing later only requires `fixmind sync push`, not a second GitHub sign-in.
+
 | Flag | Default | Meaning |
 |---|---|---|
 | `--url <url>` | `$FIXMIND_SUPABASE_URL` | Supabase project URL. |
