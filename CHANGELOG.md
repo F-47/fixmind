@@ -4,6 +4,12 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.7]
+
+### Fixed
+- Sync login now rejects blank encryption passphrases before key setup.
+- Dashboard now shows a small sync-off banner for free or logged-out users instead of a heavy login lecture.
+
 ## [1.0.6]
 
 ### Added
