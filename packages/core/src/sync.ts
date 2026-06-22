@@ -9,7 +9,7 @@ export type { Entitlement, SessionTokens, SyncBackend, SyncRow, SyncUserRecord }
 
 const VERIFIER_PLAINTEXT = "fixmind-sync-verify";
 const EPOCH = "1970-01-01T00:00:00.000Z";
-export const PRICING_URL = "https://fixmind.dev/pricing";
+export const PRICING_URL = process.env.FIXMIND_PRICING_URL ?? "https://fixmind.dev/pricing";
 
 interface SyncConfig {
   supabaseUrl: string;
