@@ -1,5 +1,7 @@
+import { spawn } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { stdin, stdout } from "node:process";
-import { log, outro, password } from "@clack/prompts";
+import { isCancel, log, outro, password } from "@clack/prompts";
 import { createLessonStore, initializeDataDirectory } from "./storage.js";
 import { createSyncEngine, PRICING_URL } from "./sync.js";
 import type { SetupScope } from "./setup.js";
@@ -40,18 +42,18 @@ export async function setup(options: Record<string, string | boolean>): Promise<
   if (!supplied.length && interactive) {
     intro("Configure Learning Lessons", common);
     note("Pick the AI clients that should receive the MCP server configuration.", "Setup", common);
-    const selected = unwrap(await multiselect({
+    const selected = await multiselect({
       message: "Clients to configure",
       options: supportedClientOptions(detected),
       initialValues: detected,
       required: false,
       ...common,
-    }));
-    clients = validateClients(selected);
+    });
+    clients = isCancel(selected) ? detected : validateClients(selected);
   }
 
   if (!suppliedScope && interactive) {
-    const selectedScope = unwrap(await select({
+    const selectedScope = await select({
       message: "Where should fixmind be configured?",
       options: [
         { value: "user", label: "This device", hint: "Available in every project (~/.claude, ~/.cursor, ...)" },
@@ -59,8 +61,8 @@ export async function setup(options: Record<string, string | boolean>): Promise<
       ],
       initialValue: "user",
       ...common,
-    }));
-    scope = selectedScope as SetupScope;
+    });
+    scope = isCancel(selectedScope) ? "user" : (selectedScope as SetupScope);
   }
 
   if (clients.length === 0) {
@@ -86,7 +88,7 @@ export async function setup(options: Record<string, string | boolean>): Promise<
     return;
   }
 
-  const nextAction = unwrap(await select({
+  const nextAction = await select({
     message: "What would you like to do next?",
     options: [
       { value: "dashboard", label: "Open dashboard", hint: "Launch the local dashboard in your browser." },
@@ -95,10 +97,14 @@ export async function setup(options: Record<string, string | boolean>): Promise<
     ],
     initialValue: "done",
     ...common,
-  }));
+  });
+
+  if (isCancel(nextAction) || nextAction === "done") {
+    return;
+  }
 
   if (nextAction === "login") {
-    await loginCommand({});
+    await launchLoginCommand();
     return;
   }
 
@@ -117,6 +123,21 @@ export async function setup(options: Record<string, string | boolean>): Promise<
       }
     }
   }
+}
+
+async function launchLoginCommand(): Promise<void> {
+  const launcherPath = fileURLToPath(new URL("./launcher.js", import.meta.url));
+  await new Promise<void>((resolve, reject) => {
+    const child = spawn(process.execPath, [launcherPath, "login"], {
+      stdio: "inherit",
+      windowsHide: true,
+    });
+    child.on("error", reject);
+    child.on("exit", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`fixmind login exited with code ${code ?? "unknown"}.`));
+    });
+  });
 }
 
 export async function loginCommand(options: Record<string, string | boolean>): Promise<void> {
