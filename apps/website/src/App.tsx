@@ -55,10 +55,23 @@ function Hero() {
             that turns every AI&#8209;assisted fix into something you actually
             remember.
           </p>
-          <div className="mt-9 flex max-w-xl items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 font-mono text-sm text-ink">
-            <span className="text-muted">$</span>
-            <span>npx fixmind setup</span>
-            <CopyButton text="npx fixmind setup" />
+          <div className="mt-9 max-w-xl space-y-2">
+            <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 font-mono text-sm text-ink">
+              <span className="text-muted">$</span>
+              <span>npm i -g fixmind@latest</span>
+              <CopyButton text="npm i -g fixmind@latest" />
+            </div>
+            <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 font-mono text-sm text-ink">
+              <span className="text-muted">$</span>
+              <span>fixmind setup</span>
+              <CopyButton text="fixmind setup" />
+            </div>
+            <p className="text-sm leading-relaxed text-muted">
+              Install the CLI once so <code className="text-ink">fixmind</code>{" "}
+              stays on your PATH, then run setup and later login/sync commands
+              from any terminal. If you prefer one-off usage, swap the install
+              step for <code className="text-ink">npx --yes fixmind@latest</code>.
+            </p>
           </div>
           <a
             href="#how"
@@ -505,10 +518,12 @@ function HowItWorksSection() {
 
         <div className="mt-14 grid gap-16 lg:grid-cols-[1fr_400px] lg:items-start">
           <div>
-            <HowStep number="01" title="Connect" command="fixmind setup">
-              Detects Claude Code, Cursor, and Codex, then registers the MCP
-              server with whichever ones you pick — on this device, or scoped to
-              just this project.
+            <HowStep number="01" title="Install and connect" command="fixmind setup">
+              Install the CLI once with{" "}
+              <code className="text-ink">npm i -g fixmind@latest</code>, then
+              run <code className="text-ink">fixmind setup</code> to register
+              the MCP server with Claude Code, Cursor, or Codex on this device
+              or just this project.
             </HowStep>
             <HowStep number="02" title="Fix bugs like normal">
               Keep working the way you already do. Your agent calls{" "}

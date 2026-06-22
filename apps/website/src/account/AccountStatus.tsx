@@ -167,9 +167,38 @@ export function AccountStatus({ session }: { session: Session }) {
           </InfoPill>
         </div>
 
+        <div className="mt-6 rounded-xl border border-line bg-bg/35 p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
+            CLI access
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            If <code className="text-ink">fixmind</code> is not recognized in
+            your terminal, install the CLI once on this machine so{" "}
+            <code className="text-ink">fixmind login</code> and the sync
+            commands work from any shell.
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <CommandCard
+              label="Install CLI"
+              command="npm i -g fixmind@latest"
+              description="Adds fixmind to PATH on this machine."
+            />
+            <CommandCard
+              label="Login"
+              command="fixmind login"
+              description="Use this after the CLI is installed so sync can connect."
+            />
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-muted">
+            Prefer not to install globally? Use{" "}
+            <code className="text-ink">npx --yes fixmind@latest &lt;command&gt;</code>{" "}
+            instead.
+          </p>
+        </div>
+
         {syncEnabled ? (
           <>
-            <div className="mt-6 rounded-xl border border-line bg-bg/35 p-4">
+            <div className="mt-4 rounded-xl border border-line bg-bg/35 p-4">
               <CommandCard
                 label="Login once"
                 command="fixmind login"
