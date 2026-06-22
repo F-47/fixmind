@@ -7,11 +7,26 @@ import { supabase, supabaseConfigured } from "./lib/supabase";
 import { AuthForm } from "./account/AuthForm";
 import { AccountStatus } from "./account/AccountStatus";
 import { InfoPill } from "./account/InfoPill";
-import { AccountCallback } from "./account/AccountCallback";
 
-function hasRedirectTokens(): boolean {
-  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  return Boolean(hash.get("access_token") && hash.get("refresh_token"));
+function getCliCallbackUrl(): URL | null {
+  const value = new URLSearchParams(window.location.search).get("cli_callback");
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const localHost = url.hostname === "127.0.0.1" || url.hostname === "localhost";
+    if (url.protocol !== "http:" || !localHost) return null;
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+function createCliCallbackTarget(session: { access_token: string; refresh_token: string }, cliCallback: string): string {
+  const url = new URL(cliCallback);
+  url.searchParams.set("access_token", session.access_token);
+  url.searchParams.set("refresh_token", session.refresh_token);
+  url.searchParams.set("token_type", "bearer");
+  return url.toString();
 }
 
 export default function Account() {
@@ -20,12 +35,11 @@ export default function Account() {
     "Manage your fixmind account, optional sync, and paid plan status.",
   );
 
-  const redirectHandoff = hasRedirectTokens();
+  const cliCallback = getCliCallbackUrl()?.toString() ?? null;
 
   const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
-    if (redirectHandoff) return;
     const client = supabase;
     if (!client) {
       setSession(null);
@@ -46,11 +60,12 @@ export default function Account() {
       mounted = false;
       subscription.subscription.unsubscribe();
     };
-  }, [redirectHandoff]);
+  }, []);
 
-  if (redirectHandoff) {
-    return <AccountCallback />;
-  }
+  useEffect(() => {
+    if (!session || !cliCallback) return;
+    window.location.replace(createCliCallbackTarget(session, cliCallback));
+  }, [cliCallback, session]);
 
   return (
     <div>
@@ -97,7 +112,7 @@ export default function Account() {
                     </div>
                   </div>
                   <p className="mt-5 text-center text-sm text-muted">
-                    Loading your account...
+                    {cliCallback ? "Signing you in, then returning you to the terminal..." : "Loading your account..."}
                   </p>
                 </div>
               ) : session ? (

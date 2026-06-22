@@ -4,6 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.19]
+
+### Changed
+- The CLI login flow now opens the Fixmind website first and waits for the browser session to hand back tokens through a localhost callback, which matches the browser-first auth pattern users expect.
+
 ## [1.0.18]
 
 ### Fixed
