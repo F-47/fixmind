@@ -5,6 +5,7 @@ import { useLayoutEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import Account from "./Account";
+import AccountCallback from "./account/Callback";
 import App from "./App";
 import Contact from "./Contact";
 import Docs from "./Docs";
@@ -32,6 +33,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/docs/*" element={<Docs />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/account" element={<Account />} />
+        <Route path="/account/callback" element={<AccountCallback />} />
       </Routes>
     </BrowserRouter>
     <Toaster theme="dark" position="bottom-right" richColors />
