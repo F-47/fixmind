@@ -34,7 +34,15 @@ import {
 } from "./cli-sync.js";
 
 const common = { input: stdin, output: stdout };
-const VERSION = "1.0.5";
+
+function readInstalledVersion(): string {
+  const packageJsonUrl = new URL("../../package.json", import.meta.url);
+  const raw = fs.readFileSync(packageJsonUrl, "utf8");
+  const parsed = JSON.parse(raw) as { version?: string };
+  return parsed.version ?? "unknown";
+}
+
+const VERSION = readInstalledVersion();
 
 function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) { cancel("Operation cancelled."); process.exit(0); }
