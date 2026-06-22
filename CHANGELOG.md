@@ -4,6 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.18]
+
+### Fixed
+- The CLI login callback now does a full same-origin reload to `/account` after applying the Supabase session, so the account page reads the persisted session instead of inheriting a transient SPA state.
+
 ## [1.0.17]
 
 ### Fixed
