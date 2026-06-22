@@ -4,6 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.10]
+
+### Fixed
+- Homepage and account copy now explain that `npx fixmind setup` does not install a persistent CLI, and show the global install step for `fixmind login` and sync commands.
+
 ## [1.0.9]
 
 ### Fixed
