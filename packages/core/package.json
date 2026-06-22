@@ -1,6 +1,6 @@
 {
   "name": "fixmind",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Local-first learning lessons for developers working with AI coding agents.",
   "type": "module",
   "repository": {
@@ -26,7 +26,7 @@
     "copy:dashboard": "node -e \"require('fs').cpSync('../dashboard/dist','dist/dashboard',{recursive:true})\"",
     "test": "npm run build && node --no-warnings --test dist/test/*.test.js",
     "prepack": "npm run build",
-    "fixmind": "NODE_OPTIONS=--disable-warning=ExperimentalWarning node dist/src/cli.js"
+    "fixmind": "node dist/src/launcher.js"
   },
   "dependencies": {
     "@clack/prompts": "^1.5.1",
