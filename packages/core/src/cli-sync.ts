@@ -150,12 +150,7 @@ export async function loginCommand(options: Record<string, string | boolean>): P
     const supabaseAnonKey = optionString(options.key) ?? process.env.FIXMIND_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_ANON_KEY;
 
     if (interactive) intro("Fixmind login", common);
-    const passphrase = optionString(options.passphrase) ?? (interactive
-      ? unwrap(await password({ message: "Sync encryption passphrase (use the same one on every machine)", ...common }))
-      : (() => { throw new Error("--passphrase is required outside an interactive terminal."); })());
-    if (!passphrase.trim()) {
-      throw new Error("Sync encryption passphrase cannot be empty.");
-    }
+    const passphrase = optionString(options.passphrase) ?? await promptPassphrase(interactive);
 
     const usePasswordLogin = Boolean(optionString(options.email) || options["password-login"]);
     let result: { email: string; entitled: boolean };
@@ -209,6 +204,18 @@ export async function loginCommand(options: Record<string, string | boolean>): P
     }
   } finally {
     store.close();
+  }
+}
+
+async function promptPassphrase(interactive: boolean): Promise<string> {
+  if (!interactive) {
+    throw new Error("--passphrase is required outside an interactive terminal.");
+  }
+
+  while (true) {
+    const value = unwrap(await password({ message: "Sync encryption passphrase (use the same one on every machine)", ...common }));
+    if (value.trim()) return value;
+    log.message("Passphrase cannot be empty. Try again.", common);
   }
 }
 
