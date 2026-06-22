@@ -7,7 +7,6 @@ import { Footer } from "./shared/Footer";
 import { Nav } from "./shared/Nav";
 
 const PRO_CHECKOUT_URL = import.meta.env.VITE_PRO_CHECKOUT_URL;
-const TEAM_CHECKOUT_URL = import.meta.env.VITE_TEAM_CHECKOUT_URL;
 
 interface Plan {
   name: string;
@@ -38,51 +37,50 @@ const PLANS: Plan[] = [
   },
   {
     name: "Pro",
-    price: "$9",
+    price: "$10",
     unit: "/mo per developer",
-    status: "roadmap",
+    status: "available",
     cta: "checkout",
     checkoutUrl: PRO_CHECKOUT_URL,
-    tagline: "For developers who switch machines and want more recall modes.",
+    tagline:
+      "For developers who switch machines and want encrypted sync across every device.",
     features: [
       "Everything in Free",
       "Encrypted sync across your machines",
-      "Cloze-deletion and timed recall modes",
-      "Optional AI lesson enrichment (bring your own key)",
+      "One login per device, then keep working",
+      "Account status and sync controls on the website",
       "Priority support",
     ],
     highlight: true,
   },
   {
     name: "Team",
-    price: "$19",
-    unit: "/mo per developer",
-    note: "5-seat minimum",
+    price: "Custom",
+    unit: "/seat",
+    note: "Waitlist",
     status: "roadmap",
-    cta: "checkout",
-    checkoutUrl: TEAM_CHECKOUT_URL,
+    cta: "contact",
     tagline:
-      "For teams that don't want the same mistake fixed twice by two people.",
+      "For teams that want shared learning later, once the individual product is proven.",
     features: [
       "Everything in Pro",
-      "Shared lesson library, tagged by project",
-      "Skill-coverage and review-compliance analytics",
-      "SSO (SAML / OIDC)",
-      "Webhook API for CI/CD",
+      "Shared lesson library",
+      "Team analytics and review visibility",
+      "SSO / org admin",
     ],
   },
   {
     name: "Enterprise",
     price: "Custom",
+    note: "Waitlist",
     status: "roadmap",
     cta: "contact",
     tagline:
-      "Self-hosted, for orgs that can't let lesson data leave the network.",
+      "For orgs that need self-hosting, compliance, and deeper rollout support.",
     features: [
       "Everything in Team",
-      "Self-hosted (Docker / Kubernetes)",
-      "On-premises storage only",
-      "Role-based access control and audit logs",
+      "Self-hosted deployment",
+      "On-premises storage options",
       "Dedicated onboarding and support",
     ],
   },
@@ -111,26 +109,18 @@ function PlanCard({ plan }: { plan: Plan }) {
       </div>
 
       <div className="mt-4 flex items-baseline gap-1.5">
-        {plan.status === "available" ? (
-          <>
-            <span className="font-display text-3xl font-semibold text-ink">
-              {plan.price}
-            </span>
-            {plan.unit && (
-              <span className="text-xs text-muted">{plan.unit}</span>
-            )}
-          </>
-        ) : (
-          <span className="font-display text-3xl font-semibold text-muted">
-            Coming soon
-          </span>
-        )}
+        <span className="font-display text-3xl font-semibold text-ink">
+          {plan.price}
+        </span>
+        {plan.unit && <span className="text-xs text-muted">{plan.unit}</span>}
       </div>
+
       {plan.note && (
         <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
           {plan.note}
         </p>
       )}
+
       <p className="mt-3 text-sm leading-relaxed text-muted">{plan.tagline}</p>
 
       <ul className="mt-6 flex-1 space-y-2.5">
@@ -143,39 +133,31 @@ function PlanCard({ plan }: { plan: Plan }) {
       </ul>
 
       <div className="mt-6">
-        {plan.status !== "available" ? (
-          <div className="block cursor-not-allowed rounded-md border border-line px-3 py-2 text-center text-sm text-muted">
-            Coming soon
-          </div>
-        ) : (
-          <>
-            {plan.cta === "install" && (
-              <Link
-                to="/#install"
-                className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
-              >
-                Get started — it&rsquo;s free
-              </Link>
-            )}
-            {plan.cta === "checkout" && (
-              <a
-                href={plan.checkoutUrl}
-                data-polar-checkout
-                data-polar-checkout-theme="dark"
-                className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
-              >
-                Subscribe
-              </a>
-            )}
-            {plan.cta === "contact" && (
-              <a
-                href={`mailto:${CONTACT_EMAIL}`}
-                className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
-              >
-                Contact us
-              </a>
-            )}
-          </>
+        {plan.cta === "install" && (
+          <Link
+            to="/#install"
+            className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+          >
+            Get started - it's free
+          </Link>
+        )}
+        {plan.cta === "checkout" && (
+          <a
+            href={plan.checkoutUrl}
+            data-polar-checkout
+            data-polar-checkout-theme="dark"
+            className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+          >
+            Subscribe
+          </a>
+        )}
+        {plan.cta === "contact" && (
+          <a
+            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`${plan.name} waitlist`)}`}
+            className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+          >
+            Join waitlist
+          </a>
         )}
       </div>
     </div>
@@ -184,8 +166,8 @@ function PlanCard({ plan }: { plan: Plan }) {
 
 export default function Pricing() {
   usePageMeta(
-    "Pricing — fixmind",
-    "Fixmind is free and local-first forever. Pro, Team, and Enterprise plans add sync, shared libraries, and self-hosting on top.",
+    "Pricing - fixmind",
+    "Fixmind is free and local-first forever. Pro adds encrypted sync across devices.",
   );
 
   useEffect(() => {
@@ -207,22 +189,22 @@ export default function Pricing() {
               Pricing
             </p>
             <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-              Free forever, until you need more than your own machine.
+              Free forever for the learning loop. Pro for sync across devices.
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-muted">
-              The core learning loop &mdash; capturing and reviewing lessons
-              &mdash; stays free for individual developers. Paid plans add what
-              an org needs on top: sync, sharing, and self-hosting.
+              Capturing, reviewing, searching, and exporting lessons stays free.
+              Pro adds encrypted sync so the same lessons follow you across
+              machines.
             </p>
             <p className="mx-auto mt-4 max-w-xl rounded-md border border-line bg-surface px-4 py-2 font-mono text-xs text-muted">
-              Free is available today. Pro, Team, and Enterprise are on the
-              roadmap.
-            </p>
+            Free and Pro are available today. Team and Enterprise are waitlist
+            tiers for later.
+          </p>
           </div>
         </section>
 
         <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             {PLANS.map((plan) => (
               <PlanCard key={plan.name} plan={plan} />
             ))}
@@ -236,7 +218,7 @@ export default function Pricing() {
             Pricing philosophy
           </p>
           <h2 className="mt-3 max-w-xl font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-            You don&rsquo;t pay for the part that teaches you something.
+            You do not pay for the part that teaches you something.
           </h2>
 
           <div className="mt-12 grid gap-5 sm:grid-cols-3">
@@ -253,21 +235,21 @@ export default function Pricing() {
             <div className="rounded-xl border border-line bg-surface p-6">
               <Check size={18} className="text-accent" />
               <h3 className="mt-4 font-display text-base font-semibold text-ink">
-                Paid plans are convenience
+                Pro pays for mobility
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                Sync across machines, more recall modes, AI enrichment &mdash;
-                useful, but never required to learn from a fix.
+                The paid part is keeping the same lessons with you when you move
+                between machines. The learning loop itself stays free.
               </p>
             </div>
             <div className="rounded-xl border border-line bg-surface p-6">
               <Check size={18} className="text-accent" />
               <h3 className="mt-4 font-display text-base font-semibold text-ink">
-                Team plans monetize org pain
+                Team and Enterprise are future lanes
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                Shared libraries and analytics solve a problem only orgs have:
-                knowledge walking out the door when someone leaves.
+                Shared libraries, SSO, self-hosting, and org rollout support
+                belong in the roadmap, not the launch offer.
               </p>
             </div>
           </div>
