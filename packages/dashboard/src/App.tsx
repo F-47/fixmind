@@ -8,6 +8,7 @@ import { RankList } from "./components/RankList";
 import { exportUrl } from "./api";
 import { formatToolName, formatWeek } from "./format";
 import { useDashboardController } from "./useDashboardController";
+import { Link } from "react-router-dom";
 
 export default function App() {
   useEffect(() => {
@@ -77,7 +78,10 @@ export default function App() {
               {data.summary.total} lessons
             </span>
             <p className="mt-1 font-mono text-[10px] uppercase tracking-[.18em] text-muted">
-              Last sync pull: {syncMeta?.lastPulledAt ? new Date(syncMeta.lastPulledAt).toLocaleString() : "never"}
+              Last sync pull:{" "}
+              {syncMeta?.lastPulledAt
+                ? new Date(syncMeta.lastPulledAt).toLocaleString()
+                : "never"}
             </p>
           </div>
         </header>
@@ -89,16 +93,21 @@ export default function App() {
                 Fixmind &mdash; a developer&rsquo;s lesson log
               </div>
               <h1 className="mt-3 font-serif text-[clamp(2.8rem,5.4vw,4.8rem)] leading-[1.02] font-bold tracking-tight">
-                <span className="block whitespace-nowrap">Don&rsquo;t just let AI fix it.</span>
+                <span className="block whitespace-nowrap">
+                  Don&rsquo;t just let <br /> AI fix it.
+                </span>
                 <span className="block text-accent">Learn from it.</span>
               </h1>
               <p className="mt-4 max-w-lg text-base leading-relaxed text-muted">
                 A running record of the bugs you&rsquo;ve fixed and the lessons
-                behind them &mdash; what to remember, why it happened, and how to
-                avoid it next time.
+                behind them &mdash; what to remember, why it happened, and how
+                to avoid it next time.
               </p>
             </div>
-            <div className="relative hidden shrink-0 min-[900px]:block" aria-hidden="true">
+            <div
+              className="relative hidden shrink-0 min-[900px]:block"
+              aria-hidden="true"
+            >
               <Brain className="size-56 text-line" strokeWidth={1} />
               <span className="absolute top-7 right-5 size-2.5 rounded-full bg-accent" />
               <span className="absolute bottom-10 left-3 size-2 rounded-full bg-accent/60" />
@@ -110,7 +119,9 @@ export default function App() {
         <section className="border-b border-line py-10 max-sm:py-8 space-y-4">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <div className="space-y-2">
-              <h2 className="text-2xl font-semibold tracking-tight">Your progress</h2>
+              <h2 className="text-2xl font-semibold tracking-tight">
+                Your progress
+              </h2>
               <div className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
                 Lessons per week by understanding
               </div>
@@ -148,6 +159,24 @@ export default function App() {
             <main>
               <div className="mb-5 space-y-4 rounded-3xl">
                 <div className="space-y-2">
+                  {syncMeta && !syncMeta.loggedIn && (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface-2 px-4 py-3">
+                      <div className="space-y-1">
+                        <div className="text-xs font-semibold uppercase tracking-[.18em] text-muted">
+                          Sync is off
+                        </div>
+                        <p className="text-sm leading-relaxed text-muted">
+                          Sign in on the account page to enable encrypted sync across your devices.
+                        </p>
+                      </div>
+                      <Link
+                        className="inline-flex items-center justify-center rounded-full border border-line bg-page px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-ink transition-colors hover:border-accent/40 hover:text-accent"
+                        to="/account"
+                      >
+                        Open account
+                      </Link>
+                    </div>
+                  )}
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h2 className="text-2xl font-semibold tracking-tight">
                       Your lessons{" "}
@@ -162,7 +191,10 @@ export default function App() {
                       className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-muted transition-colors hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
                       title="Pull the latest lessons from sync"
                     >
-                      <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+                      <RefreshCw
+                        size={12}
+                        className={refreshing ? "animate-spin" : ""}
+                      />
                       {refreshing ? "Syncing" : "Refresh"}
                     </button>
                   </div>
@@ -228,7 +260,9 @@ export default function App() {
                     />
                   ))
                 ) : (
-                  <p className="text-sm text-muted">No lessons match this view.</p>
+                  <p className="text-sm text-muted">
+                    No lessons match this view.
+                  </p>
                 )}
               </div>
               {totalPages > 1 && (
@@ -255,12 +289,19 @@ export default function App() {
             </main>
             <aside className="self-start max-[900px]:static max-[900px]:border-t max-[900px]:border-line max-[900px]:pt-10 [&>section]:border-t [&>section]:border-line [&>section]:pt-6 [&>section]:pb-6 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0 sticky top-10 border-l border-line pl-10 max-[900px]:border-l-0 max-[900px]:pl-0">
               <section>
-                <h2 className="mb-3 text-lg font-semibold tracking-tight">Models</h2>
+                <h2 className="mb-3 text-lg font-semibold tracking-tight">
+                  Models
+                </h2>
                 <div className="grid gap-2">
                   {modelCounts.map(({ tool, count }) => (
-                    <div className="flex items-baseline justify-between gap-3 text-sm" key={tool}>
+                    <div
+                      className="flex items-baseline justify-between gap-3 text-sm"
+                      key={tool}
+                    >
                       <span className="text-muted">{formatToolName(tool)}</span>
-                      <span className="font-mono text-xs font-semibold text-accent">{count}</span>
+                      <span className="font-mono text-xs font-semibold text-accent">
+                        {count}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -313,12 +354,14 @@ export default function App() {
                   className="fixed top-1/2 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 border border-line bg-page p-6 text-ink shadow-[0_40px_100px_-30px_rgba(0,0,0,0.7)]"
                   onClose={() => setConfirmingReset(false)}
                   onClick={(event) => {
-                    if (event.target === resetDialogRef.current) setConfirmingReset(false);
+                    if (event.target === resetDialogRef.current)
+                      setConfirmingReset(false);
                   }}
                 >
                   <p className="text-base leading-relaxed">
-                    Delete all {data.summary.total} lesson(s)? Export a backup first if you want to
-                    keep them &mdash; this can&rsquo;t be undone.
+                    Delete all {data.summary.total} lesson(s)? Export a backup
+                    first if you want to keep them &mdash; this can&rsquo;t be
+                    undone.
                   </p>
                   <div className="mt-6 flex justify-end gap-5 font-mono text-[11px] uppercase tracking-[.2em]">
                     <button

@@ -111,6 +111,9 @@ export async function loginCommand(options: Record<string, string | boolean>): P
     const passphrase = optionString(options.passphrase) ?? (interactive
       ? unwrap(await password({ message: "Sync encryption passphrase (use the same one on every machine)", ...common }))
       : (() => { throw new Error("--passphrase is required outside an interactive terminal."); })());
+    if (!passphrase.trim()) {
+      throw new Error("Sync encryption passphrase cannot be empty.");
+    }
 
     const usePasswordLogin = Boolean(optionString(options.email) || options["password-login"]);
     let result: { email: string; entitled: boolean };
