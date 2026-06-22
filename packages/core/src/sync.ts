@@ -42,6 +42,7 @@ function writeSyncConfig(config: SyncConfig): void {
 export interface LoginResult {
   email: string;
   entitled: boolean;
+  session: SessionTokens;
 }
 
 export interface SyncEngine {
@@ -201,7 +202,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
           );
         }
       }
-      return { email, entitled };
+      return { email, entitled, session: sessionTokens };
     },
 
     async loginWithGithub({ supabaseUrl, supabaseAnonKey, passphrase, onAuthUrl }) {
@@ -231,7 +232,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
           );
         }
       }
-      return { email: session.email, entitled };
+      return { email: session.email, entitled, session: sessionTokens };
     },
 
     logout() {

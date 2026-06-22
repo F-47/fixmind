@@ -4,6 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.15]
+
+### Fixed
+- The CLI login now opens the website account page with the active session, and the account page can hydrate that session from the URL hash so it no longer asks you to log in again.
+
 ## [1.0.14]
 
 ### Fixed

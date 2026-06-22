@@ -17,25 +17,51 @@ export default function Account() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
-    if (!supabase) {
+    const client = supabase;
+    if (!client) {
       setSession(null);
       return;
     }
+    const supabaseClient = client as NonNullable<typeof supabase>;
 
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
-    const { data: subscription } = supabase.auth.onAuthStateChange(
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const accessToken = hash.get("access_token");
+    const refreshToken = hash.get("refresh_token");
+
+    let mounted = true;
+    async function hydrateSessionFromHash() {
+      if (!accessToken || !refreshToken) return false;
+      const { data, error } = await supabaseClient.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (!mounted) return true;
+      if (!error) {
+        setSession(data.session);
+        window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
+        return true;
+      }
+      return false;
+    }
+
+    void (async () => {
+      const hydrated = await hydrateSessionFromHash();
+      if (!hydrated && mounted) {
+        const { data } = await supabaseClient.auth.getSession();
+        if (mounted) setSession(data.session);
+      }
+    })();
+
+    const { data: subscription } = supabaseClient.auth.onAuthStateChange(
       (_event, nextSession) => {
         setSession(nextSession);
       },
     );
-    return () => subscription.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.subscription.unsubscribe();
+    };
   }, []);
-
-  useEffect(() => {
-    if (!session) return;
-    if (!window.location.hash.startsWith("#access_token=") && !window.location.hash.startsWith("#error")) return;
-    window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
-  }, [session]);
 
   return (
     <div>
