@@ -107,6 +107,31 @@ function emailFromQuery(): string {
   return new URLSearchParams(window.location.search).get("email") ?? "";
 }
 
+function useLocalDashboardAvailability(): boolean | null {
+  const [available, setAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 1200);
+
+    void fetch(LOCAL_DASHBOARD_URL, {
+      cache: "no-store",
+      mode: "no-cors",
+      signal: controller.signal,
+    })
+      .then(() => setAvailable(true))
+      .catch(() => setAvailable(false))
+      .finally(() => window.clearTimeout(timeout));
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
+  }, []);
+
+  return available;
+}
+
 function AuthForm() {
   const [email, setEmail] = useState(emailFromQuery);
   const [password, setPassword] = useState("");
@@ -421,6 +446,10 @@ function AccountStatus({ session }: { session: Session }) {
 }
 
 function NextStepsCard() {
+  const dashboardAvailable = useLocalDashboardAvailability();
+  const dashboardHref = dashboardAvailable
+    ? LOCAL_DASHBOARD_URL
+    : "/docs/commands#fixmind-dashboard";
   return (
     <div className="rounded-2xl border border-line bg-surface p-7">
       <div className="flex items-center justify-between gap-4">
@@ -435,11 +464,15 @@ function NextStepsCard() {
 
       <div className="mt-6 space-y-3">
         <ActionTile
-          href={LOCAL_DASHBOARD_URL}
-          external
+          href={dashboardHref}
+          external={dashboardAvailable ?? false}
           icon={<TerminalSquare size={16} />}
-          title="Open the dashboard"
-          description="Open the local dashboard in your browser if it is already running."
+          title={dashboardAvailable ? "Open the dashboard" : "Dashboard docs"}
+          description={
+            dashboardAvailable
+              ? "Open the local dashboard in your browser."
+              : "The local dashboard is not running yet. Jump to the dashboard command docs."
+          }
         />
         <ActionTile
           href="/docs"
@@ -461,9 +494,9 @@ function NextStepsCard() {
         </p>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           The core learning loop stays free. Paid plans only add sync and team
-          features on top. If the local dashboard is not open yet, run{" "}
-          <code className="text-ink">fixmind dashboard</code> once, then use
-          the button here.
+          features on top. If the local dashboard is not running yet, run{" "}
+          <code className="text-ink">fixmind dashboard</code> once, or use the
+          button here to open the docs path.
         </p>
       </div>
     </div>

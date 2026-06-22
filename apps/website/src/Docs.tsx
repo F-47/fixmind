@@ -31,8 +31,6 @@ const DOCS = [
   { id: "changelog", title: "Changelog", content: changelogRaw },
 ];
 
-// Cross-doc links in the source markdown point at the raw file (e.g. "cli-reference.md#fixmind-setup")
-// for readability on GitHub. Map each filename to its in-app doc id so they resolve to /docs/<id> instead.
 const DOC_FILENAME_TO_ID: Record<string, string> = {
   "quickstart.md": "quickstart",
   "mcp-integration.md": "mcp-integration",
@@ -153,19 +151,19 @@ export default function Docs() {
             components={{
               h1: ({ node, ...props }) => (
                 <h1
-                  className="mb-8 mt-2 font-display text-3xl font-semibold tracking-tight text-ink first:mt-0 sm:text-4xl"
+                  className="mb-8 mt-2 scroll-mt-36 font-display text-3xl font-semibold tracking-tight text-ink first:mt-0 sm:text-4xl"
                   {...props}
                 />
               ),
               h2: ({ node, ...props }) => (
                 <h2
-                  className="mb-6 mt-12 font-display text-2xl font-semibold tracking-tight text-ink border-b border-line pb-2"
+                  className="mb-6 mt-12 scroll-mt-36 border-b border-line pb-2 font-display text-2xl font-semibold tracking-tight text-ink"
                   {...props}
                 />
               ),
               h3: ({ node, ...props }) => (
                 <h3
-                  className="mb-4 mt-8 font-display text-xl font-medium text-ink"
+                  className="mb-4 mt-8 scroll-mt-36 font-display text-xl font-medium text-ink"
                   {...props}
                 />
               ),
