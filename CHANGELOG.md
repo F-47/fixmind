@@ -4,6 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.11]
+
+### Fixed
+- `fixmind -v` now reads the installed package version instead of printing a stale hardcoded value.
+
 ## [1.0.10]
 
 ### Fixed
