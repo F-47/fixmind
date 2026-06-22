@@ -142,11 +142,11 @@ Marks `oldId` as superseded by `newId` — linked, not deleted. Superseded lesso
 
 Encrypted sync across machines via a Supabase project you (or your org) own. See [sync-setup.md](../packages/core/docs/sync-setup.md) for how to create the project and apply the schema.
 
-### `fixmind sync login`
+### `fixmind login`
 
 ```bash
-fixmind sync login
-fixmind sync login --password-login --email you@example.com --password ... --passphrase ...
+fixmind login
+fixmind login --password-login --email you@example.com --password ... --passphrase ...
 ```
 
 By default this opens your browser to sign in with **GitHub** (via Supabase's GitHub OAuth provider — see [sync-setup.md](../packages/core/docs/sync-setup.md) for the one-time GitHub OAuth App setup). Pass `--password-login` to use email/password instead. Either way it stores a session locally at `~/.fixmind/sync.json` and asks for an encryption passphrase: lesson content is encrypted on your machine with a key derived from it before it's ever sent to Supabase — use the **same passphrase on every machine**, since it can't be recovered or changed without losing access to already-synced data.
@@ -169,7 +169,7 @@ Downloads and decrypts lessons changed (on other machines) since the last pull, 
 
 ### Automatic sync
 
-If you're logged in (`fixmind sync login` has been run), two things happen without needing the explicit commands above:
+If you're logged in (`fixmind login` has been run), two things happen without needing the explicit commands above:
 
 - Saving a lesson — via `fixmind save`, `fixmind save-from-summary`, or the AI agent's `save_lesson` MCP tool call — automatically pushes it.
 - Opening `fixmind dashboard` automatically pulls first, so it shows lessons synced from other machines.
@@ -180,7 +180,7 @@ Both are best-effort: a failed auto-push/pull (offline, timeout) logs a one-line
 
 Prints whether you're logged in, and the last push/pull times.
 
-### `fixmind sync logout`
+### `fixmind logout`
 
 Removes the local session at `~/.fixmind/sync.json`. Does not delete anything from Supabase.
 

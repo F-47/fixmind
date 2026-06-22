@@ -1,5 +1,5 @@
 // Supabase Edge Function: receives Polar subscription webhooks and keeps
-// the `entitlements` table in sync, so `fixmind sync login` can check
+// the `entitlements` table in sync, so `fixmind login` can check
 // whether an account has an active Pro/Team subscription.
 //
 // Deploy: supabase functions deploy polar-webhook

@@ -1,4 +1,5 @@
 import { exec } from "node:child_process";
+import dns from "node:dns";
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -8,11 +9,16 @@ import { decrypt, deriveKey, encrypt, generateSalt } from "./crypto.js";
 import type { LessonStore } from "./storage.js";
 import type { Lesson } from "./types.js";
 
+// Some networks resolve AAAA records that time out instead of failing fast,
+// which undici's fetch surfaces as an opaque "TypeError: fetch failed".
+// Resolving IPv4 first avoids that hang on Supabase's auth/token calls.
+dns.setDefaultResultOrder("ipv4first");
+
 const VERIFIER_PLAINTEXT = "fixmind-sync-verify";
 const EPOCH = "1970-01-01T00:00:00.000Z";
 const OAUTH_CALLBACK_PORT = 51763;
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000;
-const PRICING_URL = "https://fixmind.dev/pricing";
+export const PRICING_URL = "https://fixmind.dev/pricing";
 
 export interface SyncRow {
   lessonId: string;
@@ -42,7 +48,7 @@ export interface OAuthSession {
 export interface SyncBackend {
   signIn(email: string, password: string): Promise<{ userId: string; refreshToken: string; accessToken: string }>;
   signUp(email: string, password: string): Promise<{ userId: string; refreshToken: string; accessToken: string }>;
-  signInWithGithub(): Promise<OAuthSession>;
+  signInWithGithub(onAuthUrl?: (url: string) => void): Promise<OAuthSession>;
   getEntitlement(session: SessionTokens): Promise<Entitlement | undefined>;
   getUserRecord(userId: string, session: SessionTokens): Promise<SyncUserRecord | undefined>;
   createUserRecord(userId: string, session: SessionTokens, record: SyncUserRecord): Promise<void>;
@@ -80,7 +86,81 @@ function openInBrowser(url: string): void {
   });
 }
 
-function waitForOAuthCode(port: number): Promise<string> {
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function oauthCallbackPage(options: { ok: boolean; message: string; redirectUrl?: string }): string {
+  const tint = options.ok ? "124,92,255" : "255,92,114";
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fixmind</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+    background-color: #08090d; color: #e9ecf4;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  body::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgba(35,40,56,0.6) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(35,40,56,0.6) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(circle at 50% 35%, black, transparent 75%);
+  }
+  body::after {
+    content: ""; position: absolute; left: 50%; top: 0; width: 760px; height: 420px;
+    transform: translateX(-50%); pointer-events: none; border-radius: 9999px;
+    background: rgba(${tint},0.15); filter: blur(130px);
+  }
+  .card {
+    position: relative; z-index: 1; text-align: center; padding: 2.5rem 3rem; border-radius: 16px;
+    border: 1px solid #232838; background: rgba(17,20,27,0.92);
+  }
+  .icon {
+    width: 48px; height: 48px; margin: 0 auto 1.25rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+    background: rgba(${tint},0.15);
+    color: ${options.ok ? "#7c5cff" : "#ff5c72"};
+  }
+  h1 {
+    font-family: "Space Grotesk", "Inter", sans-serif; font-size: 1.25rem; font-weight: 600;
+    margin: 0 0 0.5rem;
+  }
+  p { margin: 0; color: #828a9c; font-size: 0.95rem; line-height: 1.5; }
+  .redirect {
+    display: inline-block; margin-top: 1.5rem; padding: 0.6rem 1.5rem; border-radius: 8px;
+    background: #7c5cff; color: #08090d; font-weight: 600; font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .brand {
+    margin-top: 2rem; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase;
+    color: #4b3aae;
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">${options.ok ? "&#10003;" : "&#33;"}</div>
+    <h1>${options.ok ? "You're signed in" : "Sign in failed"}</h1>
+    <p>${escapeHtml(options.message)}</p>
+    ${options.redirectUrl ? `<a class="redirect" href="${escapeHtml(options.redirectUrl)}">Try again</a>` : ""}
+    <div class="brand">Fixmind</div>
+  </div>
+</body>
+</html>`;
+}
+
+function waitForOAuthCode(port: number, authUrl: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
       const url = new URL(req.url ?? "/", `http://127.0.0.1:${port}`);
@@ -90,8 +170,12 @@ function waitForOAuthCode(port: number): Promise<string> {
       res.writeHead(200, { "Content-Type": "text/html" });
       res.end(
         errorDescription
-          ? `<p>Sign in failed: ${errorDescription}. You can close this window.</p>`
-          : "<p>Signed in. You can close this window and return to the terminal.</p>",
+          ? oauthCallbackPage({
+              ok: false,
+              message: `${errorDescription}. You can close this window and return to the terminal.`,
+              redirectUrl: authUrl,
+            })
+          : oauthCallbackPage({ ok: true, message: "You can close this window and return to the terminal." }),
       );
 
       clearTimeout(timeout);
@@ -148,7 +232,7 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
       if (error) throw new Error(`Sign up failed: ${error.message}`);
       if (!data.session) {
         throw new Error(
-          "Account created. Check your email to confirm it, then run `fixmind sync login` again.",
+          "Account created. Check your email to confirm it, then run `fixmind login` again.",
         );
       }
       return {
@@ -158,7 +242,7 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
       };
     },
 
-    async signInWithGithub() {
+    async signInWithGithub(onAuthUrl) {
       const supabase = createClient(url, anonKey, {
         auth: {
           flowType: "pkce",
@@ -176,10 +260,10 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
       });
       if (error || !data.url) throw new Error(`GitHub sign in failed: ${error?.message ?? "no auth URL"}`);
 
-      console.log(`Opening your browser to sign in with GitHub...\nIf it doesn't open, visit: ${data.url}`);
+      onAuthUrl?.(data.url);
       openInBrowser(data.url);
 
-      const code = await waitForOAuthCode(OAUTH_CALLBACK_PORT);
+      const code = await waitForOAuthCode(OAUTH_CALLBACK_PORT, data.url);
       const { data: exchanged, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
       if (exchangeError || !exchanged.session) {
         throw new Error(`GitHub sign in failed: ${exchangeError?.message ?? "no session"}`);
@@ -288,9 +372,14 @@ function writeSyncConfig(config: SyncConfig): void {
   fs.writeFileSync(syncConfigPath(), `${JSON.stringify(config, null, 2)}\n`, "utf8");
 }
 
+export interface LoginResult {
+  email: string;
+  entitled: boolean;
+}
+
 export interface SyncEngine {
-  login(params: { supabaseUrl: string; supabaseAnonKey: string; email: string; password: string; passphrase: string }): Promise<void>;
-  loginWithGithub(params: { supabaseUrl: string; supabaseAnonKey: string; passphrase: string }): Promise<void>;
+  login(params: { supabaseUrl: string; supabaseAnonKey: string; email: string; password: string; passphrase: string }): Promise<LoginResult>;
+  loginWithGithub(params: { supabaseUrl: string; supabaseAnonKey: string; passphrase: string; onAuthUrl?: (url: string) => void }): Promise<LoginResult>;
   logout(): void;
   status(): { loggedIn: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string };
   push(): Promise<{ pushed: number }>;
@@ -335,7 +424,7 @@ export async function autoPullOnStart(store: LessonStore): Promise<void> {
 export function createSyncEngine(store: LessonStore, backend?: SyncBackend): SyncEngine {
   function requireConfig(): SyncConfig {
     const config = readSyncConfig();
-    if (!config) throw new Error("Not logged in to sync. Run `fixmind sync login` first.");
+    if (!config) throw new Error("Not logged in to sync. Run `fixmind login` first.");
     return config;
   }
 
@@ -373,11 +462,15 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
     return { key, salt };
   }
 
-  async function requireEntitlement(activeBackend: SyncBackend, sessionTokens: SessionTokens): Promise<void> {
+  async function isEntitled(activeBackend: SyncBackend, sessionTokens: SessionTokens): Promise<boolean> {
     const entitlement = await activeBackend.getEntitlement(sessionTokens);
-    if (!entitlement || entitlement.status !== "active") {
+    return Boolean(entitlement && entitlement.status === "active");
+  }
+
+  async function requireEntitlement(activeBackend: SyncBackend, sessionTokens: SessionTokens): Promise<void> {
+    if (!(await isEntitled(activeBackend, sessionTokens))) {
       throw new Error(
-        `Fixmind sync requires an active Pro or Team plan. Subscribe at ${PRICING_URL}, then run \`fixmind sync login\` again.`,
+        `Fixmind sync requires an active Pro or Team plan. Subscribe at ${PRICING_URL}, then run \`fixmind sync push\` (or \`pull\`) again.`,
       );
     }
   }
@@ -393,7 +486,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
         session = await activeBackend.signUp(email, password);
       }
       const sessionTokens: SessionTokens = { accessToken: session.accessToken, refreshToken: session.refreshToken };
-      await requireEntitlement(activeBackend, sessionTokens);
+      const entitled = await isEntitled(activeBackend, sessionTokens);
       const { key, salt } = await establishKey(activeBackend, session.userId, sessionTokens, passphrase);
 
       writeSyncConfig({
@@ -406,13 +499,14 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
         salt,
         keyBase64: key.toString("base64"),
       });
+      return { email, entitled };
     },
 
-    async loginWithGithub({ supabaseUrl, supabaseAnonKey, passphrase }) {
+    async loginWithGithub({ supabaseUrl, supabaseAnonKey, passphrase, onAuthUrl }) {
       const activeBackend = backend ?? createSupabaseBackend(supabaseUrl, supabaseAnonKey);
-      const session = await activeBackend.signInWithGithub();
+      const session = await activeBackend.signInWithGithub(onAuthUrl);
       const sessionTokens: SessionTokens = { accessToken: session.accessToken, refreshToken: session.refreshToken };
-      await requireEntitlement(activeBackend, sessionTokens);
+      const entitled = await isEntitled(activeBackend, sessionTokens);
       const { key, salt } = await establishKey(activeBackend, session.userId, sessionTokens, passphrase);
 
       writeSyncConfig({
@@ -425,6 +519,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
         salt,
         keyBase64: key.toString("base64"),
       });
+      return { email: session.email, entitled };
     },
 
     logout() {

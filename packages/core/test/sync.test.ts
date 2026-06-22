@@ -106,7 +106,7 @@ function withMachine<T>(run: (store: LessonStore) => Promise<T>): () => Promise<
   };
 }
 
-test("login is rejected without an active Pro/Team entitlement", async () => {
+test("login succeeds but reports unentitled without an active Pro/Team plan", async () => {
   const backend = new FakeBackend();
   const credentials = {
     supabaseUrl: "https://example.supabase.co",
@@ -116,22 +116,20 @@ test("login is rejected without an active Pro/Team entitlement", async () => {
     passphrase: "shared passphrase",
   };
 
-  await assert.rejects(
-    withMachine(async (store) => {
-      const engine = createSyncEngine(store, backend);
-      await engine.login(credentials);
-    })(),
-    /requires an active Pro or Team plan/,
-  );
+  await withMachine(async (store) => {
+    const engine = createSyncEngine(store, backend);
+    const result = await engine.login(credentials);
+    assert.equal(result.entitled, false);
+    assert.equal(engine.status().loggedIn, true);
+    await assert.rejects(engine.push(), /requires an active Pro or Team plan/);
+  })();
 
   backend.grantEntitlement(credentials.email, { plan: "pro", status: "canceled" });
-  await assert.rejects(
-    withMachine(async (store) => {
-      const engine = createSyncEngine(store, backend);
-      await engine.login(credentials);
-    })(),
-    /requires an active Pro or Team plan/,
-  );
+  await withMachine(async (store) => {
+    const engine = createSyncEngine(store, backend);
+    const result = await engine.login(credentials);
+    assert.equal(result.entitled, false);
+  })();
 });
 
 test("login rejects the wrong passphrase on a second machine", async () => {

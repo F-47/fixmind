@@ -15,7 +15,7 @@ plaintext lessons.
 
 ## 2. Enable GitHub sign-in (recommended)
 
-`fixmind sync login` defaults to signing in with GitHub through Supabase's
+`fixmind login` defaults to signing in with GitHub through Supabase's
 OAuth provider, so no passwords are typed into the terminal.
 
 1. On GitHub, go to **Settings > Developer settings > OAuth Apps > New OAuth App**.
@@ -31,7 +31,7 @@ OAuth provider, so no passwords are typed into the terminal.
    list.
 
 If you'd rather not set this up, pass `--password-login` to
-`fixmind sync login` to use email/password instead (make sure email
+`fixmind login` to use email/password instead (make sure email
 auth is enabled, as in step 1).
 
 ## 3. Apply the schema
@@ -53,12 +53,12 @@ export FIXMIND_SUPABASE_ANON_KEY="<anon-public-key>"
 ## 5. Log in and sync
 
 ```sh
-fixmind sync login
+fixmind login
 fixmind sync push
 fixmind sync pull
 ```
 
-`fixmind sync login` opens your browser to sign in with GitHub (creating
+`fixmind login` opens your browser to sign in with GitHub (creating
 the Supabase account on first use), then asks for an encryption
 passphrase. The passphrase is used to derive an AES-256 key locally
 (scrypt) and is never sent to Supabase. Use the **same passphrase on

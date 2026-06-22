@@ -13,6 +13,7 @@ import {
   outro,
   password,
   select,
+  spinner,
   text,
 } from "@clack/prompts";
 import { lessonsToJson, lessonsToMarkdown } from "./export.js";
@@ -39,6 +40,11 @@ const common = { input: stdin, output: stdout };
 function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) { cancel("Operation cancelled."); process.exit(0); }
   return value as T;
+}
+
+function terminalLink(text: string, url: string): string {
+  const esc = "\x1b";
+  return `${esc}]8;;${url}\u0007${text}${esc}]8;;\u0007`;
 }
 
 function optionString(value: string | boolean | undefined): string | undefined {
@@ -114,6 +120,16 @@ async function main(): Promise<void> {
 
   if (args.command === "setup") {
     await setup(args.options);
+    return;
+  }
+
+  if (args.command === "login") {
+    await loginCommand(args.options);
+    return;
+  }
+
+  if (args.command === "logout") {
+    await logoutCommand();
     return;
   }
 
@@ -276,71 +292,118 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
   console.log("Restart configured AI clients so they discover the MCP server.");
 }
 
-async function syncCommand(
-  sub: string | undefined,
-  options: Record<string, string | boolean>,
-): Promise<void> {
-  if (!sub || !["login", "logout", "push", "pull", "status"].includes(sub)) {
-    throw new Error("Usage: fixmind sync <login|push|pull|status|logout>");
-  }
-
+async function loginCommand(options: Record<string, string | boolean>): Promise<void> {
   initializeDataDirectory();
-  const { createSyncEngine } = await import("./sync.js");
+  const { createSyncEngine, PRICING_URL } = await import("./sync.js");
   const store = createLessonStore();
   const interactive = stdin.isTTY && stdout.isTTY;
   try {
     const engine = createSyncEngine(store);
 
-    if (sub === "login") {
-      const supabaseUrl = optionString(options.url) ?? process.env.FIXMIND_SUPABASE_URL;
-      const supabaseAnonKey = optionString(options.key) ?? process.env.FIXMIND_SUPABASE_ANON_KEY;
-      if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error(
-          "Set FIXMIND_SUPABASE_URL and FIXMIND_SUPABASE_ANON_KEY (or pass --url/--key). See docs/sync-setup.md.",
-        );
-      }
-
-      if (interactive) intro("Fixmind sync login", common);
-      const passphrase = optionString(options.passphrase) ?? (interactive
-        ? unwrap(await password({
-            message: "Sync encryption passphrase (use the same one on every machine)",
-            ...common,
-          }))
-        : (() => { throw new Error("--passphrase is required outside an interactive terminal."); })());
-
-      const usePasswordLogin = Boolean(optionString(options.email) || options["password-login"]);
-      let email: string;
-      if (usePasswordLogin) {
-        email = optionString(options.email) ?? (interactive
-          ? unwrap(await text({ message: "Email", ...common }))
-          : (() => { throw new Error("Usage: fixmind sync login --email <email> --password <password> --passphrase <passphrase>"); })());
-        const userPassword = optionString(options.password) ?? (interactive
-          ? unwrap(await password({ message: "Password", ...common }))
-          : (() => { throw new Error("--password is required outside an interactive terminal."); })());
-        await engine.login({ supabaseUrl, supabaseAnonKey, email, password: userPassword, passphrase });
-      } else {
-        await engine.loginWithGithub({ supabaseUrl, supabaseAnonKey, passphrase });
-        email = engine.status().email ?? "your GitHub account";
-      }
-
-      if (interactive) {
-        outro(`Logged in as ${email}.`, common);
-      } else {
-        console.log(`Logged in as ${email}.`);
-      }
-      return;
+    const supabaseUrl = optionString(options.url) ?? process.env.FIXMIND_SUPABASE_URL;
+    const supabaseAnonKey = optionString(options.key) ?? process.env.FIXMIND_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error(
+        "Set FIXMIND_SUPABASE_URL and FIXMIND_SUPABASE_ANON_KEY (or pass --url/--key). See docs/sync-setup.md.",
+      );
     }
 
-    if (sub === "logout") {
-      engine.logout();
-      console.log("Logged out of sync.");
-      return;
+    if (interactive) intro("Fixmind login", common);
+    const passphrase = optionString(options.passphrase) ?? (interactive
+      ? unwrap(await password({
+          message: "Sync encryption passphrase (use the same one on every machine)",
+          ...common,
+        }))
+      : (() => { throw new Error("--passphrase is required outside an interactive terminal."); })());
+
+    const usePasswordLogin = Boolean(optionString(options.email) || options["password-login"]);
+    let result: { email: string; entitled: boolean };
+    if (usePasswordLogin) {
+      const email = optionString(options.email) ?? (interactive
+        ? unwrap(await text({ message: "Email", ...common }))
+        : (() => { throw new Error("Usage: fixmind login --email <email> --password <password> --passphrase <passphrase>"); })());
+      const userPassword = optionString(options.password) ?? (interactive
+        ? unwrap(await password({ message: "Password", ...common }))
+        : (() => { throw new Error("--password is required outside an interactive terminal."); })());
+      result = await engine.login({ supabaseUrl, supabaseAnonKey, email, password: userPassword, passphrase });
+    } else if (interactive) {
+      let s = spinner();
+      let fallbackUrl: string | undefined;
+      s.start("Opening your browser to sign in with GitHub...");
+      try {
+        result = await engine.loginWithGithub({
+          supabaseUrl,
+          supabaseAnonKey,
+          passphrase,
+          onAuthUrl: (url) => {
+            fallbackUrl = url;
+            s.stop("Browser opened.");
+            log.message(`Didn't open? ${terminalLink("Click here to sign in", url)}`, common);
+            s = spinner();
+            s.start("Waiting for sign in to finish in your browser...");
+          },
+        });
+        s.stop("Signed in with GitHub.");
+      } catch (error) {
+        s.stop("GitHub sign in failed.");
+        if (fallbackUrl) log.message(`If the browser didn't open: ${terminalLink("Click here to sign in", fallbackUrl)}`, common);
+        throw error;
+      }
+    } else {
+      result = await engine.loginWithGithub({
+        supabaseUrl,
+        supabaseAnonKey,
+        passphrase,
+        onAuthUrl: (url) => console.log(`Opening your browser to sign in with GitHub...\nIf it doesn't open, visit: ${url}`),
+      });
     }
+
+    const message = result.entitled
+      ? `Logged in as ${result.email}. Sync is active.`
+      : `Signed in as ${result.email}, but you don't have an active Pro or Team plan yet. ` +
+        `Subscribe at ${PRICING_URL} to start syncing — no need to log in again afterward, just run \`fixmind sync push\`.`;
+
+    if (interactive) {
+      outro(message, common);
+    } else {
+      console.log(message);
+    }
+  } finally {
+    store.close();
+  }
+}
+
+async function logoutCommand(): Promise<void> {
+  initializeDataDirectory();
+  const { createSyncEngine } = await import("./sync.js");
+  const store = createLessonStore();
+  try {
+    const engine = createSyncEngine(store);
+    engine.logout();
+    console.log("Logged out.");
+  } finally {
+    store.close();
+  }
+}
+
+async function syncCommand(
+  sub: string | undefined,
+  options: Record<string, string | boolean>,
+): Promise<void> {
+  if (!sub || !["push", "pull", "status"].includes(sub)) {
+    throw new Error("Usage: fixmind sync <push|pull|status>");
+  }
+
+  initializeDataDirectory();
+  const { createSyncEngine } = await import("./sync.js");
+  const store = createLessonStore();
+  try {
+    const engine = createSyncEngine(store);
 
     if (sub === "status") {
       const status = engine.status();
       if (!status.loggedIn) {
-        console.log("Not logged in to sync. Run `fixmind sync login`.");
+        console.log("Not logged in. Run `fixmind login`.");
         return;
       }
       console.log(`Logged in as ${status.email}.`);
@@ -831,13 +894,13 @@ async function readStdin(): Promise<string> {
 
 function printHelp(): void {
   console.log(
-    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind sync login [--url <supabase-url> --key <anon-key> --passphrase ...]  (opens browser for GitHub sign in)\n  fixmind sync login --password-login --email ... --password ... --passphrase ...  (email/password instead)\n  fixmind sync push\n  fixmind sync pull\n  fixmind sync status\n  fixmind sync logout\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
+    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--dry-run]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind login [--url <supabase-url> --key <anon-key> --passphrase ...]  (opens browser for GitHub sign in)\n  fixmind login --password-login --email ... --password ... --passphrase ...  (email/password instead)\n  fixmind logout\n  fixmind sync push\n  fixmind sync pull\n  fixmind sync status\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
   );
 }
 
 main().catch((error: unknown) => {
-  console.error(
-    `Error: ${error instanceof Error ? error.message : String(error)}`,
-  );
+  const message = error instanceof Error ? error.message : String(error);
+  const cause = error instanceof Error && error.cause instanceof Error ? error.cause.message : undefined;
+  console.error(`Error: ${message}${cause ? ` (${cause})` : ""}`);
   process.exitCode = 1;
 });

@@ -57,7 +57,7 @@ function AuthForm() {
         {mode === "signIn" ? "Sign in" : "Create your account"}
       </h2>
       <p className="mt-1 text-sm text-muted">Same account fixmind&rsquo;s CLI uses for</p>
-      <code className="mt-0.5 block text-sm text-ink">fixmind sync login</code>
+      <code className="mt-0.5 block text-sm text-ink">fixmind login</code>
 
       <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
         <input
@@ -162,9 +162,9 @@ function AccountStatus({ session }: { session: Session }) {
       </p>
       <div className="mt-2 space-y-2">
         <p className="break-all rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-[11px] leading-relaxed text-muted">
-          <span className="text-ink">$</span> fixmind sync login
+          <span className="text-ink">$</span> fixmind login
         </p>
-        <CopyButton text="fixmind sync login" label="Copy command" variant="block" />
+        <CopyButton text="fixmind login" label="Copy command" variant="block" />
       </div>
     </div>
   );
@@ -173,7 +173,7 @@ function AccountStatus({ session }: { session: Session }) {
 export default function Account() {
   usePageMeta(
     "Account — fixmind",
-    "Manage your fixmind account and connect the CLI with fixmind sync login.",
+    "Manage your fixmind account and connect the CLI with fixmind login.",
   );
 
   const [session, setSession] = useState<Session | null | undefined>(undefined);
@@ -209,7 +209,7 @@ export default function Account() {
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-muted">
               One account ties your CLI to a paid plan. Sign in here, then run{" "}
-              <code className="text-ink">fixmind sync login</code> on every
+              <code className="text-ink">fixmind login</code> on every
               machine you want to sync from.
             </p>
 
