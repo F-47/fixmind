@@ -4,6 +4,12 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.8]
+
+### Fixed
+- Dashboard now uses a plain account link and no longer depends on a React Router provider.
+- Removed external Google Fonts loading so the dashboard and website work under the local CSP.
+
 ## [1.0.7]
 
 ### Fixed

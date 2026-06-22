@@ -8,7 +8,6 @@ import { RankList } from "./components/RankList";
 import { exportUrl } from "./api";
 import { formatToolName, formatWeek } from "./format";
 import { useDashboardController } from "./useDashboardController";
-import { Link } from "react-router-dom";
 
 export default function App() {
   useEffect(() => {
@@ -169,12 +168,12 @@ export default function App() {
                           Sign in on the account page to enable encrypted sync across your devices.
                         </p>
                       </div>
-                      <Link
+                      <a
                         className="inline-flex items-center justify-center rounded-full border border-line bg-page px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-ink transition-colors hover:border-accent/40 hover:text-accent"
-                        to="/account"
+                        href="/account"
                       >
                         Open account
-                      </Link>
+                      </a>
                     </div>
                   )}
                   <div className="flex flex-wrap items-center justify-between gap-3">
