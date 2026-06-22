@@ -22,7 +22,7 @@ Fixmind is a local-first CLI and MCP server that records short learning lessons 
 npx fixmind setup
 ```
 
-`fixmind setup` initializes local storage and automatically configures detected installations of Cursor, Claude Code, and Codex. _Restart your AI clients after running setup._
+`npx fixmind setup` initializes local storage and automatically configures detected installations of Cursor, Claude Code, and Codex. _Restart your AI clients after running setup._
 
 ## How It Works
 

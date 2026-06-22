@@ -4,6 +4,13 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.12]
+
+### Changed
+- `npx fixmind setup` is now the primary onboarding path, and setup asks whether you want to open the dashboard or sign in before it does anything else.
+- The dashboard no longer nags logged-out or free users to visit the account page; it stays local-first and only shows last sync when encrypted sync is active.
+- The GitHub login success page now offers an account button after sign-in.
+
 ## [1.0.11]
 
 ### Fixed

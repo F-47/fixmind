@@ -46,7 +46,6 @@ export default function App() {
     setQuery,
     setSelectedWeek,
     syncMeta,
-    syncNote,
     totalPages,
     open,
     refreshDashboard,
@@ -76,12 +75,14 @@ export default function App() {
               <span className="size-1.5 rounded-full bg-accent" />
               {data.summary.total} lessons
             </span>
-            <p className="mt-1 font-mono text-[10px] uppercase tracking-[.18em] text-muted">
-              Last sync pull:{" "}
-              {syncMeta?.lastPulledAt
-                ? new Date(syncMeta.lastPulledAt).toLocaleString()
-                : "never"}
-            </p>
+            {syncMeta?.syncEnabled && (
+              <p className="mt-1 font-mono text-[10px] uppercase tracking-[.18em] text-muted">
+                Last sync pull:{" "}
+                {syncMeta.lastPulledAt
+                  ? new Date(syncMeta.lastPulledAt).toLocaleString()
+                  : "never"}
+              </p>
+            )}
           </div>
         </header>
 
@@ -157,27 +158,7 @@ export default function App() {
           <div className="grid grid-cols-[1fr_300px] gap-10 py-10 max-[900px]:grid-cols-1 max-[900px]:gap-10">
             <main>
               <div className="mb-5 space-y-4 rounded-3xl">
-                <div className="space-y-2">
-                  {syncMeta && (!syncMeta.loggedIn || syncMeta.needsReauth) && (
-                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface-2 px-4 py-3">
-                      <div className="space-y-1">
-                        <div className="text-xs font-semibold uppercase tracking-[.18em] text-muted">
-                          {syncMeta.needsReauth ? "Sync needs re-login" : "Sync is off"}
-                        </div>
-                        <p className="text-sm leading-relaxed text-muted">
-                          {syncMeta.needsReauth
-                            ? "Your saved sync session expired. Sign in again on the account page to restore encrypted sync."
-                            : "Sign in on the account page to enable encrypted sync across your devices."}
-                        </p>
-                      </div>
-                      <a
-                        className="inline-flex items-center justify-center rounded-full border border-line bg-page px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-ink transition-colors hover:border-accent/40 hover:text-accent"
-                        href="https://fixmind.dev/account"
-                      >
-                        Open account
-                      </a>
-                    </div>
-                  )}
+              <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h2 className="text-2xl font-semibold tracking-tight">
                       Your lessons{" "}
@@ -190,7 +171,7 @@ export default function App() {
                       onClick={() => void refreshDashboard()}
                       disabled={refreshing}
                       className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-muted transition-colors hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
-                      title="Pull the latest lessons from sync"
+                      title={syncMeta?.syncEnabled ? "Pull the latest lessons from sync" : "Reload local lessons"}
                     >
                       <RefreshCw
                         size={12}
@@ -202,7 +183,6 @@ export default function App() {
                   <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
                     Filter by learning state or model.
                   </p>
-                  {syncNote && <p className="text-sm text-muted">{syncNote}</p>}
                 </div>
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
                   <nav className="flex flex-wrap gap-5">

@@ -81,7 +81,28 @@ export async function setup(options: Record<string, string | boolean>): Promise<
   for (const result of permissions) console.log(`${result.client} permissions: ${result.status} - ${result.filePath}`);
   console.log("Restart configured AI clients so they discover the MCP server.");
 
-  if (!dryRun && !options["no-dashboard"]) {
+  if (dryRun || options["no-dashboard"] || !interactive) {
+    console.log("Run `npx fixmind dashboard` to open the local dashboard, or `npx fixmind login` to enable sync.");
+    return;
+  }
+
+  const nextAction = unwrap(await select({
+    message: "What would you like to do next?",
+    options: [
+      { value: "dashboard", label: "Open dashboard", hint: "Launch the local dashboard in your browser." },
+      { value: "login", label: "Sign in now", hint: "Set up encrypted sync on this machine." },
+      { value: "done", label: "Finish setup", hint: "Return to the terminal without opening anything." },
+    ],
+    initialValue: "done",
+    ...common,
+  }));
+
+  if (nextAction === "login") {
+    await loginCommand({});
+    return;
+  }
+
+  if (nextAction === "dashboard") {
     const { startDashboard } = await import("./dashboard.js");
     try {
       const handle = await startDashboard({ port: optionalPort(options.port), open: true });
@@ -158,7 +179,7 @@ export async function loginCommand(options: Record<string, string | boolean>): P
     const message = result.entitled
       ? `Logged in as ${result.email}. Sync is active.`
       : `Signed in as ${result.email}, but you don't have an active Pro or Team plan yet. ` +
-        `Subscribe at ${PRICING_URL} to start syncing - no need to log in again afterward, just run \`fixmind sync push\`.`;
+        `Subscribe at ${PRICING_URL} to start syncing - no need to log in again afterward, just run \`npx fixmind sync push\`.`;
 
     if (interactive) {
       outro(message, common);
@@ -195,10 +216,15 @@ export async function syncCommand(sub: string | undefined): Promise<void> {
     if (sub === "status") {
       const status = await engine.status();
       if (!status.loggedIn) {
-        console.log(status.needsReauth ? "Sync session expired. Run `fixmind login` again." : "Not logged in. Run `fixmind login`.");
+        console.log(status.needsReauth ? "Sync session expired. Run `npx fixmind login` again." : "Not logged in. Run `npx fixmind login`.");
         return;
       }
-      console.log(`Logged in as ${status.email}.`);
+      if (!status.syncEnabled) {
+        console.log(`Signed in as ${status.email}. Sync is not active on this account.`);
+      } else {
+        console.log(`Logged in as ${status.email}.`);
+        console.log("Encrypted sync is on.");
+      }
       console.log(`Last push: ${status.lastPushedAt ?? "never"}`);
       console.log(`Last pull: ${status.lastPulledAt ?? "never"}`);
       return;
