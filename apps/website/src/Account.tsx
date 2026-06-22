@@ -1,5 +1,7 @@
 import type { Session } from "@supabase/supabase-js";
+import { CheckCircle2, CircleDashed, LogOut, Mail } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { toast } from "sonner";
 import { CopyButton } from "./components/CopyButton";
 import { supabase, supabaseConfigured } from "./lib/supabase";
 import { usePageMeta } from "./router";
@@ -19,24 +21,25 @@ function AuthForm() {
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
   const [pending, setPending] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!supabase) return;
     setPending(true);
-    setMessage(null);
     const { error } =
       mode === "signIn"
         ? await supabase.auth.signInWithPassword({ email, password })
         : await supabase.auth.signUp({ email, password });
     setPending(false);
     if (error) {
-      setMessage(error.message);
+      toast.error(error.message);
       return;
     }
     if (mode === "signUp") {
-      setMessage("Check your email to confirm your account, then sign in.");
+      toast.success("Check your email to confirm your account, then sign in.", {
+        icon: <Mail size={16} />,
+        duration: 8000,
+      });
     }
   }
 
@@ -93,8 +96,6 @@ function AuthForm() {
         Continue with GitHub
       </button>
 
-      {message && <p className="mt-3 text-sm text-muted">{message}</p>}
-
       <button
         type="button"
         onClick={() => setMode(mode === "signIn" ? "signUp" : "signIn")}
@@ -119,21 +120,42 @@ function AccountStatus({ session }: { session: Session }) {
   }, []);
 
   const email = session.user.email ?? "";
+  const isActive = entitlement?.status === "active";
 
   return (
     <div className="mx-auto max-w-sm rounded-xl border border-line bg-surface p-6">
-      <h2 className="font-display text-xl font-semibold text-ink">Your account</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="font-display text-xl font-semibold text-ink">Your account</h2>
+        <button
+          type="button"
+          onClick={() => supabase?.auth.signOut()}
+          className="flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
+        >
+          <LogOut size={14} />
+          Sign out
+        </button>
+      </div>
       <p className="mt-1 text-sm text-muted">{email}</p>
 
-      <div className="mt-5 rounded-md border border-line bg-surface-2 px-3 py-2.5">
+      <div
+        className={`mt-5 flex items-center gap-2.5 rounded-md border px-3 py-2.5 ${
+          isActive ? "border-good/30 bg-good/10" : "border-line bg-surface-2"
+        }`}
+      >
         {entitlement === undefined ? (
           <p className="text-sm text-muted">Checking your plan&hellip;</p>
-        ) : entitlement && entitlement.status === "active" ? (
-          <p className="text-sm text-ink">
-            Plan: <span className="font-medium capitalize">{entitlement.plan}</span> &middot; active
-          </p>
+        ) : isActive ? (
+          <>
+            <CheckCircle2 size={16} className="shrink-0 text-good" />
+            <p className="text-sm text-ink">
+              <span className="font-medium capitalize">{entitlement.plan}</span> plan &middot; active
+            </p>
+          </>
         ) : (
-          <p className="text-sm text-muted">No active paid plan on this account yet.</p>
+          <>
+            <CircleDashed size={16} className="shrink-0 text-muted" />
+            <p className="text-sm text-muted">No active paid plan on this account yet.</p>
+          </>
         )}
       </div>
 
@@ -146,14 +168,6 @@ function AccountStatus({ session }: { session: Session }) {
         </p>
         <CopyButton text="fixmind sync login" label="Copy command" variant="block" />
       </div>
-
-      <button
-        type="button"
-        onClick={() => supabase?.auth.signOut()}
-        className="mt-5 block w-full rounded-md border border-line px-3 py-2 text-center text-sm text-muted transition-colors hover:border-accent/60 hover:text-ink"
-      >
-        Sign out
-      </button>
     </div>
   );
 }
