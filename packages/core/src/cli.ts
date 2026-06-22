@@ -146,12 +146,21 @@ async function main(): Promise<void> {
 
   if (args.command === "dashboard") {
     const { startDashboard } = await import("./dashboard.js");
-    const handle = await startDashboard({
-      port: optionalPort(args.options.port),
-      open: !args.options["no-open"],
-    });
-    console.log(`Fixmind dashboard: ${handle.url}`);
-    console.log("Press Ctrl+C to stop.");
+    try {
+      const handle = await startDashboard({
+        port: optionalPort(args.options.port),
+        open: !args.options["no-open"],
+      });
+      console.log(`Fixmind dashboard: ${handle.url}`);
+      console.log("Press Ctrl+C to stop.");
+    } catch (error) {
+      if (isAddressInUseError(error)) {
+        throw new Error(
+          `Dashboard port is already in use. Run \`fixmind dashboard --port <different-port>\` or stop the process using 127.0.0.1:${optionalPort(args.options.port) ?? 4317}.`,
+        );
+      }
+      throw error;
+    }
     return;
   }
 
@@ -299,9 +308,20 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
 
   if (!dryRun && !options["no-dashboard"]) {
     const { startDashboard } = await import("./dashboard.js");
-    const handle = await startDashboard({ port: optionalPort(options.port), open: true });
-    console.log(`Fixmind dashboard: ${handle.url}`);
-    console.log("Press Ctrl+C to stop.");
+    try {
+      const handle = await startDashboard({ port: optionalPort(options.port), open: true });
+      console.log(`Fixmind dashboard: ${handle.url}`);
+      console.log("Press Ctrl+C to stop.");
+    } catch (error) {
+      if (isAddressInUseError(error)) {
+        const port = optionalPort(options.port) ?? 4317;
+        console.log(
+          `Dashboard is already running on 127.0.0.1:${port}; skipping a second launch.`,
+        );
+      } else {
+        throw error;
+      }
+    }
   }
 }
 
@@ -454,6 +474,13 @@ function validateClients(values: string[]): SupportedClient[] {
       `Unsupported client(s): ${invalid.join(", ")}. Use codex, claude, or cursor.`,
     );
   return [...new Set(values)] as SupportedClient[];
+}
+
+function isAddressInUseError(error: unknown): boolean {
+  if (error == null || typeof error !== "object") return false;
+  if ("code" in error && (error as { code?: unknown }).code === "EADDRINUSE") return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /address already in use/i.test(message);
 }
 
 async function saveLesson(
