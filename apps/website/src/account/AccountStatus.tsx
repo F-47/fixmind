@@ -111,7 +111,7 @@ export function AccountStatus({ session }: { session: Session }) {
           </button>
         </div>
 
-        <div className={`mt-6 grid gap-3 ${syncEnabled ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
+        <div className={`mt-6 grid gap-3 ${syncEnabled ? "sm:grid-cols-2 md:grid-cols-4" : "sm:grid-cols-2 md:grid-cols-3"}`}>
           <div className="rounded-xl border border-line bg-surface-2 p-4">
             <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
               Signed in as
@@ -162,7 +162,7 @@ export function AccountStatus({ session }: { session: Session }) {
           <InfoPill>
             <span className="inline-flex items-center gap-1">
               <TerminalSquare size={10} />
-              fixmind login
+              npx fixmind login
             </span>
           </InfoPill>
         </div>
@@ -172,38 +172,37 @@ export function AccountStatus({ session }: { session: Session }) {
             CLI access
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            If <code className="text-ink">fixmind</code> is not recognized in
-            your terminal, install the CLI once on this machine so{" "}
-            <code className="text-ink">fixmind login</code> and the sync
-            commands work from any shell.
+            Use <code className="text-ink">npx fixmind setup</code> to register
+            the MCP server on a new machine, then{" "}
+            <code className="text-ink">npx fixmind login</code> when you want
+            encrypted sync.
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <CommandCard
-              label="Install CLI"
-              command="npm i -g fixmind@latest"
-              description="Adds fixmind to PATH on this machine."
+              label="Setup"
+              command="npx fixmind setup"
+              description="Register Claude Code, Cursor, and Codex without a global install."
             />
             <CommandCard
               label="Login"
-              command="fixmind login"
-              description="Use this after the CLI is installed so sync can connect."
+              command="npx fixmind login"
+              description="Turn on encrypted sync for this machine when you're ready."
             />
           </div>
           <p className="mt-3 text-xs leading-relaxed text-muted">
-            Prefer not to install globally? Use{" "}
-            <code className="text-ink">npx --yes fixmind@latest &lt;command&gt;</code>{" "}
-            instead.
+            Install globally only if you want a persistent{" "}
+            <code className="text-ink">fixmind</code> command on your PATH.
           </p>
         </div>
 
         {syncEnabled ? (
           <>
             <div className="mt-4 rounded-xl border border-line bg-bg/35 p-4">
-              <CommandCard
-                label="Login once"
-                command="fixmind login"
-                description="Run this once on every machine you want encrypted sync on. If you only use one device, you can ignore it."
-              />
+            <CommandCard
+              label="Login once"
+              command="npx fixmind login"
+              description="Run this once on every machine you want encrypted sync on. If you only use one device, you can ignore it."
+            />
             </div>
 
             <div className="mt-4 rounded-xl border border-line bg-bg/35 p-4">
@@ -212,29 +211,29 @@ export function AccountStatus({ session }: { session: Session }) {
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted">
                 Sign in once on each device with{" "}
-                <code className="text-ink">fixmind login</code>. After that,
+                <code className="text-ink">npx fixmind login</code>. After that,
                 opening the dashboard usually refreshes lessons for you, and these
                 commands cover the manual cases:
               </p>
               <div className="mt-3 grid gap-3">
                 <CommandCard
                   label="Push"
-                  command="fixmind sync push"
+                  command="npx fixmind sync push"
                   description="Send local lessons from this device up to sync storage."
                 />
                 <CommandCard
                   label="Status"
-                  command="fixmind sync status"
+                  command="npx fixmind sync status"
                   description="Check whether this device is logged in and when it last synced."
                 />
                 <CommandCard
                   label="Pull"
-                  command="fixmind sync pull"
+                  command="npx fixmind sync pull"
                   description="Fetch the latest lessons from sync storage."
                 />
                 <CommandCard
                   label="Open"
-                  command="fixmind dashboard"
+                  command="npx fixmind dashboard"
                   description="Open the dashboard. It pulls the latest lessons when it starts, so it is the easiest refresh."
                 />
               </div>

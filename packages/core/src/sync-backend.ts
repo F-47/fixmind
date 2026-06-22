@@ -88,7 +88,7 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function oauthCallbackPage(options: { ok: boolean; message: string; redirectUrl?: string }): string {
+function oauthCallbackPage(options: { ok: boolean; message: string; redirectUrl?: string; redirectLabel?: string }): string {
   const tint = options.ok ? "124,92,255" : "255,92,114";
   return `<!doctype html>
 <html lang="en">
@@ -147,7 +147,7 @@ function oauthCallbackPage(options: { ok: boolean; message: string; redirectUrl?
     <div class="icon">${options.ok ? "&#10003;" : "&#33;"}</div>
     <h1>${options.ok ? "You're signed in" : "Sign in failed"}</h1>
     <p>${escapeHtml(options.message)}</p>
-    ${options.redirectUrl ? `<a class="redirect" href="${escapeHtml(options.redirectUrl)}">Try again</a>` : ""}
+    ${options.redirectUrl ? `<a class="redirect" href="${escapeHtml(options.redirectUrl)}">${escapeHtml(options.redirectLabel ?? "Try again")}</a>` : ""}
     <div class="brand">Fixmind</div>
   </div>
 </body>
@@ -169,7 +169,12 @@ function waitForOAuthCode(port: number, authUrl: string): Promise<string> {
               message: `${errorDescription}. You can close this window and return to the terminal.`,
               redirectUrl: authUrl,
             })
-          : oauthCallbackPage({ ok: true, message: "You can close this window and return to the terminal." }),
+          : oauthCallbackPage({
+              ok: true,
+              message: "You can close this window and return to the terminal.",
+              redirectUrl: "https://fixmind.dev/account",
+              redirectLabel: "Open account",
+            }),
       );
 
       clearTimeout(timeout);
@@ -226,7 +231,7 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
       if (error) throw new Error(`Sign up failed: ${error.message}`);
       if (!data.session) {
         throw new Error(
-          "Account created. Check your email to confirm it, then run `fixmind login` again.",
+          "Account created. Check your email to confirm it, then run `npx fixmind login` again.",
         );
       }
       return {

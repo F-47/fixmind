@@ -151,7 +151,7 @@ async function main(): Promise<void> {
     } catch (error) {
       if (isAddressInUseError(error)) {
         throw new Error(
-          `Dashboard port is already in use. Run \`fixmind dashboard --port <different-port>\` or stop the process using 127.0.0.1:${optionalPort(args.options.port) ?? 4317}.`,
+          `Dashboard port is already in use. Run \`npx fixmind dashboard --port <different-port>\` or stop the process using 127.0.0.1:${optionalPort(args.options.port) ?? 4317}.`,
         );
       }
       throw error;

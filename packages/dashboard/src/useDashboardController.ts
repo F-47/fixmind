@@ -6,7 +6,7 @@ import type { DashboardData, DashboardLesson, Understanding } from "./types";
 type Filter = "all" | "learning" | "understood";
 type ModelFilter = "all" | `tool:${string}`;
 type Route = { kind: "dashboard" } | { kind: "lesson"; lessonId: string; review: boolean };
-type SyncMeta = { loggedIn: boolean; needsReauth?: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string };
+type SyncMeta = { loggedIn: boolean; syncEnabled: boolean; needsReauth?: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string };
 
 const PAGE_SIZE = 8;
 
@@ -33,7 +33,6 @@ export function useDashboardController() {
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [route, setRoute] = useState<Route>(() => readRoute());
   const [error, setError] = useState("");
-  const [syncNote, setSyncNote] = useState("");
   const [syncMeta, setSyncMeta] = useState<SyncMeta | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -67,20 +66,17 @@ export function useDashboardController() {
   async function refreshDashboard(): Promise<void> {
     setRefreshing(true);
     setError("");
-    setSyncNote("");
     try {
-      const result = await syncPull();
-      if (result.pulled > 0) {
-        setSyncNote(`Pulled ${result.pulled} lesson(s), applied ${result.applied} update(s).`);
-      } else {
-        setSyncNote("No new lessons to pull.");
+      const status = await syncStatus();
+      setSyncMeta(status);
+      if (status.syncEnabled) {
+        await syncPull();
       }
     } catch (caught) {
-      setSyncNote(caught instanceof Error ? `Sync pull skipped: ${caught.message}` : "Sync pull skipped.");
+      setError(caught instanceof Error ? caught.message : String(caught));
     }
     try {
       await loadCurrentDashboard();
-      setSyncMeta(await syncStatus());
     } finally {
       setRefreshing(false);
     }
@@ -207,7 +203,6 @@ export function useDashboardController() {
     setQuery,
     setSelectedWeek,
     syncMeta,
-    syncNote,
     totalPages,
     confirmingReset,
     navigate,

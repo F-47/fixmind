@@ -58,19 +58,19 @@ function Hero() {
           <div className="mt-9 max-w-xl space-y-2">
             <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 font-mono text-sm text-ink">
               <span className="text-muted">$</span>
-              <span>npm i -g fixmind@latest</span>
-              <CopyButton text="npm i -g fixmind@latest" />
+              <span>npx fixmind setup</span>
+              <CopyButton text="npx fixmind setup" />
             </div>
             <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 font-mono text-sm text-ink">
               <span className="text-muted">$</span>
-              <span>fixmind setup</span>
-              <CopyButton text="fixmind setup" />
+              <span>npx fixmind login</span>
+              <CopyButton text="npx fixmind login" />
             </div>
             <p className="text-sm leading-relaxed text-muted">
-              Install the CLI once so <code className="text-ink">fixmind</code>{" "}
-              stays on your PATH, then run setup and later login/sync commands
-              from any terminal. If you prefer one-off usage, swap the install
-              step for <code className="text-ink">npx --yes fixmind@latest</code>.
+              Run the CLI through <code className="text-ink">npx</code> when you
+              want a one-off setup or login. If you want a persistent binary on
+              your PATH later, install the package globally after you know you
+              need it.
             </p>
           </div>
           <a
@@ -266,7 +266,7 @@ function FeaturesSection() {
         </FeatureCard>
         <FeatureCard icon={<Plug size={18} />} title="Speaks MCP">
           Works with Claude Code, Cursor, and Codex.{" "}
-          <code className="text-ink">fixmind setup</code> wires itself into
+          <code className="text-ink">npx fixmind setup</code> wires itself into
           whatever you already run — on this device, or scoped to a single
           project.
         </FeatureCard>
@@ -465,7 +465,7 @@ function DashboardPreview() {
         <span className="h-2.5 w-2.5 rounded-full bg-[#e8b35f]/70" />
         <span className="h-2.5 w-2.5 rounded-full bg-good/70" />
         <span className="ml-2 font-mono text-xs text-muted">
-          fixmind dashboard
+          npx fixmind dashboard
         </span>
       </div>
       <div className="px-5 py-5">
@@ -518,12 +518,11 @@ function HowItWorksSection() {
 
         <div className="mt-14 grid gap-16 lg:grid-cols-[1fr_400px] lg:items-start">
           <div>
-            <HowStep number="01" title="Install and connect" command="fixmind setup">
-              Install the CLI once with{" "}
-              <code className="text-ink">npm i -g fixmind@latest</code>, then
-              run <code className="text-ink">fixmind setup</code> to register
+            <HowStep number="01" title="Set up the MCP server" command="npx fixmind setup">
+              Use{" "}
+              <code className="text-ink">npx fixmind setup</code> to register
               the MCP server with Claude Code, Cursor, or Codex on this device
-              or just this project.
+              or just this project. No global install is required.
             </HowStep>
             <HowStep number="02" title="Fix bugs like normal">
               Keep working the way you already do. Your agent calls{" "}
@@ -538,7 +537,7 @@ function HowItWorksSection() {
             <HowStep
               number="04"
               title="Browse before you forget"
-              command="fixmind dashboard"
+              command="npx fixmind dashboard"
             >
               Due reviews, progress signals, and recurring concepts, all in the
               local dashboard. Prefer the terminal?{" "}

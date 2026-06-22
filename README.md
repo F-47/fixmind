@@ -10,11 +10,10 @@ A local-first CLI and MCP server that turns every AI-assisted bug fix into a les
 ## Quick start
 
 ```bash
-npm install -g fixmind
-fixmind setup
+npx fixmind setup
 ```
 
-`fixmind setup` detects Claude Code, Cursor, and Codex, and wires the MCP server into whichever ones you pick — globally on this device, or scoped to a single project with `--scope project`. Full usage lives in [packages/core/README.md](packages/core/README.md).
+`npx fixmind setup` detects Claude Code, Cursor, and Codex, and wires the MCP server into whichever ones you pick — globally on this device, or scoped to a single project with `--scope project`. Full usage lives in [packages/core/README.md](packages/core/README.md).
 
 ## Documentation
 

@@ -48,7 +48,7 @@ export interface SyncEngine {
   login(params: { supabaseUrl: string; supabaseAnonKey: string; email: string; password: string; passphrase: string }): Promise<LoginResult>;
   loginWithGithub(params: { supabaseUrl: string; supabaseAnonKey: string; passphrase: string; onAuthUrl?: (url: string) => void }): Promise<LoginResult>;
   logout(): void;
-  status(): Promise<{ loggedIn: boolean; needsReauth?: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string }>;
+  status(): Promise<{ loggedIn: boolean; syncEnabled: boolean; needsReauth?: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string }>;
   push(): Promise<{ pushed: number }>;
   pull(): Promise<{ pulled: number; applied: number }>;
 }
@@ -66,24 +66,24 @@ async function withTimeout<T>(promise: Promise<T>): Promise<T> {
 
 export async function autoPushAfterSave(store: LessonStore): Promise<void> {
   const engine = createSyncEngine(store);
-  if (!(await engine.status()).loggedIn) return;
+  if (!(await engine.status()).syncEnabled) return;
   try {
     await withTimeout(engine.push());
   } catch (error) {
     console.error(
-      `fixmind: auto-sync push failed (will retry on the next save or \`fixmind sync push\`): ${error instanceof Error ? error.message : String(error)}`,
+      `fixmind: auto-sync push failed (will retry on the next save or \`npx fixmind sync push\`): ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }
 
 export async function autoPullOnStart(store: LessonStore): Promise<void> {
   const engine = createSyncEngine(store);
-  if (!(await engine.status()).loggedIn) return;
+  if (!(await engine.status()).syncEnabled) return;
   try {
     await withTimeout(engine.pull());
   } catch (error) {
     console.error(
-      `fixmind: auto-sync pull failed (run \`fixmind sync pull\` manually): ${error instanceof Error ? error.message : String(error)}`,
+      `fixmind: auto-sync pull failed (run \`npx fixmind sync pull\` manually): ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 }
@@ -91,7 +91,7 @@ export async function autoPullOnStart(store: LessonStore): Promise<void> {
 export function createSyncEngine(store: LessonStore, backend?: SyncBackend): SyncEngine {
   function requireConfig(): SyncConfig {
     const config = readSyncConfig();
-    if (!config) throw new Error("Not logged in to sync. Run `fixmind login` first.");
+    if (!config) throw new Error("Not logged in to sync. Run `npx fixmind login` first.");
     return config;
   }
 
@@ -162,7 +162,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
   async function requireEntitlement(activeBackend: SyncBackend, sessionTokens: SessionTokens): Promise<void> {
     if (!(await isEntitled(activeBackend, sessionTokens))) {
       throw new Error(
-        `Fixmind sync requires an active Pro or Team plan. Subscribe at ${PRICING_URL}, then run \`fixmind sync push\` (or \`pull\`) again.`,
+        `Fixmind sync requires an active Pro or Team plan. Subscribe at ${PRICING_URL}, then run \`npx fixmind sync push\` (or \`pull\`) again.`,
       );
     }
   }
@@ -197,7 +197,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
           if (config) await withTimeout(pushPendingLessons(config, activeBackend, sessionTokens, key));
         } catch (error) {
           console.error(
-            `fixmind: initial sync push after login failed (run \`fixmind sync push\` manually): ${error instanceof Error ? error.message : String(error)}`,
+            `fixmind: initial sync push after login failed (run \`npx fixmind sync push\` manually): ${error instanceof Error ? error.message : String(error)}`,
           );
         }
       }
@@ -227,7 +227,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
           if (config) await withTimeout(pushPendingLessons(config, activeBackend, sessionTokens, key));
         } catch (error) {
           console.error(
-            `fixmind: initial sync push after login failed (run \`fixmind sync push\` manually): ${error instanceof Error ? error.message : String(error)}`,
+            `fixmind: initial sync push after login failed (run \`npx fixmind sync push\` manually): ${error instanceof Error ? error.message : String(error)}`,
           );
         }
       }
@@ -241,34 +241,38 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
 
     async status() {
       const config = readSyncConfig();
-      if (!config) return { loggedIn: false };
+      if (!config) return { loggedIn: false, syncEnabled: false };
       const activeBackend = backendFor(config);
       const session: SessionTokens = { accessToken: config.accessToken, refreshToken: config.refreshToken };
       try {
         await activeBackend.verifySession(session);
-        return {
-          loggedIn: true,
-          email: config.email,
-          lastPushedAt: config.lastPushedAt,
-          lastPulledAt: config.lastPulledAt,
-        };
       } catch (error) {
-        if (!isAuthError(error)) {
+        if (isAuthError(error)) {
           return {
-            loggedIn: true,
+            loggedIn: false,
+            syncEnabled: false,
+            needsReauth: true,
             email: config.email,
             lastPushedAt: config.lastPushedAt,
             lastPulledAt: config.lastPulledAt,
           };
         }
         return {
-          loggedIn: false,
-          needsReauth: true,
+          loggedIn: true,
+          syncEnabled: false,
           email: config.email,
           lastPushedAt: config.lastPushedAt,
           lastPulledAt: config.lastPulledAt,
         };
       }
+      const syncEnabled = await isEntitled(activeBackend, session).catch(() => false);
+      return {
+        loggedIn: true,
+        syncEnabled,
+        email: config.email,
+        lastPushedAt: config.lastPushedAt,
+        lastPulledAt: config.lastPulledAt,
+      };
     },
 
     async push() {

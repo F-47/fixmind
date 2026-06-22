@@ -85,7 +85,7 @@ export function AuthForm() {
               <div>
                 <p className="text-sm font-medium text-ink">Same account as the CLI</p>
                 <p className="text-sm text-muted">
-                  Used by <code className="text-ink">fixmind login</code>.
+                  Used by <code className="text-ink">npx fixmind login</code>.
                 </p>
               </div>
             </div>
