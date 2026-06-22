@@ -4,7 +4,12 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.6]
+
 ### Added
+- React Router-based website navigation and cleaner route resets.
+- A simpler Windows-friendly setup command using `npx fixmind setup`.
+- Account UX that separates local-only and synced Pro views more clearly.
 - Jun 22 release logs:
   - `update account ui`
   - `account updated`
@@ -21,4 +26,4 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [1.0.2]
 
-Current published version. Entries before this point were not tracked here; see `git log` for history.
+Previous tracked baseline. Entries before this point were not tracked here; see `git log` for history.
