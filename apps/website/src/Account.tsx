@@ -1,0 +1,209 @@
+import type { Session } from "@supabase/supabase-js";
+import { useEffect, useState, type FormEvent } from "react";
+import { CopyButton } from "./components/CopyButton";
+import { supabase, supabaseConfigured } from "./lib/supabase";
+import { usePageMeta } from "./router";
+import { Footer, Nav } from "./shared";
+
+interface Entitlement {
+  plan: string;
+  status: string;
+}
+
+function emailFromQuery(): string {
+  return new URLSearchParams(window.location.search).get("email") ?? "";
+}
+
+function AuthForm() {
+  const [email, setEmail] = useState(emailFromQuery);
+  const [password, setPassword] = useState("");
+  const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!supabase) return;
+    setPending(true);
+    setMessage(null);
+    const { error } =
+      mode === "signIn"
+        ? await supabase.auth.signInWithPassword({ email, password })
+        : await supabase.auth.signUp({ email, password });
+    setPending(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    if (mode === "signUp") {
+      setMessage("Check your email to confirm your account, then sign in.");
+    }
+  }
+
+  async function handleGithub() {
+    if (!supabase) return;
+    await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: { redirectTo: window.location.href },
+    });
+  }
+
+  return (
+    <div className="mx-auto max-w-sm rounded-xl border border-line bg-surface p-6">
+      <h2 className="font-display text-xl font-semibold text-ink">
+        {mode === "signIn" ? "Sign in" : "Create your account"}
+      </h2>
+      <p className="mt-1 text-sm text-muted">
+        Same account fixmind&rsquo;s CLI uses for{" "}
+        <code className="text-ink">fixmind sync login</code>.
+      </p>
+
+      <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
+        <input
+          type="email"
+          required
+          placeholder="you@example.com"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          className="w-full rounded-md border border-line bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent/60"
+        />
+        <input
+          type="password"
+          required
+          minLength={6}
+          placeholder="Password"
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          className="w-full rounded-md border border-line bg-surface-2 px-3 py-2 text-sm text-ink outline-none focus:border-accent/60"
+        />
+        <button
+          type="submit"
+          disabled={pending}
+          className="block w-full rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent disabled:opacity-50"
+        >
+          {mode === "signIn" ? "Sign in" : "Sign up"}
+        </button>
+      </form>
+
+      <button
+        type="button"
+        onClick={handleGithub}
+        className="mt-3 block w-full rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+      >
+        Continue with GitHub
+      </button>
+
+      {message && <p className="mt-3 text-sm text-muted">{message}</p>}
+
+      <button
+        type="button"
+        onClick={() => setMode(mode === "signIn" ? "signUp" : "signIn")}
+        className="mt-4 text-sm text-muted underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+      >
+        {mode === "signIn" ? "Need an account? Sign up" : "Already have an account? Sign in"}
+      </button>
+    </div>
+  );
+}
+
+function AccountStatus({ session }: { session: Session }) {
+  const [entitlement, setEntitlement] = useState<Entitlement | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase
+      .from("entitlements")
+      .select("plan, status")
+      .maybeSingle()
+      .then(({ data }) => setEntitlement(data ?? null));
+  }, []);
+
+  const email = session.user.email ?? "";
+
+  return (
+    <div className="mx-auto max-w-sm rounded-xl border border-line bg-surface p-6">
+      <h2 className="font-display text-xl font-semibold text-ink">Your account</h2>
+      <p className="mt-1 text-sm text-muted">{email}</p>
+
+      <div className="mt-5 rounded-md border border-line bg-surface-2 px-3 py-2.5">
+        {entitlement === undefined ? (
+          <p className="text-sm text-muted">Checking your plan&hellip;</p>
+        ) : entitlement && entitlement.status === "active" ? (
+          <p className="text-sm text-ink">
+            Plan: <span className="font-medium capitalize">{entitlement.plan}</span> &middot; active
+          </p>
+        ) : (
+          <p className="text-sm text-muted">No active paid plan on this account yet.</p>
+        )}
+      </div>
+
+      <p className="mt-5 text-sm text-muted">
+        Run this on each machine you want to sync from:
+      </p>
+      <div className="mt-2 space-y-2">
+        <p className="break-all rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-[11px] leading-relaxed text-muted">
+          <span className="text-ink">$</span> fixmind sync login
+        </p>
+        <CopyButton text="fixmind sync login" label="Copy command" variant="block" />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => supabase?.auth.signOut()}
+        className="mt-5 block w-full rounded-md border border-line px-3 py-2 text-center text-sm text-muted transition-colors hover:border-accent/60 hover:text-ink"
+      >
+        Sign out
+      </button>
+    </div>
+  );
+}
+
+export default function Account() {
+  usePageMeta(
+    "Account — fixmind",
+    "Manage your fixmind account and connect the CLI with fixmind sync login.",
+  );
+
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!supabase) {
+      setSession(null);
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+    return () => subscription.subscription.unsubscribe();
+  }, []);
+
+  return (
+    <div>
+      <Nav />
+      <section className="mx-auto max-w-3xl px-6 py-24">
+        <p className="text-center font-mono text-xs uppercase tracking-[0.2em] text-accent">
+          Account
+        </p>
+        <h1 className="mt-3 text-center font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+          Connect fixmind to this account
+        </h1>
+
+        <div className="mt-10">
+          {!supabaseConfigured ? (
+            <p className="text-center text-sm text-muted">
+              Account sign-in isn&rsquo;t configured on this deployment yet.
+            </p>
+          ) : session === undefined ? (
+            <p className="text-center text-sm text-muted">Loading&hellip;</p>
+          ) : session ? (
+            <AccountStatus session={session} />
+          ) : (
+            <AuthForm />
+          )}
+        </div>
+      </section>
+      <Footer />
+    </div>
+  );
+}

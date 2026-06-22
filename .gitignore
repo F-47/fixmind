@@ -3,3 +3,5 @@ dist/
 *.log
 .fixmind/
 .env.*
+.vercel
+.env*.local

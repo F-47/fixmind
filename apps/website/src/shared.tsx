@@ -112,6 +112,9 @@ export function Nav() {
           <NavLink to="/contact" isActive={path === "/contact"}>
             Contact
           </NavLink>
+          <NavLink to="/account" isActive={path === "/account"}>
+            Account
+          </NavLink>
         </nav>
         <div className="flex items-center gap-3">
           <Link
