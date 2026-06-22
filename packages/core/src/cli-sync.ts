@@ -167,7 +167,7 @@ export async function loginCommand(options: Record<string, string | boolean>): P
             : (() => { throw new Error("--password is required outside an interactive terminal."); })());
           result = await engine.login({ supabaseUrl, supabaseAnonKey, email, password: userPassword, passphrase });
         } else if (interactive) {
-          let s = startSpinner("Opening your browser to sign in with GitHub...");
+          let s = startSpinner("Waiting for authentication...");
           let fallbackUrl: string | undefined;
           try {
             result = await engine.loginWithGithub({
@@ -176,9 +176,8 @@ export async function loginCommand(options: Record<string, string | boolean>): P
               passphrase,
               onAuthUrl: (url) => {
                 fallbackUrl = url;
-                s.stop("Browser opened.");
-                log.message(`Didn't open? ${terminalLink("Click here to sign in", url)}`, common);
-                s = startSpinner("Waiting for sign in to finish in your browser...");
+                log.message(`Open ${terminalLink("this Fixmind account page", url)} to sign in.`, common);
+                log.message("Waiting for authentication...", common);
               },
             });
             s.stop("Signed in with GitHub.");
@@ -192,11 +191,12 @@ export async function loginCommand(options: Record<string, string | boolean>): P
             throw error;
           }
         } else {
+          console.log("Waiting for authentication...");
           result = await engine.loginWithGithub({
             supabaseUrl,
             supabaseAnonKey,
             passphrase,
-            onAuthUrl: (url) => console.log(`Opening your browser to sign in with GitHub...\nIf it doesn't open, visit: ${url}`),
+            onAuthUrl: (url) => console.log(`Open this Fixmind account page in your browser:\n${url}`),
           });
         }
         break;
