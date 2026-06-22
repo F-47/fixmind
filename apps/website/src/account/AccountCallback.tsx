@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { usePageMeta } from "../router";
 import { supabase } from "../lib/supabase";
 import { InfoPill } from "./InfoPill";
@@ -17,7 +16,6 @@ function wait(ms: number) {
 
 export function AccountCallback() {
   usePageMeta("Signing you in - fixmind", "Finishing the Fixmind account handoff.");
-  const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,7 +26,7 @@ export function AccountCallback() {
       return;
     }
     if (!redirectSession) {
-      navigate("/account", { replace: true });
+      window.location.replace("/account");
       return;
     }
 
@@ -44,8 +42,7 @@ export function AccountCallback() {
 
         if (cancelled) return;
         if (!sessionError && data.session) {
-          window.history.replaceState({}, "", `${window.location.origin}/account`);
-          navigate("/account", { replace: true });
+          window.location.replace("/account");
           return;
         }
 
@@ -57,8 +54,7 @@ export function AccountCallback() {
       const { data, error: sessionError } = await supabaseClient.auth.getSession();
       if (cancelled) return;
       if (data.session) {
-        window.history.replaceState({}, "", `${window.location.origin}/account`);
-        navigate("/account", { replace: true });
+        window.location.replace("/account");
         return;
       }
 
@@ -68,7 +64,7 @@ export function AccountCallback() {
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, []);
 
   return (
     <div className="mx-auto flex min-h-[60vh] max-w-2xl items-center px-6 py-24">
