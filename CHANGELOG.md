@@ -4,6 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.13]
+
+### Fixed
+- `fixmind setup` no longer exits when a prompt is cancelled, and the login branch now starts in a fresh CLI process so the passphrase prompt is clean.
+
 ## [1.0.12]
 
 ### Changed
