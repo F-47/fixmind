@@ -148,13 +148,6 @@ export function Nav() {
 
         <div className="flex items-center gap-3">
           <Link
-            to="/#install"
-            className="rounded-md border border-line px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
-          >
-            Install
-          </Link>
-
-          <Link
             to="/account"
             aria-label={loggedIn ? "Account" : "Sign in"}
             title={loggedIn ? "Account" : "Sign in"}
@@ -167,7 +160,6 @@ export function Nav() {
             {loggedIn ? <User size={16} /> : <LogIn size={16} />}
           </Link>
 
-          {/* Hamburger button — mobile only */}
           <button
             id="mobile-menu-toggle"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
