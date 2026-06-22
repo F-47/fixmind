@@ -4,6 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.16]
+
+### Fixed
+- The CLI login handoff now points to the canonical `www.fixmind.dev` account page, and the website waits for the redirect session to hydrate before falling back to the sign-in form.
+
 ## [1.0.15]
 
 ### Fixed
