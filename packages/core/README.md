@@ -19,8 +19,7 @@ Fixmind is a local-first CLI and MCP server that records short learning lessons 
 **Requirements:** Node.js 22.5+
 
 ```sh
-npm install -g fixmind
-fixmind setup
+npx fixmind setup
 ```
 
 `fixmind setup` initializes local storage and automatically configures detected installations of Cursor, Claude Code, and Codex. _Restart your AI clients after running setup._

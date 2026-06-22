@@ -3,8 +3,7 @@
 **Requirements:** Node.js 22.5+
 
 ```bash
-npm install -g fixmind
-fixmind setup
+npx fixmind setup
 ```
 
 `fixmind setup` detects Claude Code, Cursor, and Codex, and registers the fixmind MCP server with whichever ones you pick — globally on this device, or scoped to a single project with `--scope project`. Restart your AI client after setup finishes. Full flag reference: [Commands](cli-reference.md#fixmind-setup). No supported client installed? See [MCP Integration](../packages/core/docs/mcp-integration.md#other-mcp-clients) for a generic config.

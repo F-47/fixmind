@@ -132,6 +132,29 @@ test("login succeeds but reports unentitled without an active Pro/Team plan", as
   })();
 });
 
+test("login backfills existing local lessons after the first sync login", async () => {
+  const backend = new FakeBackend();
+  backend.grantEntitlement("dev@example.com");
+  const credentials = {
+    supabaseUrl: "https://example.supabase.co",
+    supabaseAnonKey: "anon-key",
+    email: "dev@example.com",
+    password: "hunter2",
+    passphrase: "shared passphrase",
+  };
+
+  await withMachine(async (store) => {
+    const saved = store.save(lessonInput());
+    const engine = createSyncEngine(store, backend);
+    const result = await engine.login(credentials);
+    assert.equal(result.entitled, true);
+
+    const userLessons = [...backend.lessons.values()].find((lessons) => lessons.has(saved.id));
+    assert.ok(userLessons);
+    assert.equal(userLessons?.size, 1);
+  })();
+});
+
 test("login rejects the wrong passphrase on a second machine", async () => {
   const backend = new FakeBackend();
   backend.grantEntitlement("dev@example.com");
