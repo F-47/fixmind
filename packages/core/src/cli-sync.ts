@@ -27,7 +27,7 @@ import { configureClients, configureInstructions, configurePermissions, detectCl
 
 const DEFAULT_SUPABASE_URL = "https://jpczzgekindvuivnwjuw.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwY3p6Z2VraW5kdnVpdm53anV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwNzEyMjEsImV4cCI6MjA5NzY0NzIyMX0.qG-9H5BZi3sKHVQrzL3iI9ALmJgoTizLCU4Bxzpw0Bo";
-const ACCOUNT_URL = "https://fixmind.dev/account";
+const ACCOUNT_URL = "https://www.fixmind.dev/account";
 
 export async function setup(options: Record<string, string | boolean>): Promise<void> {
   const paths = initializeDataDirectory();

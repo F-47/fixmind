@@ -8,58 +8,108 @@ import { AuthForm } from "./account/AuthForm";
 import { AccountStatus } from "./account/AccountStatus";
 import { InfoPill } from "./account/InfoPill";
 
+function readRedirectSession() {
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const accessToken = hash.get("access_token");
+  const refreshToken = hash.get("refresh_token");
+  return accessToken && refreshToken ? { accessToken, refreshToken } : null;
+}
+
+function wait(ms: number) {
+  return new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+}
+
 export default function Account() {
   usePageMeta(
     "Account and sync - fixmind",
     "Manage your fixmind account, optional sync, and paid plan status.",
   );
 
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authState, setAuthState] = useState<"loading" | "signed-out" | "signed-in">("loading");
+  const [redirectError, setRedirectError] = useState<string | null>(null);
 
   useEffect(() => {
     const client = supabase;
     if (!client) {
       setSession(null);
+      setAuthState("signed-out");
       return;
     }
     const supabaseClient = client as NonNullable<typeof supabase>;
-
-    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const accessToken = hash.get("access_token");
-    const refreshToken = hash.get("refresh_token");
+    const redirectSession = readRedirectSession();
 
     let mounted = true;
-    async function hydrateSessionFromHash() {
-      if (!accessToken || !refreshToken) return false;
-      const { data, error } = await supabaseClient.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-      if (!mounted) return true;
-      if (!error) {
-        setSession(data.session);
-        window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
-        return true;
+    let initialCheckComplete = false;
+
+    async function hydrateSessionFromRedirect() {
+      if (!redirectSession) return false;
+
+      setAuthState("loading");
+      setRedirectError(null);
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const { data, error } = await supabaseClient.auth.setSession({
+          access_token: redirectSession.accessToken,
+          refresh_token: redirectSession.refreshToken,
+        });
+
+        if (!mounted) return true;
+        if (!error && data.session) {
+          setSession(data.session);
+          setAuthState("signed-in");
+          window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
+          return true;
+        }
+
+        if (attempt < 2) {
+          await wait(250 * (attempt + 1));
+        }
       }
+
       return false;
     }
 
     void (async () => {
-      const hydrated = await hydrateSessionFromHash();
-      if (!hydrated && mounted) {
-        const { data } = await supabaseClient.auth.getSession();
-        if (mounted) setSession(data.session);
+      if (redirectSession) {
+        const hydrated = await hydrateSessionFromRedirect();
+        if (!mounted) return;
+        if (!hydrated) {
+          const { data, error } = await supabaseClient.auth.getSession();
+          if (!mounted) return;
+          if (data.session) {
+            setSession(data.session);
+            setAuthState("signed-in");
+          } else {
+            setSession(null);
+            setAuthState("signed-out");
+            setRedirectError(error?.message ?? "The sign-in redirect could not be applied.");
+          }
+        }
+        initialCheckComplete = true;
+        return;
       }
+
+      const { data } = await supabaseClient.auth.getSession();
+      if (!mounted) return;
+      setSession(data.session);
+      setAuthState(data.session ? "signed-in" : "signed-out");
+      initialCheckComplete = true;
     })();
 
-    const { data: subscription } = supabaseClient.auth.onAuthStateChange(
-      (_event, nextSession) => {
-        setSession(nextSession);
-      },
-    );
+    const { data } = supabaseClient.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return;
+      if (!initialCheckComplete && !nextSession) return;
+      setSession(nextSession);
+      setAuthState(nextSession ? "signed-in" : "signed-out");
+      if (!nextSession) {
+        setRedirectError(null);
+      }
+    });
+
     return () => {
       mounted = false;
-      subscription.subscription.unsubscribe();
+      data.subscription.unsubscribe();
     };
   }, []);
 
@@ -96,7 +146,7 @@ export default function Account() {
                     Account sign-in is not configured on this deployment yet.
                   </p>
                 </div>
-              ) : session === undefined ? (
+              ) : authState === "loading" ? (
                 <div className="mx-auto max-w-2xl rounded-2xl border border-line bg-surface p-8">
                   <div className="animate-pulse space-y-4">
                     <div className="h-4 w-32 rounded bg-surface-2" />
@@ -107,10 +157,28 @@ export default function Account() {
                       <div className="h-20 rounded-xl bg-surface-2" />
                     </div>
                   </div>
+                  <p className="mt-5 text-center text-sm text-muted">
+                    Finishing your sign-in from the CLI...
+                  </p>
                 </div>
               ) : session ? (
                 <div className="grid gap-6 lg:grid-cols-1">
                   <AccountStatus session={session} />
+                </div>
+              ) : redirectError ? (
+                <div className="mx-auto max-w-2xl rounded-2xl border border-line bg-surface p-7 text-center">
+                  <InfoPill tone="accent">Sign-in not ready</InfoPill>
+                  <h2 className="mt-4 font-display text-2xl font-semibold text-ink">
+                    We could not finish the redirect sign-in.
+                  </h2>
+                  <p className="mt-3 text-sm leading-relaxed text-muted">
+                    The CLI login completed, but this page could not apply the session
+                    yet. Refresh the page once, or sign in again from the account form.
+                  </p>
+                  <p className="mt-4 font-mono text-xs text-muted">{redirectError}</p>
+                  <div className="mt-6">
+                    <AuthForm />
+                  </div>
                 </div>
               ) : (
                 <AuthForm />
