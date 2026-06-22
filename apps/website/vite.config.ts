@@ -8,6 +8,7 @@ const directory = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   root: directory,
+  envDir: path.resolve(directory, "..", ".."),
   base: "/",
   plugins: [react(), tailwindcss()],
   build: {
