@@ -12,7 +12,8 @@ dns.setDefaultResultOrder("ipv4first");
 
 const OAUTH_CALLBACK_PORT = 51763;
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000;
-const ACCOUNT_URL = "https://www.fixmind.dev/account";
+const ACCOUNT_URL = process.env.FIXMIND_ACCOUNT_URL ?? "https://www.fixmind.dev/account";
+const ACCOUNT_CALLBACK_URL = process.env.FIXMIND_ACCOUNT_CALLBACK_URL ?? `${ACCOUNT_URL.replace(/\/account$/, "")}/account/callback`;
 
 export interface SyncRow {
   lessonId: string;
@@ -173,7 +174,7 @@ function waitForOAuthCode(port: number, authUrl: string): Promise<string> {
           : oauthCallbackPage({
               ok: true,
               message: "You can close this window and return to the terminal.",
-              redirectUrl: "https://www.fixmind.dev/account/callback",
+              redirectUrl: ACCOUNT_CALLBACK_URL,
               redirectLabel: "Open account",
             }),
       );
@@ -204,7 +205,7 @@ function sessionCallbackPage(): string {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="1; url=https://www.fixmind.dev/account">
+<meta http-equiv="refresh" content="1; url=${escapeHtml(ACCOUNT_URL)}">
 <title>Fixmind</title>
 <style>
   :root { color-scheme: dark; }
@@ -233,7 +234,7 @@ function sessionCallbackPage(): string {
   <div class="card">
     <h1>You're signed in</h1>
     <p>Returning you to Fixmind so the browser session stays where the account lives.</p>
-    <a class="link" href="https://www.fixmind.dev/account">Open account</a>
+    <a class="link" href="${escapeHtml(ACCOUNT_URL)}">Open account</a>
   </div>
 </body>
 </html>`;
