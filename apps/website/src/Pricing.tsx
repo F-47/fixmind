@@ -1,6 +1,7 @@
 import { PolarEmbedCheckout } from "@polar-sh/checkout/embed";
 import { Check, Lock } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "./lib/supabase";
 import { Link, usePageMeta } from "./router";
 import { CONTACT_EMAIL } from "./shared/constants";
 import { Footer } from "./shared/Footer";
@@ -19,6 +20,11 @@ interface Plan {
   tagline: string;
   features: string[];
   highlight?: boolean;
+}
+
+interface Entitlement {
+  plan: string;
+  status: string;
 }
 
 const PLANS: Plan[] = [
@@ -86,12 +92,20 @@ const PLANS: Plan[] = [
   },
 ];
 
-function PlanCard({ plan }: { plan: Plan }) {
+function PlanCard({
+  plan,
+  active,
+}: {
+  plan: Plan;
+  active: boolean;
+}) {
   return (
     <div
       className={`flex flex-col rounded-xl border p-6 ${
-        plan.highlight
-          ? "border-accent/50 bg-surface shadow-[0_0_60px_-25px_var(--color-accent-dim)]"
+        active
+          ? "border-accent/45 bg-surface shadow-[0_0_40px_-28px_var(--color-accent-dim)]"
+          : plan.highlight
+            ? "border-accent/50 bg-surface shadow-[0_0_60px_-25px_var(--color-accent-dim)]"
           : "border-line bg-surface"
       }`}
     >
@@ -107,6 +121,12 @@ function PlanCard({ plan }: { plan: Plan }) {
           {plan.status === "available" ? "Available now" : "Roadmap"}
         </span>
       </div>
+
+      {active && (
+        <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.15em] text-accent">
+          Current plan
+        </p>
+      )}
 
       <div className="mt-4 flex items-baseline gap-1.5">
         <span className="font-display text-3xl font-semibold text-ink">
@@ -133,15 +153,18 @@ function PlanCard({ plan }: { plan: Plan }) {
       </ul>
 
       <div className="mt-6">
-        {plan.cta === "install" && (
+        {active ? (
+          <div className="rounded-md border border-accent/30 bg-accent/10 px-3 py-2 text-center text-sm text-accent">
+            Already active
+          </div>
+        ) : plan.cta === "install" ? (
           <Link
             to="/#install"
             className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
           >
             Get started - it's free
           </Link>
-        )}
-        {plan.cta === "checkout" && (
+        ) : plan.cta === "checkout" ? (
           <a
             href={plan.checkoutUrl}
             data-polar-checkout
@@ -150,8 +173,7 @@ function PlanCard({ plan }: { plan: Plan }) {
           >
             Subscribe
           </a>
-        )}
-        {plan.cta === "contact" && (
+        ) : (
           <a
             href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`${plan.name} waitlist`)}`}
             className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
@@ -170,9 +192,38 @@ export default function Pricing() {
     "Fixmind is free and local-first forever. Pro adds encrypted sync across devices.",
   );
 
+  const [activePlan, setActivePlan] = useState<string | null | undefined>(undefined);
+
   useEffect(() => {
     PolarEmbedCheckout.init();
   }, []);
+
+  useEffect(() => {
+    if (!supabase) {
+      setActivePlan(null);
+      return;
+    }
+
+    let mounted = true;
+    void (async () => {
+      const { data } = await supabase
+        .from("entitlements")
+        .select("plan, status")
+        .maybeSingle();
+      if (!mounted) return;
+      if (!data || data.status !== "active") {
+        setActivePlan(null);
+        return;
+      }
+      setActivePlan(data.plan?.toLowerCase() ?? null);
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const selectedPlan = activePlan === "pro" ? "Pro" : null;
 
   return (
     <div>
@@ -206,7 +257,7 @@ export default function Pricing() {
         <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             {PLANS.map((plan) => (
-              <PlanCard key={plan.name} plan={plan} />
+              <PlanCard key={plan.name} plan={plan} active={selectedPlan === plan.name} />
             ))}
           </div>
         </section>

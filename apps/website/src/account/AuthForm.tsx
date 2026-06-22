@@ -9,6 +9,10 @@ function emailFromQuery(): string {
   return new URLSearchParams(window.location.search).get("email") ?? "";
 }
 
+function accountCallbackUrl(): string {
+  return `${window.location.origin}/account/callback`;
+}
+
 export function AuthForm() {
   const [email, setEmail] = useState(emailFromQuery);
   const [password, setPassword] = useState("");
@@ -23,7 +27,13 @@ export function AuthForm() {
     const { error } =
       mode === "signIn"
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+        : await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              emailRedirectTo: accountCallbackUrl(),
+            },
+          });
     setPending(false);
 
     if (error) {
@@ -44,7 +54,7 @@ export function AuthForm() {
     await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: `${window.location.origin}${window.location.pathname}${window.location.search}`,
+        redirectTo: accountCallbackUrl(),
       },
     });
   }

@@ -12,7 +12,7 @@ dns.setDefaultResultOrder("ipv4first");
 
 const OAUTH_CALLBACK_PORT = 51763;
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000;
-const ACCOUNT_URL = "https://www.fixmind.dev/account";
+const ACCOUNT_URL = process.env.FIXMIND_ACCOUNT_URL ?? "https://www.fixmind.dev/account";
 
 export interface SyncRow {
   lessonId: string;
