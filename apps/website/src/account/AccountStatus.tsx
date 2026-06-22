@@ -162,7 +162,7 @@ export function AccountStatus({ session }: { session: Session }) {
           <InfoPill>
             <span className="inline-flex items-center gap-1">
               <TerminalSquare size={10} />
-              npx fixmind login
+              Encrypted sync
             </span>
           </InfoPill>
         </div>
@@ -173,9 +173,8 @@ export function AccountStatus({ session }: { session: Session }) {
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted">
             Use <code className="text-ink">npx fixmind setup</code> to register
-            the MCP server on a new machine, then{" "}
-            <code className="text-ink">npx fixmind login</code> when you want
-            encrypted sync.
+            the MCP server on a new machine. The Login card below turns on
+            encrypted sync when you want it.
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <CommandCard
@@ -198,22 +197,13 @@ export function AccountStatus({ session }: { session: Session }) {
         {syncEnabled ? (
           <>
             <div className="mt-4 rounded-xl border border-line bg-bg/35 p-4">
-            <CommandCard
-              label="Login once"
-              command="npx fixmind login"
-              description="Run this once on every machine you want encrypted sync on. If you only use one device, you can ignore it."
-            />
-            </div>
-
-            <div className="mt-4 rounded-xl border border-line bg-bg/35 p-4">
               <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
                 Best practice
               </p>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                Sign in once on each device with{" "}
-                <code className="text-ink">npx fixmind login</code>. After that,
-                opening the dashboard usually refreshes lessons for you, and these
-                commands cover the manual cases:
+                Sign in once on each device. After that, opening the dashboard
+                usually refreshes lessons for you, and these commands cover the
+                manual cases:
               </p>
               <div className="mt-3 grid gap-3">
                 <CommandCard

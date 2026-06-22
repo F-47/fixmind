@@ -83,9 +83,10 @@ export function AuthForm() {
                 <Database size={16} />
               </div>
               <div>
-                <p className="text-sm font-medium text-ink">Same account as the CLI</p>
+                <p className="text-sm font-medium text-ink">Terminal sync on this device</p>
                 <p className="text-sm text-muted">
-                  Used by <code className="text-ink">npx fixmind login</code>.
+                  Run <code className="text-ink">npx fixmind login</code> when you want encrypted sync on this machine.
+                  The passphrase encrypts your lessons before they sync.
                 </p>
               </div>
             </div>

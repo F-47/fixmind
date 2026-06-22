@@ -7,12 +7,7 @@ export function Link({ to, onClick, ...rest }: LinkProps) {
   return (
     <RouterLink
       to={to}
-      onClick={(event) => {
-        onClick?.(event);
-        const hash = typeof to === "string" ? new URL(to, window.location.origin).hash : "";
-        if (!hash) return;
-        requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector(hash)?.scrollIntoView()));
-      }}
+      onClick={onClick}
       {...rest}
     />
   );

@@ -167,7 +167,7 @@ export async function loginCommand(options: Record<string, string | boolean>): P
             : (() => { throw new Error("--password is required outside an interactive terminal."); })());
           result = await engine.login({ supabaseUrl, supabaseAnonKey, email, password: userPassword, passphrase });
         } else if (interactive) {
-          let s = startSpinner("Waiting for authentication...");
+          let s = startSpinner("Opening your browser to sign in with GitHub...");
           let fallbackUrl: string | undefined;
           try {
             result = await engine.loginWithGithub({
@@ -176,8 +176,9 @@ export async function loginCommand(options: Record<string, string | boolean>): P
               passphrase,
               onAuthUrl: (url) => {
                 fallbackUrl = url;
-                log.message(`Open ${terminalLink("this Fixmind account page", url)} to sign in.`, common);
-                log.message("Waiting for authentication...", common);
+                s.stop("Browser opened.");
+                log.message(`Didn't open? ${terminalLink("Click here to sign in", url)}`, common);
+                s = startSpinner("Waiting for authentication...");
               },
             });
             s.stop("Signed in with GitHub.");
@@ -191,12 +192,11 @@ export async function loginCommand(options: Record<string, string | boolean>): P
             throw error;
           }
         } else {
-          console.log("Waiting for authentication...");
           result = await engine.loginWithGithub({
             supabaseUrl,
             supabaseAnonKey,
             passphrase,
-            onAuthUrl: (url) => console.log(`Open this Fixmind account page in your browser:\n${url}`),
+            onAuthUrl: (url) => console.log(`Opening your browser to sign in with GitHub...\nIf it doesn't open, visit: ${url}`),
           });
         }
         break;
@@ -230,7 +230,12 @@ async function promptPassphrase(interactive: boolean): Promise<string> {
   }
 
   while (true) {
-    const value = unwrap(await password({ message: "Sync encryption passphrase (use the same one on every machine)", ...common }));
+    const value = unwrap(
+      await password({
+        message: "Sync encryption passphrase (encrypts lessons before they sync; use the same one on every machine)",
+        ...common,
+      }),
+    );
     if (value.trim()) return value;
     log.message("Passphrase cannot be empty. Try again.", common);
   }
