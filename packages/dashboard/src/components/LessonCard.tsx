@@ -24,7 +24,15 @@ export function LessonCard({ lesson, onOpen, onDelete }: Props) {
   return (
     <article
       className="group cursor-pointer border-t border-line py-5 first:border-t-0 first:pt-0"
+      role="button"
+      tabIndex={0}
       onClick={() => onOpen(lesson, false)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen(lesson, false);
+        }
+      }}
     >
       <h3 className="font-serif text-xl font-semibold tracking-tight transition group-hover:text-accent">
         {lesson.title}
