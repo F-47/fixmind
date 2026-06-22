@@ -36,6 +36,7 @@ import type { Lesson, LessonInput, ReviewQuestion, Understanding } from "./types
 import { assessLessonQuality, validateLessonInput } from "./validation.js";
 
 const common = { input: stdin, output: stdout };
+const VERSION = "1.0.5";
 
 function unwrap<T>(value: T | symbol): T {
   if (isCancel(value)) { cancel("Operation cancelled."); process.exit(0); }
@@ -107,6 +108,11 @@ interface ParsedArgs {
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+  if (args.options.version) {
+    console.log(VERSION);
+    return;
+  }
+
   if (!args.command || args.options.help) {
     printHelp();
     return;
@@ -140,12 +146,21 @@ async function main(): Promise<void> {
 
   if (args.command === "dashboard") {
     const { startDashboard } = await import("./dashboard.js");
-    const handle = await startDashboard({
-      port: optionalPort(args.options.port),
-      open: !args.options["no-open"],
-    });
-    console.log(`Fixmind dashboard: ${handle.url}`);
-    console.log("Press Ctrl+C to stop.");
+    try {
+      const handle = await startDashboard({
+        port: optionalPort(args.options.port),
+        open: !args.options["no-open"],
+      });
+      console.log(`Fixmind dashboard: ${handle.url}`);
+      console.log("Press Ctrl+C to stop.");
+    } catch (error) {
+      if (isAddressInUseError(error)) {
+        throw new Error(
+          `Dashboard port is already in use. Run \`fixmind dashboard --port <different-port>\` or stop the process using 127.0.0.1:${optionalPort(args.options.port) ?? 4317}.`,
+        );
+      }
+      throw error;
+    }
     return;
   }
 
@@ -293,9 +308,20 @@ async function setup(options: Record<string, string | boolean>): Promise<void> {
 
   if (!dryRun && !options["no-dashboard"]) {
     const { startDashboard } = await import("./dashboard.js");
-    const handle = await startDashboard({ port: optionalPort(options.port), open: true });
-    console.log(`Fixmind dashboard: ${handle.url}`);
-    console.log("Press Ctrl+C to stop.");
+    try {
+      const handle = await startDashboard({ port: optionalPort(options.port), open: true });
+      console.log(`Fixmind dashboard: ${handle.url}`);
+      console.log("Press Ctrl+C to stop.");
+    } catch (error) {
+      if (isAddressInUseError(error)) {
+        const port = optionalPort(options.port) ?? 4317;
+        console.log(
+          `Dashboard is already running on 127.0.0.1:${port}; skipping a second launch.`,
+        );
+      } else {
+        throw error;
+      }
+    }
   }
 }
 
@@ -448,6 +474,13 @@ function validateClients(values: string[]): SupportedClient[] {
       `Unsupported client(s): ${invalid.join(", ")}. Use codex, claude, or cursor.`,
     );
   return [...new Set(values)] as SupportedClient[];
+}
+
+function isAddressInUseError(error: unknown): boolean {
+  if (error == null || typeof error !== "object") return false;
+  if ("code" in error && (error as { code?: unknown }).code === "EADDRINUSE") return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /address already in use/i.test(message);
 }
 
 async function saveLesson(
@@ -883,6 +916,7 @@ function parseArgs(argv: string[]): ParsedArgs {
       client: S, scope: S, reason: S,
       url: S, key: S, email: S, password: S, passphrase: S,
       yes: { ...B, short: "y" }, "include-superseded": B, "no-open": B, "dry-run": B, help: B,
+      version: { ...B, short: "v" },
       "password-login": B,
     },
   });
@@ -898,7 +932,7 @@ async function readStdin(): Promise<string> {
 
 function printHelp(): void {
   console.log(
-    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--dry-run] [--no-dashboard]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind login [--url <supabase-url> --key <anon-key> --passphrase ...]  (opens browser for GitHub sign in)\n  fixmind login --password-login --email ... --password ... --passphrase ...  (email/password instead)\n  fixmind logout\n  fixmind sync push\n  fixmind sync pull\n  fixmind sync status\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
+    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--dry-run] [--no-dashboard]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind login [--url <supabase-url> --key <anon-key> --passphrase ...]  (opens browser for GitHub sign in)\n  fixmind login --password-login --email ... --password ... --passphrase ...  (email/password instead)\n  fixmind logout\n  fixmind sync push\n  fixmind sync pull\n  fixmind sync status\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nOptions:\n  -v, --version  Show the installed CLI version.\n  -h, --help     Show this help text.\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
   );
 }
 
