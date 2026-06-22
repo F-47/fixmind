@@ -21,16 +21,6 @@ createRoot(document.getElementById("root")!).render(
     <RouterProvider>
       <Routes />
     </RouterProvider>
-    <Toaster
-      theme="dark"
-      position="bottom-right"
-      toastOptions={{
-        style: {
-          background: "var(--color-surface)",
-          border: "1px solid var(--color-line)",
-          color: "var(--color-ink)",
-        },
-      }}
-    />
+    <Toaster theme="dark" position="bottom-right" richColors />
   </StrictMode>,
 );
