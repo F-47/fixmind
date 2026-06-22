@@ -21,10 +21,26 @@ function ScrollToTop() {
   return null;
 }
 
+function ScrollToHash() {
+  const { pathname, hash } = useLocation();
+
+  useLayoutEffect(() => {
+    if (!hash) return;
+
+    const target = document.querySelector(hash);
+    if (target instanceof HTMLElement) {
+      target.scrollIntoView();
+    }
+  }, [pathname, hash]);
+
+  return null;
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>
       <ScrollToTop />
+      <ScrollToHash />
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/pricing" element={<Pricing />} />

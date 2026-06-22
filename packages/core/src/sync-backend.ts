@@ -172,9 +172,9 @@ function waitForOAuthCode(port: number, authUrl: string): Promise<string> {
             })
           : oauthCallbackPage({
               ok: true,
-              message: "You can close this window and return to the terminal.",
-              redirectUrl: "https://www.fixmind.dev/account/callback",
-              redirectLabel: "Open account",
+              message: "CLI sign-in is complete. You can close this window and return to the terminal.",
+              redirectUrl: ACCOUNT_URL,
+              redirectLabel: "Open website account",
             }),
       );
 
@@ -188,86 +188,6 @@ function waitForOAuthCode(port: number, authUrl: string): Promise<string> {
     const timeout = setTimeout(() => {
       server.close();
       reject(new Error("Timed out waiting for GitHub sign in."));
-    }, OAUTH_TIMEOUT_MS);
-
-    server.on("error", (error) => {
-      clearTimeout(timeout);
-      reject(error);
-    });
-
-    server.listen(port, "127.0.0.1");
-  });
-}
-
-function sessionCallbackPage(): string {
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta http-equiv="refresh" content="1; url=https://www.fixmind.dev/account">
-<title>Fixmind</title>
-<style>
-  :root { color-scheme: dark; }
-  body {
-    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    background-color: #08090d; color: #e9ecf4;
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  }
-  .card {
-    max-width: 32rem; padding: 2rem 2.5rem; border-radius: 16px;
-    border: 1px solid #232838; background: rgba(17,20,27,0.96); text-align: center;
-  }
-  h1 {
-    font-family: "Space Grotesk", "Inter", sans-serif; font-size: 1.25rem; font-weight: 600;
-    margin: 0 0 0.5rem;
-  }
-  p { margin: 0; color: #828a9c; font-size: 0.95rem; line-height: 1.5; }
-  .link {
-    display: inline-block; margin-top: 1.5rem; padding: 0.6rem 1.5rem; border-radius: 8px;
-    background: #7c5cff; color: #08090d; font-weight: 600; font-size: 0.9rem;
-    text-decoration: none;
-  }
-</style>
-</head>
-<body>
-  <div class="card">
-    <h1>You're signed in</h1>
-    <p>Returning you to Fixmind so the browser session stays where the account lives.</p>
-    <a class="link" href="https://www.fixmind.dev/account">Open account</a>
-  </div>
-</body>
-</html>`;
-}
-
-function waitForBrowserSession(port: number): Promise<SessionTokens> {
-  return new Promise((resolve, reject) => {
-    const server = http.createServer((req, res) => {
-      const url = new URL(req.url ?? "/", `http://127.0.0.1:${port}`);
-      const accessToken = url.searchParams.get("access_token");
-      const refreshToken = url.searchParams.get("refresh_token");
-      const errorDescription = url.searchParams.get("error_description") ?? url.searchParams.get("error");
-
-      res.writeHead(200, { "Content-Type": "text/html" });
-      res.end(
-        errorDescription
-          ? oauthCallbackPage({
-              ok: false,
-              message: `${errorDescription}. You can close this window and return to the terminal.`,
-              redirectUrl: ACCOUNT_URL,
-            })
-          : sessionCallbackPage(),
-      );
-
-      clearTimeout(timeout);
-      server.close();
-      if (errorDescription) reject(new Error(`GitHub sign in failed: ${errorDescription}`));
-      else if (accessToken && refreshToken) resolve({ accessToken, refreshToken });
-      else reject(new Error("No session tokens received from Fixmind account sign-in."));
-    });
-
-    const timeout = setTimeout(() => {
-      server.close();
-      reject(new Error("Timed out waiting for Fixmind account sign in."));
     }, OAUTH_TIMEOUT_MS);
 
     server.on("error", (error) => {
@@ -323,28 +243,36 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
     },
 
     async signInWithGithub(onAuthUrl) {
-      const accountUrl = new URL(ACCOUNT_URL);
-      accountUrl.searchParams.set("cli_callback", `http://127.0.0.1:${OAUTH_CALLBACK_PORT}`);
-
-      onAuthUrl?.(accountUrl.toString());
-      openInBrowser(accountUrl.toString());
-
-      const sessionTokens = await waitForBrowserSession(OAUTH_CALLBACK_PORT);
-      const supabase = client();
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: sessionTokens.accessToken,
-        refresh_token: sessionTokens.refreshToken,
+      const supabase = createClient(url, anonKey, {
+        auth: {
+          flowType: "pkce",
+          storage: new MemoryAuthStorage(),
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
       });
-      if (sessionError) throw new Error(`GitHub sign in failed: ${sessionError.message}`);
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) {
-        throw new Error(`GitHub sign in failed: ${userError?.message ?? "no user"}`);
+
+      const redirectTo = `http://127.0.0.1:${OAUTH_CALLBACK_PORT}`;
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "github",
+        options: { redirectTo, skipBrowserRedirect: true },
+      });
+      if (error || !data.url) throw new Error(`GitHub sign in failed: ${error?.message ?? "no auth URL"}`);
+
+      onAuthUrl?.(data.url);
+      openInBrowser(data.url);
+
+      const code = await waitForOAuthCode(OAUTH_CALLBACK_PORT, data.url);
+      const { data: exchanged, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError || !exchanged.session) {
+        throw new Error(`GitHub sign in failed: ${exchangeError?.message ?? "no session"}`);
       }
       return {
-        userId: userData.user.id,
-        email: userData.user.email ?? "",
-        accessToken: sessionTokens.accessToken,
-        refreshToken: sessionTokens.refreshToken,
+        userId: exchanged.user.id,
+        email: exchanged.user.email ?? "",
+        accessToken: exchanged.session.access_token,
+        refreshToken: exchanged.session.refresh_token,
       };
     },
 

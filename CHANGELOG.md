@@ -4,6 +4,12 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.21]
+
+### Fixed
+- Removed the experimental browser-to-account session handoff and kept CLI sync login separate from website account sign-in.
+- Clarified the account and CLI copy so the website manages plan status while `npx fixmind login` handles encrypted sync on a device.
+
 ## [1.0.20]
 
 ### Changed

@@ -8,34 +8,11 @@ import { AuthForm } from "./account/AuthForm";
 import { AccountStatus } from "./account/AccountStatus";
 import { InfoPill } from "./account/InfoPill";
 
-function getCliCallbackUrl(): URL | null {
-  const value = new URLSearchParams(window.location.search).get("cli_callback");
-  if (!value) return null;
-  try {
-    const url = new URL(value);
-    const localHost = url.hostname === "127.0.0.1" || url.hostname === "localhost";
-    if (url.protocol !== "http:" || !localHost) return null;
-    return url;
-  } catch {
-    return null;
-  }
-}
-
-function createCliCallbackTarget(session: { access_token: string; refresh_token: string }, cliCallback: string): string {
-  const url = new URL(cliCallback);
-  url.searchParams.set("access_token", session.access_token);
-  url.searchParams.set("refresh_token", session.refresh_token);
-  url.searchParams.set("token_type", "bearer");
-  return url.toString();
-}
-
 export default function Account() {
   usePageMeta(
     "Account and sync - fixmind",
     "Manage your fixmind account, optional sync, and paid plan status.",
   );
-
-  const cliCallback = getCliCallbackUrl()?.toString() ?? null;
 
   const [session, setSession] = useState<Session | null | undefined>(undefined);
 
@@ -62,11 +39,6 @@ export default function Account() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!session || !cliCallback) return;
-    window.location.replace(createCliCallbackTarget(session, cliCallback));
-  }, [cliCallback, session]);
-
   return (
     <div>
       <Nav />
@@ -84,9 +56,10 @@ export default function Account() {
                 A clean control center for local-first users
               </h1>
               <p className="mx-auto mt-5 max-w-2xl text-muted">
-                Fixmind stays on your machine by default. This page is for the
-                small number of moments where you want to sign in, check plan
-                status, or turn on encrypted sync.
+                Fixmind stays on your machine by default. Use this page to sign
+                in on the website or check plan status. Use{" "}
+                <code className="text-ink">npx fixmind login</code> in the
+                terminal when you want encrypted sync on a device.
               </p>
             </div>
 
@@ -112,7 +85,7 @@ export default function Account() {
                     </div>
                   </div>
                   <p className="mt-5 text-center text-sm text-muted">
-                    {cliCallback ? "Signing you in, then returning you to the terminal..." : "Loading your account..."}
+                    Loading your account...
                   </p>
                 </div>
               ) : session ? (
