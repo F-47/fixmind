@@ -13,9 +13,9 @@
   --color-warn: #e8b35f;
   --color-danger: #ff5c72;
 
-  --font-serif: "Space Grotesk", "Inter", sans-serif;
-  --font-sans: "Inter", sans-serif;
-  --font-mono: "JetBrains Mono", monospace;
+  --font-serif: "ui-sans-serif", "system-ui", sans-serif;
+  --font-sans: "ui-sans-serif", "system-ui", sans-serif;
+  --font-mono: "ui-monospace", "SFMono-Regular", monospace;
 }
 
 @layer base {
