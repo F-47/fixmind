@@ -195,28 +195,43 @@ export default function Account() {
   return (
     <div>
       <Nav />
-      <section className="mx-auto max-w-3xl px-6 py-24">
-        <p className="text-center font-mono text-xs uppercase tracking-[0.2em] text-accent">
-          Account
-        </p>
-        <h1 className="mt-3 text-center font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-          Connect fixmind to this account
-        </h1>
 
-        <div className="mt-10">
-          {!supabaseConfigured ? (
-            <p className="text-center text-sm text-muted">
-              Account sign-in isn&rsquo;t configured on this deployment yet.
+      <div className="relative overflow-hidden bg-grid">
+        <section>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-accent/15 blur-[130px]"
+          />
+          <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
+              Account
             </p>
-          ) : session === undefined ? (
-            <p className="text-center text-sm text-muted">Loading&hellip;</p>
-          ) : session ? (
-            <AccountStatus session={session} />
-          ) : (
-            <AuthForm />
-          )}
-        </div>
-      </section>
+            <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
+              Connect fixmind to this account
+            </h1>
+            <p className="mx-auto mt-5 max-w-xl text-muted">
+              One account ties your CLI to a paid plan. Sign in here, then run{" "}
+              <code className="text-ink">fixmind sync login</code> on every
+              machine you want to sync from.
+            </p>
+
+            <div className="mt-10">
+              {!supabaseConfigured ? (
+                <p className="mx-auto max-w-xl rounded-md border border-line bg-surface px-4 py-2 font-mono text-xs text-muted">
+                  Account sign-in isn&rsquo;t configured on this deployment yet.
+                </p>
+              ) : session === undefined ? (
+                <p className="text-sm text-muted">Loading&hellip;</p>
+              ) : session ? (
+                <AccountStatus session={session} />
+              ) : (
+                <AuthForm />
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+
       <Footer />
     </div>
   );
