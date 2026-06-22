@@ -110,10 +110,20 @@ function PlanCard({ plan }: { plan: Plan }) {
       </div>
 
       <div className="mt-4 flex items-baseline gap-1.5">
-        <span className="font-display text-3xl font-semibold text-ink">
-          {plan.price}
-        </span>
-        {plan.unit && <span className="text-xs text-muted">{plan.unit}</span>}
+        {plan.status === "available" ? (
+          <>
+            <span className="font-display text-3xl font-semibold text-ink">
+              {plan.price}
+            </span>
+            {plan.unit && (
+              <span className="text-xs text-muted">{plan.unit}</span>
+            )}
+          </>
+        ) : (
+          <span className="font-display text-3xl font-semibold text-muted">
+            Coming soon
+          </span>
+        )}
       </div>
       {plan.note && (
         <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.1em] text-muted">
@@ -132,35 +142,43 @@ function PlanCard({ plan }: { plan: Plan }) {
       </ul>
 
       <div className="mt-6">
-        {plan.cta === "install" && (
-          <div className="space-y-2">
-            <p className="break-all rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-[11px] leading-relaxed text-muted">
-              <span className="text-ink">$</span> {INSTALL_CMD}
-            </p>
-            <CopyButton
-              text={INSTALL_CMD}
-              label="Copy install command"
-              variant="block"
-            />
+        {plan.status !== "available" ? (
+          <div className="block cursor-not-allowed rounded-md border border-line px-3 py-2 text-center text-sm text-muted">
+            Coming soon
           </div>
-        )}
-        {plan.cta === "checkout" && (
-          <a
-            href={plan.checkoutUrl}
-            data-polar-checkout
-            data-polar-checkout-theme="dark"
-            className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
-          >
-            Subscribe
-          </a>
-        )}
-        {plan.cta === "contact" && (
-          <a
-            href={`mailto:${CONTACT_EMAIL}`}
-            className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
-          >
-            Contact us
-          </a>
+        ) : (
+          <>
+            {plan.cta === "install" && (
+              <div className="space-y-2">
+                <p className="break-all rounded-md border border-line bg-surface-2 px-3 py-2 font-mono text-[11px] leading-relaxed text-muted">
+                  <span className="text-ink">$</span> {INSTALL_CMD}
+                </p>
+                <CopyButton
+                  text={INSTALL_CMD}
+                  label="Copy install command"
+                  variant="block"
+                />
+              </div>
+            )}
+            {plan.cta === "checkout" && (
+              <a
+                href={plan.checkoutUrl}
+                data-polar-checkout
+                data-polar-checkout-theme="dark"
+                className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+              >
+                Subscribe
+              </a>
+            )}
+            {plan.cta === "contact" && (
+              <a
+                href={`mailto:${CONTACT_EMAIL}`}
+                className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+              >
+                Contact us
+              </a>
+            )}
+          </>
         )}
       </div>
     </div>
