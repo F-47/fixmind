@@ -1,171 +1,87 @@
 # Fixmind
 
-A local-first CLI and MCP server that records short learning lessons after AI-assisted coding fixes. It stores everything on the developer's machine and calls no external or paid AI API.
+> **Bug fixed. You learned nothing.** <br />
+> Your agent patches the code, you accept the diff, and the lesson evaporates. Fixmind catches it on the way out — a local MCP server that turns every AI-assisted fix into a lesson you actually remember.
 
-## Requirements
+Fixmind is a local-first CLI and MCP server that records short learning lessons after meaningful coding fixes. It stores everything securely on your machine, integrating natively with your AI agents via the Model Context Protocol (MCP).
 
-- Node.js 22.5 or newer
-- An MCP-compatible AI coding tool, optional for manual use
-- Git, optional for automatic diff capture
+## Features
 
-## Install
+- **Local by Default:** Lessons live in `~/.fixmind/learning.db`. No account needed, no external APIs.
+- **Speaks MCP:** Works seamlessly with Claude Code, Cursor, and Codex.
+- **Spaced Recall:** New lessons resurface on a schedule (1, 3, 7 days) with a real question to test your understanding before showing the answer.
+- **Real Diffs:** Captures the actual bad and good code from your git diff, not just a vague summary.
 
-```bash
+---
+
+## Quickstart
+
+**Requirements:** Node.js 22.5+
+
+```sh
 npm install -g fixmind
 fixmind setup
 ```
 
-For local development against this repo instead of the published package:
+`fixmind setup` initializes local storage and automatically configures detected installations of Cursor, Claude Code, and Codex. _Restart your AI clients after running setup._
 
-```bash
-npm install
-npm run build
-npm link
-fixmind setup
+## How It Works
+
+1. **Fix bugs like normal:** Hand a bug to your agent. It patches it.
+2. **Agent saves the lesson:** If the fix involved actual learning (not just formatting/renaming), the agent automatically calls the MCP tool to log the problem, root cause, and the bad/good code.
+3. **Stored locally:** The lesson lands safely in your local SQLite database.
+4. **Browse & Review:** Fixmind quizzes you on the lesson in 1, 3, and 7 days so you actually retain the knowledge.
+
+## The Quality Gate
+
+The MCP server doesn't just blindly accept data; it acts as a strict teacher for your AI agent. Before any lesson is stored, Fixmind runs it through a local validation gate:
+
+- **No Garbage:** If the agent tries to save a formatting change, a pure refactor, or a UI tweak without a behavioral break, the server **rejects the save outright** and forces the agent to skip it.
+- **Enforcing the "Why":** If the agent repeats the symptom as the root cause, the server throws an error and demands a deeper explanation.
+- **Transfer, Not Recall:** The server instructs the agent to write _transfer questions_ (e.g., "How would this apply to a different framework?") instead of basic recall questions (e.g., "What line did you change?").
+- **Superseding Mistakes:** If an agent saves a lesson for a fix that turns out to be wrong, it can link the corrected lesson to the old one to supersede it, keeping your library clean.
+
+## CLI Usage
+
+Manage your learning library straight from the terminal.
+
+```sh
+# Setup & MCP
+fixmind setup                 # Configure detected AI clients
+fixmind setup --scope project # Scope MCP to the current directory
+fixmind mcp                   # Start the MCP server manually (agents do this automatically)
+
+# Browse Lessons
+fixmind list                  # View recent lessons
+fixmind list --limit 5        # Show the last 5 lessons
+fixmind search "hydration"    # Find lessons by keyword or concept
+fixmind stats                 # View recurring mistake patterns
+
+# Review & Learn
+fixmind review                # Answer recall questions for due lessons
 ```
 
-`fixmind setup` initializes storage and configures detected Codex, Claude Code, and Cursor installations. Restart configured clients afterward.
+## Local Dashboard
 
-Data remains local:
+Prefer a GUI? Fixmind comes with a beautiful, local-only web dashboard to view your progress, review lessons, and browse your knowledge base.
 
-- Database: `~/.fixmind/learning.db`
-- Config: `~/.fixmind/config.json`
-
-Set `FIXMIND_DATA_DIR` to override the data directory.
-
-## How it works
-
-```text
-AI coding client
-      |
-      | MCP: save_lesson
-      v
-Local Fixmind server
-      |
-      v
-~/.fixmind/learning.db
-      |
-      v
-Human runs fixmind review
-```
-
-The MCP server instructs agents to save lessons after meaningful fixes while skipping formatting, renames, and mechanical edits. Invocation remains best-effort because the AI client controls tool selection.
-
-## MCP setup
-
-```powershell
-fixmind setup
-fixmind setup --client codex,claude,cursor
-fixmind setup --client cursor --dry-run
-```
-
-For Claude Code, setup also adds `mcp__fixmind__save_lesson` to `permissions.allow` in `~/.claude/settings.json` (with a `.backup` copy of any prior file), so the agent can save lessons without a permission prompt.
-
-The MCP process can also be started directly:
-
-```powershell
-fixmind mcp
-```
-
-Humans normally do not run that command themselves; the configured AI client launches it over stdio. See [docs/mcp-integration.md](docs/mcp-integration.md) for configuration details and the tool schema.
-
-## Human commands
-
-```powershell
-fixmind save-manual
-fixmind list
-fixmind list --limit 5
-fixmind search "hydration"
-fixmind stats
-fixmind review
-```
-
-## Local dashboard
-
-Open the visual dashboard with:
-
-```powershell
+```sh
 fixmind dashboard
 ```
 
-It runs only on `127.0.0.1`, opens the browser automatically, and provides a learning library with filters, due reviews, progress signals, recurring concepts, detailed root-cause lessons, wrong-versus-correct code examples, practice tasks, previous answers, and interactive recall reviews.
+_Runs locally on `127.0.0.1`. Use `--port 8080` to specify a port or `--no-open` to prevent auto-opening the browser._
 
-The dashboard is built with React, Vite, and Tailwind CSS, but published packages contain prebuilt static assets. End users still run only `fixmind dashboard` and do not need to install or run the frontend toolchain.
+## Sync (Pro)
 
-```powershell
-fixmind dashboard --port 8080
-fixmind dashboard --no-open
-```
+Fixmind is fiercely local-first. But if you want your lessons available across multiple machines, you can opt-in to end-to-end encrypted sync. The server only ever sees ciphertext.
 
-`fixmind save-manual` is available as a shorthand for interactive manual lessons, and `fixmind save-ai-summary` as a shorthand for piping in AI-generated summaries (scripts and integrations).
-
-## Sync (Pro, optional)
-
-Fixmind is local-first by default — no account needed. If you want your lessons available on more than one machine, `fixmind login` signs in (GitHub or email/password) and encrypts lessons on your machine before syncing them through a Supabase project, so the server only ever sees ciphertext:
-
-```powershell
+```sh
 fixmind login
 fixmind sync push
 fixmind sync pull
-fixmind sync status
-fixmind logout
 ```
 
-Saving a lesson auto-pushes, and opening `fixmind dashboard` auto-pulls, once you're logged in. See the [full CLI reference](../../docs/cli-reference.md#sync-pro) and [sync-setup.md](docs/sync-setup.md) for details.
+---
 
-## Next.js hydration example
-
-After fixing a hydration mismatch, the AI calls `save_lesson` with content similar to (the `tool` field is optional and auto-detected from the connected MCP client, so it's normally omitted):
-
-```json
-{
-  "projectPath": "C:/projects/example",
-  "title": "Keep initial server and client renders deterministic",
-  "originalPrompt": "Fix the hydration mismatch on the theme toggle",
-  "problem": "The server rendered a light label while the browser initially rendered a dark label.",
-  "mistake": "The component read localStorage during its initial render.",
-  "rootCause": "Server rendering cannot access localStorage, so the initial server and browser markup differed.",
-  "fixSummary": "Render a stable initial value and read the saved theme in useEffect after hydration.",
-  "takeaway": "Keep the server render and browser's first render identical.",
-  "mistakePattern": "Hydration timing",
-  "concepts": ["Next.js hydration", "SSR/browser APIs"],
-  "filesChanged": ["app/components/ThemeToggle.tsx"],
-  "codeExample": "const [theme, setTheme] = useState('light');\nuseEffect(() => setTheme(localStorage.getItem('theme') ?? 'light'), []);",
-  "badCodeExample": "const theme = localStorage.getItem('theme');",
-  "goodCodeExample": "const [theme, setTheme] = useState('light');\nuseEffect(() => setTheme(localStorage.getItem('theme') ?? 'light'), []);",
-  "codeExplanation": "The corrected version waits until hydration before reading browser-only storage.",
-  "practiceTask": "Build a theme label whose initial markup is identical on the server and browser.",
-  "reviewQuestions": [
-    {
-      "question": "What must be true about the server render and browser's first render?",
-      "expectedAnswer": "They must produce matching markup before client-only state is loaded."
-    }
-  ],
-  "understanding": "unknown",
-  "tags": [
-    { "name": "React: Hydration Mismatch", "url": "https://react.dev/link/hydration-mismatch" }
-  ]
-}
-```
-
-New lessons are due the next day. Review them with:
-
-```text
-> fixmind review
-What must be true about the server render and browser's first render?
-Your answer: They need matching initial markup.
-Expected: They must produce matching markup before client-only state is loaded.
-Understanding (understood, partial, copied_blindly): understood
-Review saved.
-```
-
-## More documentation
-
-- [Full CLI reference](../../docs/cli-reference.md) — every command and flag, including `edit`, `delete`, `supersede`, and `export`, which aren't covered above.
-- [What a lesson contains](../../docs/lesson-schema.md) — required vs. optional fields, the quality gate that rejects shallow lessons, and the exact spaced-repetition schedule.
-- [FAQ / troubleshooting](../../docs/faq.md) — agents not saving lessons, backups, resets, per-client scope quirks.
-- [MCP integration](docs/mcp-integration.md) — the tool schema in full, token/context overhead, configuring clients fixmind doesn't autodetect.
-
-## Scope
-
-Local-first by default — no account required to use any of the above. Accounts and encrypted sync (above) are opt-in for Pro/Team. There's no team-shared library, public sharing, browser extension, or bundled AI client yet. The dashboard is local-only, and MCP is write-only for agents; lesson history and reviews remain controlled by the human.
+**License:** MIT  
+**Privacy:** No telemetry. Your data stays on your machine.

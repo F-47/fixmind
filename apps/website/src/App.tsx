@@ -314,20 +314,20 @@ function TokensSection() {
 
         <div className="mt-14 grid gap-16 lg:grid-cols-[1fr_420px] lg:items-start">
           <div>
-            <TokenStep number="01" title="Sent once per session">
+            <TokenStep number="01" title="Sent once per session (~2,500 tokens, average)">
               The server&rsquo;s instructions and the{" "}
               <code className="text-ink">save_lesson</code> schema go out when
               the client connects. Clients that support prompt caching reuse that across
-              every later turn.
+              every later turn, dropping the cost to <strong className="text-ink font-medium">near zero ($0.001)</strong>.
             </TokenStep>
-            <TokenStep number="02" title="Silent on every other turn">
+            <TokenStep number="02" title="Silent on every other turn (0 tokens)">
               The tool is only called when the agent decides a fix actually taught it
               something &mdash; never on a whim, never on formatting or renames.
             </TokenStep>
-            <TokenStep number="03" title="A commit-message-sized payload">
+            <TokenStep number="03" title="A commit-message-sized payload (~500 tokens, average)">
               When a lesson is saved, the problem, root cause, fix summary, and code
               examples together are about as big as a short commit message or review
-              comment.
+              comment &mdash; costing <strong className="text-ink font-medium">a fraction of a cent</strong>.
             </TokenStep>
           </div>
 

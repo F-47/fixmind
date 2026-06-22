@@ -13,15 +13,16 @@ function useActiveSection(enabled: boolean): string | null {
       setActive(null);
       return;
     }
-    const sections = SECTION_IDS.map((id) => document.getElementById(id)).filter(
-      (el): el is HTMLElement => el !== null,
-    );
+    const sections = SECTION_IDS.map((id) =>
+      document.getElementById(id),
+    ).filter((el): el is HTMLElement => el !== null);
     if (sections.length === 0) return;
 
     function update() {
       let current: string | null = null;
       for (const section of sections) {
-        if (section.getBoundingClientRect().top <= NAV_OFFSET) current = section.id;
+        if (section.getBoundingClientRect().top <= NAV_OFFSET)
+          current = section.id;
       }
       setActive(current);
     }
@@ -61,13 +62,19 @@ function NavLink({
   to,
   isActive,
   children,
+  onClick,
 }: {
   to: string;
   isActive: boolean;
   children: ReactNode;
+  onClick?: () => void;
 }) {
   return (
-    <Link to={to} className={`relative pb-0.5 transition-colors hover:text-ink ${isActive ? "text-ink" : ""}`}>
+    <Link
+      to={to}
+      onClick={onClick}
+      className={`relative pb-0.5 transition-colors hover:text-ink ${isActive ? "text-ink" : ""}`}
+    >
       {children}
       <span
         aria-hidden="true"
@@ -79,43 +86,53 @@ function NavLink({
   );
 }
 
+const NAV_LINKS = [
+  { to: "/#loop", label: "The loop", section: "loop" },
+  { to: "/#features", label: "Features", section: "features" },
+  { to: "/#tokens", label: "Token cost", section: "tokens" },
+  { to: "/#how", label: "How it works", section: "how" },
+  { to: "/#commands", label: "Commands", section: "commands" },
+  { to: "/pricing", label: "Pricing", section: null as string | null },
+  { to: "/contact", label: "Contact", section: null as string | null },
+  { to: "/account", label: "Account", section: null as string | null },
+];
+
 export function Nav() {
   const { path } = useRouter();
   const active = useActiveSection(path === "/");
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close menu on route change
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [path]);
+
+  function isLinkActive(link: (typeof NAV_LINKS)[0]) {
+    if (link.section) return active === link.section;
+    return path === link.to;
+  }
 
   return (
-    <header className="sticky top-0 z-50 h-16 border-b border-line/60 bg-bg/60 backdrop-blur-md">
-      <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
-        <Link to="/" className="flex items-center gap-2 font-mono text-sm font-medium text-ink">
+    <header className="sticky top-0 z-50 border-b border-line/60 bg-bg/60 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        {/* Logo */}
+        <Link
+          to="/"
+          className="flex items-center gap-2 font-mono text-sm font-medium text-ink"
+        >
           <Logo />
           fixmind
         </Link>
-        <nav className="hidden items-center gap-8 text-sm text-muted sm:flex">
-          <NavLink to="/#loop" isActive={active === "loop"}>
-            The loop
-          </NavLink>
-          <NavLink to="/#features" isActive={active === "features"}>
-            Features
-          </NavLink>
-          <NavLink to="/#tokens" isActive={active === "tokens"}>
-            Token cost
-          </NavLink>
-          <NavLink to="/#how" isActive={active === "how"}>
-            How it works
-          </NavLink>
-          <NavLink to="/#commands" isActive={active === "commands"}>
-            Commands
-          </NavLink>
-          <NavLink to="/pricing" isActive={path === "/pricing"}>
-            Pricing
-          </NavLink>
-          <NavLink to="/contact" isActive={path === "/contact"}>
-            Contact
-          </NavLink>
-          <NavLink to="/account" isActive={path === "/account"}>
-            Account
-          </NavLink>
+
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-8 text-sm text-muted lg:flex">
+          {NAV_LINKS.map((link) => (
+            <NavLink key={link.to} to={link.to} isActive={isLinkActive(link)}>
+              {link.label}
+            </NavLink>
+          ))}
         </nav>
+
         <div className="flex items-center gap-3">
           <Link
             to="/#commands"
@@ -123,8 +140,61 @@ export function Nav() {
           >
             Install
           </Link>
+
+          {/* Hamburger button — mobile only */}
+          <button
+            id="mobile-menu-toggle"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+            onClick={() => setMenuOpen((o) => !o)}
+            className="flex h-8 w-8 flex-col items-center justify-center gap-[5px] lg:hidden"
+          >
+            <span
+              className={`block h-px w-5 bg-ink transition-all duration-200 origin-center ${
+                menuOpen ? "translate-y-[6px] rotate-45" : ""
+              }`}
+            />
+            <span
+              className={`block h-px w-5 bg-ink transition-opacity duration-200 ${
+                menuOpen ? "opacity-0" : ""
+              }`}
+            />
+            <span
+              className={`block h-px w-5 bg-ink transition-all duration-200 origin-center ${
+                menuOpen ? "-translate-y-[6px] -rotate-45" : ""
+              }`}
+            />
+          </button>
         </div>
       </div>
+
+      {/* Mobile dropdown */}
+      {menuOpen && (
+        <nav
+          id="mobile-menu"
+          className="absolute left-0 top-full w-full border-t border-line/60 bg-bg/95 backdrop-blur-md lg:hidden shadow-lg"
+        >
+          <ul className="mx-auto flex max-w-6xl flex-col px-6 py-2">
+            {NAV_LINKS.map((link) => (
+              <li key={link.to}>
+                <Link
+                  to={link.to}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-2 border-b border-line/40 py-3.5 text-sm transition-colors last:border-0 hover:text-ink ${
+                    isLinkActive(link) ? "text-ink" : "text-muted"
+                  }`}
+                >
+                  {isLinkActive(link) && (
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                  )}
+                  {link.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
     </header>
   );
 }
@@ -138,7 +208,9 @@ export function Footer() {
             <Logo size={18} />
             fixmind
           </div>
-          <p className="text-sm text-muted">Local-first learning lessons for AI-assisted fixes.</p>
+          <p className="text-sm text-muted">
+            Local-first learning lessons for AI-assisted fixes.
+          </p>
           <a
             href={`mailto:${CONTACT_EMAIL}`}
             className="text-sm text-muted transition-colors hover:text-ink"
