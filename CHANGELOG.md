@@ -4,6 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.14]
+
+### Fixed
+- The sync passphrase prompt now warns and asks again when it is left blank instead of exiting the login flow.
+
 ## [1.0.13]
 
 ### Fixed
