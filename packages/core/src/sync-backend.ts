@@ -47,6 +47,7 @@ export interface SyncBackend {
   signIn(email: string, password: string): Promise<{ userId: string; refreshToken: string; accessToken: string }>;
   signUp(email: string, password: string): Promise<{ userId: string; refreshToken: string; accessToken: string }>;
   signInWithGithub(onAuthUrl?: (url: string) => void): Promise<OAuthSession>;
+  verifySession(session: SessionTokens): Promise<void>;
   getEntitlement(session: SessionTokens): Promise<Entitlement | undefined>;
   getUserRecord(userId: string, session: SessionTokens): Promise<SyncUserRecord | undefined>;
   createUserRecord(userId: string, session: SessionTokens, record: SyncUserRecord): Promise<void>;
@@ -267,6 +268,10 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
         accessToken: exchanged.session.access_token,
         refreshToken: exchanged.session.refresh_token,
       };
+    },
+
+    async verifySession(session) {
+      await withSession(session);
     },
 
     async getEntitlement(session) {

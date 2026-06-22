@@ -64,6 +64,8 @@ class FakeBackend implements SyncBackend {
     throw new Error("GitHub OAuth is not exercised in tests; use signIn/signUp.");
   }
 
+  async verifySession(_session: SessionTokens) {}
+
   async getEntitlement(session: SessionTokens) {
     const email = this.sessionToEmail.get(session.accessToken);
     return email ? this.entitlements.get(email) : undefined;
@@ -120,7 +122,7 @@ test("login succeeds but reports unentitled without an active Pro/Team plan", as
     const engine = createSyncEngine(store, backend);
     const result = await engine.login(credentials);
     assert.equal(result.entitled, false);
-    assert.equal(engine.status().loggedIn, true);
+    assert.equal((await engine.status()).loggedIn, true);
     await assert.rejects(engine.push(), /requires an active Pro or Team plan/);
   })();
 
