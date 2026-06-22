@@ -3,9 +3,10 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import { Search } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Footer } from "./shared/Footer";
 import { Nav } from "./shared/Nav";
-import { usePageMeta, useRouter } from "./router";
+import { usePageMeta } from "./router";
 
 import quickstartRaw from "@docs/quickstart.md?raw";
 import cliReferenceRaw from "@docs/cli-reference.md?raw";
@@ -49,13 +50,14 @@ function resolveDocLink(href: string): { docId: string; hash: string } | null {
 }
 
 export default function Docs() {
-  const { path, navigate } = useRouter();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [activeDoc, setActiveDoc] = useState(DOCS[0]);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   usePageMeta(
-    "Fixmind — Documentation",
+    "Fixmind - Documentation",
     "Detailed documentation for Fixmind CLI and MCP integration.",
   );
 
@@ -75,14 +77,14 @@ export default function Docs() {
   }, [debouncedQuery]);
 
   useEffect(() => {
-    const docId = path.split("/").pop();
+    const docId = location.pathname.split("/").pop();
     const doc = DOCS.find((d) => d.id === docId);
     if (doc) {
       setActiveDoc(doc);
-    } else if (path === "/docs") {
-      navigate(`/docs/${DOCS[0].id}`);
+    } else if (location.pathname === "/docs") {
+      navigate(`/docs/${DOCS[0].id}`, { replace: true });
     }
-  }, [path, navigate]);
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     if (
@@ -126,9 +128,9 @@ export default function Docs() {
               {filteredDocs.map((doc) => {
                 const isActive = activeDoc.id === doc.id;
                 return (
-                  <button
+                  <Link
                     key={doc.id}
-                    onClick={() => navigate(`/docs/${doc.id}`)}
+                    to={`/docs/${doc.id}`}
                     className={`rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                       isActive
                         ? "bg-surface-2 font-medium text-ink"
@@ -136,7 +138,7 @@ export default function Docs() {
                     }`}
                   >
                     {doc.title}
-                  </button>
+                  </Link>
                 );
               })}
             </nav>

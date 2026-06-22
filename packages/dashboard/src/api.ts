@@ -1,29 +1,36 @@
 import type { DashboardData, Understanding } from "./types";
 
+async function requestOk(input: RequestInfo | URL, init?: RequestInit, fallback = "Request failed."): Promise<void> {
+  const response = await fetch(input, init);
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({} as { error?: string }));
+    throw new Error(result.error ?? fallback);
+  }
+}
+
+async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit, fallback = "Request failed."): Promise<T> {
+  const response = await fetch(input, init);
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({} as { error?: string }));
+    throw new Error(result.error ?? fallback);
+  }
+  return response.json() as Promise<T>;
+}
+
 export async function loadDashboard(query = ""): Promise<DashboardData> {
-  const response = await fetch(`/api/dashboard?q=${encodeURIComponent(query)}`);
-  if (!response.ok) throw new Error("Could not load lessons.");
-  return response.json() as Promise<DashboardData>;
+  return requestJson<DashboardData>(`/api/dashboard?q=${encodeURIComponent(query)}`, undefined, "Could not load lessons.");
 }
 
 export async function saveReview(lessonId: string, answers: Record<string, string>, understanding: Understanding): Promise<void> {
-  const response = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}/review`, {
+  await requestOk(`/api/lessons/${encodeURIComponent(lessonId)}/review`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ answers, understanding }),
-  });
-  if (!response.ok) {
-    const result = await response.json() as { error?: string };
-    throw new Error(result.error ?? "Could not save review.");
-  }
+  }, "Could not save review.");
 }
 
 export async function deleteLesson(lessonId: string): Promise<void> {
-  const response = await fetch(`/api/lessons/${encodeURIComponent(lessonId)}`, { method: "DELETE" });
-  if (!response.ok) {
-    const result = await response.json() as { error?: string };
-    throw new Error(result.error ?? "Could not delete lesson.");
-  }
+  await requestOk(`/api/lessons/${encodeURIComponent(lessonId)}`, { method: "DELETE" }, "Could not delete lesson.");
 }
 
 export function exportUrl(format: "json" | "md"): string {
@@ -31,9 +38,13 @@ export function exportUrl(format: "json" | "md"): string {
 }
 
 export async function resetAllLessons(): Promise<void> {
-  const response = await fetch("/api/reset", { method: "POST" });
-  if (!response.ok) {
-    const result = await response.json() as { error?: string };
-    throw new Error(result.error ?? "Could not reset lessons.");
-  }
+  await requestOk("/api/reset", { method: "POST" }, "Could not reset lessons.");
+}
+
+export async function syncPull(): Promise<{ pulled: number; applied: number }> {
+  return requestJson<{ pulled: number; applied: number }>("/api/sync/pull", { method: "POST" }, "Could not sync pull lessons.");
+}
+
+export async function syncStatus(): Promise<{ loggedIn: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string }> {
+  return requestJson<{ loggedIn: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string }>("/api/sync/status", undefined, "Could not load sync status.");
 }

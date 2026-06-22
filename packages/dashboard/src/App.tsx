@@ -1,184 +1,85 @@
-import { Brain, Download, Search } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { deleteLesson, exportUrl, loadDashboard, resetAllLessons, saveReview } from "./api";
+import { Brain, Download, RefreshCw, Search } from "lucide-react";
+import { useEffect } from "react";
 import { LessonCard } from "./components/LessonCard";
 import { LessonPage } from "./components/LessonPage";
 import { MarginArt } from "./components/MarginArt";
 import { ProgressChart } from "./components/ProgressChart";
 import { RankList } from "./components/RankList";
-import { formatToolName, formatWeek, weekStartOf } from "./format";
-import type { DashboardData, DashboardLesson, Understanding } from "./types";
-
-type Filter = "all" | "learning" | "understood";
-type ModelFilter = "all" | `tool:${string}`;
-type Route = { kind: "dashboard" } | { kind: "lesson"; lessonId: string; review: boolean };
-
-const PAGE_SIZE = 8;
-
-function readRoute(): Route {
-  const pathname = window.location.pathname.replace(/\/+$/, "") || "/";
-  const match = pathname.match(/^\/lessons\/([^/]+)$/);
-  if (!match) return { kind: "dashboard" };
-  return {
-    kind: "lesson",
-    lessonId: decodeURIComponent(match[1]),
-    review: new URLSearchParams(window.location.search).get("review") === "1",
-  };
-}
-
-function lessonUrl(lessonId: string, review = false): string {
-  return `/lessons/${encodeURIComponent(lessonId)}${review ? "?review=1" : ""}`;
-}
+import { exportUrl } from "./api";
+import { formatToolName, formatWeek } from "./format";
+import { useDashboardController } from "./useDashboardController";
 
 export default function App() {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
-  const [modelFilter, setModelFilter] = useState<ModelFilter>("all");
-  const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
-  const [route, setRoute] = useState<Route>(() => readRoute());
-  const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
-  const [page, setPage] = useState(1);
-  const [confirmingReset, setConfirmingReset] = useState(false);
-  const resetDialogRef = useRef<HTMLDialogElement>(null);
-
   useEffect(() => {
-    if (confirmingReset) {
-      if (!resetDialogRef.current?.open) resetDialogRef.current?.showModal();
-    } else {
-      resetDialogRef.current?.close();
-    }
-  }, [confirmingReset]);
-
-  useEffect(() => {
-    const handlePopState = () => setRoute(readRoute());
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
+    document.title = "fixmind - close the loop on AI bug fixes";
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute(
+        "content",
+        "Fixmind is a local-first MCP server that turns every AI bug fix into a lesson you actually remember. Local by default, no account required.",
+      );
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      loadDashboard(query)
-        .then(setData)
-        .catch((caught: Error) => setError(caught.message));
-    }, 180);
-    return () => clearTimeout(timer);
-  }, [query]);
-
-  const tools = useMemo(() => {
-    return data?.models ?? [];
-  }, [data]);
-  const modelCounts = useMemo(
-    () => tools.map(({ name, count }) => ({ tool: name, count })),
-    [data, tools],
-  );
-  const visible = useMemo(
-    () =>
-      data?.lessons.filter(
-        (item) =>
-          filter === "all" ||
-          (filter === "learning" && item.understanding !== "understood") ||
-          (filter === "understood" && item.understanding === "understood"),
-      ) ?? [],
-    [data, filter],
-  );
-  const modelVisible = useMemo(
-    () =>
-      visible.filter(
-        (item) =>
-          (modelFilter === "all" || item.tool === modelFilter.slice(5)) &&
-          (selectedWeek === null ||
-            weekStartOf(item.createdAt) === selectedWeek),
-      ),
-    [modelFilter, selectedWeek, visible],
-  );
-  const totalPages = Math.max(1, Math.ceil(modelVisible.length / PAGE_SIZE));
-  const pageLessons = useMemo(
-    () => modelVisible.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [modelVisible, page],
-  );
-  useEffect(() => {
-    setPage(1);
-  }, [filter, modelFilter, selectedWeek, query]);
-  const selectedLesson = useMemo(
-    () =>
-      route.kind === "lesson"
-        ? data?.lessons.find((lesson) => lesson.id === route.lessonId) ?? null
-        : null,
-    [data, route],
-  );
-
-  function navigate(to: string, replace = false) {
-    if (replace) {
-      window.history.replaceState({}, "", to);
-    } else {
-      window.history.pushState({}, "", to);
-    }
-    setRoute(readRoute());
-  }
-
-  function open(lesson: DashboardLesson, review: boolean) {
-    navigate(lessonUrl(lesson.id, review));
-  }
-  function toggleWeek(weekStart: string) {
-    setSelectedWeek((prev) => (prev === weekStart ? null : weekStart));
-  }
-  async function submitReview(
-    answers: Record<string, string>,
-    understanding: Understanding,
-  ) {
-    if (route.kind !== "lesson" || !selectedLesson) return;
-    await saveReview(selectedLesson.id, answers, understanding);
-    setData(await loadDashboard(query));
-    setSaved(true);
-    setTimeout(() => setSaved(false), 1800);
-    navigate("/", true);
-  }
-  async function removeLesson(lessonId: string) {
-    await deleteLesson(lessonId);
-    setData(await loadDashboard(query));
-    if (route.kind === "lesson" && route.lessonId === lessonId) {
-      navigate("/", true);
-    }
-  }
-  async function resetAll() {
-    await resetAllLessons();
-    setConfirmingReset(false);
-    setData(await loadDashboard(query));
-  }
+  const {
+    confirmingReset,
+    data,
+    error,
+    filters,
+    filter,
+    modelCounts,
+    modelFilters,
+    modelFilter,
+    modelVisible,
+    page,
+    pageLessons,
+    query,
+    refreshing,
+    resetDialogRef,
+    route,
+    saved,
+    selectedLesson,
+    selectedWeek,
+    setConfirmingReset,
+    setFilter,
+    setModelFilter,
+    setPage,
+    setQuery,
+    setSelectedWeek,
+    syncMeta,
+    syncNote,
+    totalPages,
+    open,
+    refreshDashboard,
+    removeLesson,
+    resetAll,
+    submitReview,
+    toggleWeek,
+    navigate,
+  } = useDashboardController();
 
   if (!data)
     return (
       <main className="grid min-h-screen place-items-center text-lg text-muted">
-        {error || "Loading your lessons…"}
+        {error || "Loading your lessons..."}
       </main>
     );
-
-  const filters: Array<[Filter, string]> = [
-    ["all", "All"],
-    ["learning", "Not learned"],
-    ["understood", "Learned"],
-  ];
-  const modelFilters: Array<[ModelFilter, string]> = [
-    ["all", "All models"],
-    ...tools.map(({ name }): [ModelFilter, string] => [
-      `tool:${name}`,
-      formatToolName(name),
-    ]),
-  ];
 
   return (
     <>
       <MarginArt side="left" />
       <MarginArt side="right" />
       <div className="mx-auto max-w-260 px-6 py-10 max-sm:px-4 max-sm:py-6">
-        <header className="flex items-baseline justify-between border-b border-line pb-5">
+        <header className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-5">
           <span className="text-2xl font-bold tracking-tight">Fixmind</span>
-          <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[.2em] text-muted">
-            <span className="size-1.5 rounded-full bg-accent" />
-            {data.summary.total} lessons &mdash; Local only
-          </span>
+          <div className="text-right">
+            <span className="flex items-center justify-end gap-1.5 font-mono text-[11px] uppercase tracking-[.2em] text-muted">
+              <span className="size-1.5 rounded-full bg-accent" />
+              {data.summary.total} lessons
+            </span>
+            <p className="mt-1 font-mono text-[10px] uppercase tracking-[.18em] text-muted">
+              Last sync pull: {syncMeta?.lastPulledAt ? new Date(syncMeta.lastPulledAt).toLocaleString() : "never"}
+            </p>
+          </div>
         </header>
 
         <section className="border-b border-line py-12 max-sm:py-8">
@@ -188,7 +89,7 @@ export default function App() {
                 Fixmind &mdash; a developer&rsquo;s lesson log
               </div>
               <h1 className="mt-3 font-serif text-[clamp(2.8rem,5.4vw,4.8rem)] leading-[1.02] font-bold tracking-tight">
-                Don&rsquo;t just let AI fix it.
+                <span className="block whitespace-nowrap">Don&rsquo;t just let AI fix it.</span>
                 <span className="block text-accent">Learn from it.</span>
               </h1>
               <p className="mt-4 max-w-lg text-base leading-relaxed text-muted">
@@ -206,13 +107,10 @@ export default function App() {
           </div>
         </section>
 
-        {/* Progress */}
         <section className="border-b border-line py-10 max-sm:py-8 space-y-4">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <div className="space-y-2">
-              <h2 className="text-2xl font-semibold tracking-tight">
-                Your progress
-              </h2>
+              <h2 className="text-2xl font-semibold tracking-tight">Your progress</h2>
               <div className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
                 Lessons per week by understanding
               </div>
@@ -238,7 +136,10 @@ export default function App() {
             lesson={selectedLesson}
             reviewMode={route.review}
             onBack={() => navigate("/", true)}
-            onStartReview={() => navigate(lessonUrl(selectedLesson?.id ?? route.lessonId, true))}
+            onStartReview={() => {
+              const lessonId = selectedLesson?.id ?? route.lessonId;
+              navigate(`/lessons/${encodeURIComponent(lessonId)}?review=1`);
+            }}
             onSave={submitReview}
             onDelete={(lessonId) => void removeLesson(lessonId)}
           />
@@ -247,15 +148,28 @@ export default function App() {
             <main>
               <div className="mb-5 space-y-4 rounded-3xl">
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-semibold tracking-tight">
-                    Your lessons{" "}
-                    <span className="text-lg text-muted">
-                      ({modelVisible.length})
-                    </span>
-                  </h2>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-2xl font-semibold tracking-tight">
+                      Your lessons{" "}
+                      <span className="text-lg text-muted">
+                        ({modelVisible.length})
+                      </span>
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => void refreshDashboard()}
+                      disabled={refreshing}
+                      className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-muted transition-colors hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                      title="Pull the latest lessons from sync"
+                    >
+                      <RefreshCw size={12} className={refreshing ? "animate-spin" : ""} />
+                      {refreshing ? "Syncing" : "Refresh"}
+                    </button>
+                  </div>
                   <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
                     Filter by learning state or model.
                   </p>
+                  {syncNote && <p className="text-sm text-muted">{syncNote}</p>}
                 </div>
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
                   <nav className="flex flex-wrap gap-5">
@@ -314,9 +228,7 @@ export default function App() {
                     />
                   ))
                 ) : (
-                  <p className="text-sm text-muted">
-                    No lessons match this view.
-                  </p>
+                  <p className="text-sm text-muted">No lessons match this view.</p>
                 )}
               </div>
               {totalPages > 1 && (

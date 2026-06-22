@@ -1,7 +1,8 @@
 import { LogIn, User } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
-import { Link, useRouter } from "../router";
+import { Link } from "../router";
 import { Logo } from "./Logo";
 
 const SECTION_IDS = ["loop", "features", "tokens", "how"];
@@ -109,20 +110,20 @@ const NAV_LINKS = [
 ];
 
 export function Nav() {
-  const { path } = useRouter();
-  const active = useActiveSection(path === "/");
+  const { pathname } = useLocation();
+  const active = useActiveSection(pathname === "/");
   const [menuOpen, setMenuOpen] = useState(false);
   const loggedIn = useIsLoggedIn();
 
   // Close menu on route change
   useEffect(() => {
     setMenuOpen(false);
-  }, [path]);
+  }, [pathname]);
 
   function isLinkActive(link: (typeof NAV_LINKS)[0]) {
     if (link.section) return active === link.section;
-    if (link.to === "/docs") return path.startsWith("/docs");
-    return path === link.to;
+    if (link.to === "/docs") return pathname.startsWith("/docs");
+    return pathname === link.to;
   }
 
   return (
@@ -159,7 +160,7 @@ export function Nav() {
             aria-label={loggedIn ? "Account" : "Sign in"}
             title={loggedIn ? "Account" : "Sign in"}
             className={`flex h-8 w-8 items-center justify-center rounded-md border transition-colors hover:border-accent/60 hover:text-accent ${
-              path === "/account"
+              pathname === "/account"
                 ? "border-accent/60 text-accent"
                 : "border-line text-ink"
             }`}
