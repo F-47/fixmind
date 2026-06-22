@@ -24,9 +24,9 @@ function Hero() {
             MCP server · runs on your machine
           </p>
           <h1 className="mt-5 font-display text-5xl font-semibold leading-[1.05] tracking-tight text-ink sm:text-6xl">
-            You fixed the bug.
+            Bug fixed.
             <br />
-            <span className="text-accent text-glow">Again.</span>
+            <span className="text-accent text-glow">You learned nothing.</span>
           </h1>
           <p className="mt-6 max-w-md text-lg leading-relaxed text-muted">
             Your agent patches the code, you accept the diff, and the lesson evaporates.
@@ -217,13 +217,13 @@ function FeaturesSection() {
         Built for how you already work
       </p>
       <h2 className="mt-3 max-w-xl font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
-        No accounts. No cloud. Just a closer loop.
+        Local by default. Accounts are opt-in, not required.
       </h2>
 
       <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         <FeatureCard icon={<Lock size={18} />} title="Local-first">
           Lessons live in <code className="text-ink">~/.fixmind/learning.db</code>. No
-          account, no sync, no paid AI API in the loop.
+          account needed, no paid AI API in the loop.
         </FeatureCard>
         <FeatureCard icon={<Plug size={18} />} title="Speaks MCP">
           Works with Claude Code, Cursor, and Codex. <code className="text-ink">fixmind
@@ -578,7 +578,7 @@ function CommandsSection() {
 export default function App() {
   usePageMeta(
     "fixmind — close the loop on AI bug fixes",
-    "Fixmind is a local-first MCP server that turns every AI bug fix into a lesson you actually remember. No cloud, no account.",
+    "Fixmind is a local-first MCP server that turns every AI bug fix into a lesson you actually remember. Local by default, no account required.",
   );
   return (
     <div>
