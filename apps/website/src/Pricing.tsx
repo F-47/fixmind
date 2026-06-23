@@ -1,13 +1,15 @@
 import { PolarEmbedCheckout } from "@polar-sh/checkout/embed";
-import { Check, Lock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check, Lock, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
 import { supabase } from "./lib/supabase";
 import { Link, usePageMeta } from "./router";
-import { CONTACT_EMAIL } from "./shared/constants";
 import { Footer } from "./shared/Footer";
 import { Nav } from "./shared/Nav";
 
 const PRO_CHECKOUT_URL = import.meta.env.VITE_PRO_CHECKOUT_URL;
+const WEB3FORMS_ACCESS_KEY = "9ea2eed4-81f4-4dc3-b5d8-feac9d67b566";
+const WAITLIST_FRAME_NAME = "waitlist-form-frame";
 
 interface Plan {
   name: string;
@@ -95,9 +97,11 @@ const PLANS: Plan[] = [
 function PlanCard({
   plan,
   active,
+  onJoinWaitlist,
 }: {
   plan: Plan;
   active: boolean;
+  onJoinWaitlist: (plan: string) => void;
 }) {
   return (
     <div
@@ -174,13 +178,148 @@ function PlanCard({
             Subscribe
           </a>
         ) : (
-          <a
-            href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(`${plan.name} waitlist`)}`}
-            className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+          <button
+            type="button"
+            onClick={() => onJoinWaitlist(plan.name)}
+            className="block w-full rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
           >
             Join waitlist
-          </a>
+          </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+function WaitlistModal({
+  plan,
+  onClose,
+}: {
+  plan: string;
+  onClose: () => void;
+}) {
+  const [sent, setSent] = useState(false);
+  const [email, setEmail] = useState("");
+  const submittedRef = useRef(false);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  if (sent) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-bg/75 px-4 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <div
+          className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-good/10 text-good">
+            <Check size={18} />
+          </div>
+          <h3 className="mt-4 text-center font-display text-lg font-semibold text-ink">
+            You’re on the waitlist
+          </h3>
+          <p className="mt-2 text-center text-sm text-muted">
+            We’ll reach out at <span className="text-ink">{email}</span> when {plan} is ready.
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-5 w-full rounded-md border border-line px-4 py-2.5 text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/75 px-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent">
+              Waitlist
+            </p>
+            <h3 className="mt-2 font-display text-xl font-semibold text-ink">
+              Join the {plan} waitlist
+            </h3>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-line p-2 text-muted transition-colors hover:border-accent/60 hover:text-accent"
+            aria-label="Close waitlist modal"
+          >
+            <X size={16} />
+          </button>
+        </div>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          Leave your email and I’ll only use it for the {plan.toLowerCase()} waitlist.
+        </p>
+
+        <form
+          className="mt-5 space-y-3"
+          action="https://api.web3forms.com/submit"
+          method="POST"
+          target={WAITLIST_FRAME_NAME}
+          onSubmit={() => {
+            submittedRef.current = true;
+          }}
+        >
+          <iframe
+            name={WAITLIST_FRAME_NAME}
+            className="hidden"
+            title="Waitlist submission"
+            onLoad={() => {
+              if (submittedRef.current) setSent(true);
+            }}
+          />
+          <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
+          <input
+            type="hidden"
+            name="subject"
+            value={`New ${plan} waitlist request from fixmind.dev`}
+          />
+          <input
+            type="hidden"
+            name="plan"
+            value={plan}
+          />
+          <label className="block">
+            <span className="sr-only">Email</span>
+            <input
+              type="email"
+              name="email"
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="you@example.com"
+              className="w-full rounded-lg border border-line bg-surface-2 px-4 py-3 text-sm text-ink outline-none transition-colors placeholder:text-muted focus:border-accent/60"
+            />
+          </label>
+          <button
+            type="submit"
+            className="inline-flex w-full items-center justify-center rounded-lg border border-line bg-bg/40 px-4 py-3 text-sm font-medium text-ink transition-colors hover:border-accent/60 hover:text-accent"
+          >
+            Join waitlist
+          </button>
+        </form>
       </div>
     </div>
   );
@@ -193,6 +332,7 @@ export default function Pricing() {
   );
 
   const [activePlan, setActivePlan] = useState<string | null | undefined>(undefined);
+  const [waitlistPlan, setWaitlistPlan] = useState<string | null>(null);
 
   useEffect(() => {
     PolarEmbedCheckout.init();
@@ -257,7 +397,12 @@ export default function Pricing() {
         <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             {PLANS.map((plan) => (
-              <PlanCard key={plan.name} plan={plan} active={selectedPlan === plan.name} />
+              <PlanCard
+                key={plan.name}
+                plan={plan}
+                active={selectedPlan === plan.name}
+                onJoinWaitlist={(nextPlan) => setWaitlistPlan(nextPlan)}
+              />
             ))}
           </div>
         </section>
@@ -306,6 +451,13 @@ export default function Pricing() {
           </div>
         </div>
       </section>
+
+      {waitlistPlan && (
+        <WaitlistModal
+          plan={waitlistPlan}
+          onClose={() => setWaitlistPlan(null)}
+        />
+      )}
 
       <Footer />
     </div>
