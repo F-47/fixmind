@@ -1,7 +1,7 @@
 # fixmind
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-7c5cff.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D22.5-339933.svg)](https://nodejs.org)
+[![Node](https://img.shields.io/badge/node-%3E%3D22.13-339933.svg)](https://nodejs.org)
 
 A local-first CLI and MCP server that turns every AI-assisted bug fix into a lesson you actually remember. No paid AI API, no account required — everything lives in a SQLite database on your machine. Encrypted sync across machines is available as an opt-in Pro feature.
 
