@@ -28,6 +28,10 @@ On the new machine, there's no `import` command yet — restoring means copying 
 
 There's no CLI command for this on purpose (it's the one truly irreversible action, so it's gated behind a confirmation dialog). Open `fixmind dashboard` → Backup & export → Reset all data. Export a backup first if you might want any of it back.
 
+## What if a saved lesson turns out to be wrong?
+
+The old lesson stays in your history unless you explicitly supersede it. When the fix is finally correct, save the corrected lesson and run `fixmind supersede <oldId> <newId>` so the wrong lesson is hidden from review/search but still preserved in the archive. That's the intended recovery path for "we thought it was fixed, but it wasn't yet."
+
 ## `fixmind review` says nothing is due, but I just saved a lesson
 
 That's expected — a freshly-saved lesson's first review is the next day, not immediately (see [Lesson Schema](lesson-schema.md#spaced-repetition)). Check with `fixmind status` or `fixmind list` (which shows each lesson's next review date) rather than assuming it should appear right away.

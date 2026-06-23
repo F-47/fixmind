@@ -23,7 +23,7 @@ export default function Account() {
   const navigate = useNavigate();
 
   usePageMeta(
-    "Account and sync - fixmind",
+    "Fixmind — Account",
     "Manage your fixmind account, optional sync, and paid plan status.",
   );
 

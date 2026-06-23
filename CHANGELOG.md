@@ -7,6 +7,7 @@ All notable changes to the `fixmind` package are documented here. Format follows
 ### Changed
 - `fixmind setup` now defaults to strict capture mode, and `fixmind settings` lets users switch to balanced capture mode later without re-running setup.
 - The MCP server now reads capture mode from local config so the agent can be more or less aggressive about saving borderline-but-useful lessons.
+- Added `fixmind memory` plus an MCP `memory` tool so the agent can retrieve reviewed lessons and reuse them as guidance in new tasks.
 
 ## [1.0.22]
 

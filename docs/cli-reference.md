@@ -38,6 +38,16 @@ fixmind settings --capture-mode balanced
 
 After changing the mode, restart your AI client so it picks up the updated MCP instructions.
 
+### `fixmind memory`
+
+```bash
+fixmind memory
+fixmind memory hydration
+fixmind memory stale closure --limit 3
+```
+
+Returns the small set of reviewed, active lessons that are most relevant to the query. This is the memory view the agent uses when it wants to reuse a past lesson as guidance instead of just keeping history.
+
 ### `fixmind mcp`
 
 Starts the MCP server on stdio. You don't run this yourself — the AI client you configured with `fixmind setup` launches it.

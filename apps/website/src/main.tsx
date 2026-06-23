@@ -1,6 +1,5 @@
-import { StrictMode } from "react";
+import { StrictMode, useEffect, useLayoutEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
-import { useLayoutEffect, useRef } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
 import Account from "./Account";
@@ -25,7 +24,7 @@ function ScrollToTop() {
 function ScrollToHash() {
   const { pathname, hash } = useLocation();
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!hash) return;
 
     let targetId: string;
@@ -37,7 +36,16 @@ function ScrollToHash() {
 
     const target = document.getElementById(targetId);
     if (target instanceof HTMLElement) {
-      target.scrollIntoView();
+      const offset = 72;
+      const top = target.getBoundingClientRect().top + window.scrollY - offset;
+      window.requestAnimationFrame(() => {
+        window.scrollTo({
+          top: Math.max(0, top),
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "auto"
+            : "smooth",
+        });
+      });
     }
   }, [pathname, hash]);
 

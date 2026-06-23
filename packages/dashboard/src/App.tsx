@@ -1,4 +1,4 @@
-import { Brain, Download, RefreshCw, Search } from "lucide-react";
+import { Brain, BrainCircuit, Download, RefreshCw, Search } from "lucide-react";
 import { useEffect } from "react";
 import { LessonCard } from "./components/LessonCard";
 import { LessonPage } from "./components/LessonPage";
@@ -140,6 +140,70 @@ export default function App() {
             selectedWeek={selectedWeek}
             onSelectWeek={toggleWeek}
           />
+        </section>
+
+        <section className="border-b border-line py-10">
+          <div className="grid gap-5 lg:grid-cols-[1.4fr_.9fr]">
+            <div className="rounded-3xl border border-accent/30 bg-accent/5 p-6">
+              <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[.2em] text-accent">
+                <BrainCircuit className="size-4" />
+                Memory retrieval
+              </div>
+              <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
+                <div>
+                  <div className="font-serif text-5xl font-bold tracking-tight text-ink">
+                    {data.summary.memoryReady}
+                  </div>
+                  <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">
+                    reviewed lesson{data.summary.memoryReady === 1 ? "" : "s"} ready to reuse
+                  </p>
+                </div>
+                <p className="max-w-xl text-sm leading-relaxed text-muted">
+                  When a new task looks familiar, Fixmind can pull a few
+                  reviewed lessons back into context so the agent reuses the
+                  rule instead of relearning the same mistake. That cuts repeat
+                  debugging and keeps the next response moving faster.
+                </p>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-2 font-mono text-[10px] uppercase tracking-[.15em]">
+                <span className="rounded-full border border-accent/25 bg-page/50 px-3 py-1.5 text-accent">
+                  fixmind memory
+                </span>
+                <span className="rounded-full border border-line bg-page/50 px-3 py-1.5 text-muted">
+                  use fixmind memory
+                </span>
+                <span className="rounded-full border border-line bg-page/50 px-3 py-1.5 text-muted">
+                  reviewed lessons only
+                </span>
+              </div>
+            </div>
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="rounded-3xl border border-line bg-surface p-6">
+                <div className="font-mono text-[11px] uppercase tracking-[.18em] text-muted">
+                  What it saves
+                </div>
+                <p className="mt-3 text-lg font-semibold tracking-tight text-ink">
+                  Fewer repeat fixes.
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  Memory turns old lessons into a reusable reminder when the
+                  same pattern shows up again.
+                </p>
+              </div>
+              <div className="rounded-3xl border border-line bg-surface p-6">
+                <div className="font-mono text-[11px] uppercase tracking-[.18em] text-muted">
+                  Ready now
+                </div>
+                <p className="mt-3 text-lg font-semibold tracking-tight text-ink">
+                  {data.summary.memoryReady} lesson{data.summary.memoryReady === 1 ? "" : "s"}
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  Only active lessons with real reviews are eligible for memory
+                  retrieval.
+                </p>
+              </div>
+            </div>
+          </div>
         </section>
 
         {route.kind === "lesson" ? (

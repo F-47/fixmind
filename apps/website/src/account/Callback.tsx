@@ -38,7 +38,7 @@ export default function AccountCallback() {
   const navigate = useNavigate();
 
   usePageMeta(
-    "Finishing sign-in - fixmind",
+    "Fixmind — Sign in",
     "Complete your Fixmind sign-in, magic-link login, or password reset.",
   );
 

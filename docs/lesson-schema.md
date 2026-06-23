@@ -58,6 +58,8 @@ If a fix turns out to be wrong or incomplete, `fixmind supersede <oldId> <newId>
 - The new lesson gets `supersedes` pointing back.
 - Superseded lessons are hidden from `list`, `search`, and `review` by default (`--include-superseded` to see them), but stay in your exported history.
 
+If the first saved lesson was based on an incorrect or incomplete fix, do not overwrite history by hand. Save the corrected lesson, then supersede the older one so review/search use the right version while the original attempt remains traceable.
+
 ## Where it lives
 
 Everything above is stored in a single `lessons` table in `~/.fixmind/learning.db` (override with `FIXMIND_DATA_DIR`) — see the `CREATE TABLE` statement in `packages/core/src/storage.ts` for the exact column mapping (camelCase fields become `snake_case` columns). There's no other database, no cloud sync, and no telemetry; `fixmind export` is the only way data leaves that file.

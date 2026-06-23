@@ -10,7 +10,9 @@ Fixmind exposes a local stdio MCP server. Any MCP-compatible AI coding client ca
 
 `save_lesson`
 
-The tool stores a lesson locally. It does not call an AI API, upload code, or expose lesson history to the agent. For what gets stored and how it's reviewed afterward, see [Lesson Schema](../../../docs/lesson-schema.md). For the `fixmind setup` flags used below, see [Commands](../../../docs/cli-reference.md#fixmind-setup).
+It also exposes a `memory` tool that returns a small set of reviewed, active lessons relevant to the current task. The tools store and retrieve lessons locally. They do not call an AI API, upload code, or expose lesson history to the agent in bulk. For what gets stored and how it's reviewed afterward, see [Lesson Schema](../../../docs/lesson-schema.md). For the `fixmind setup` flags used below, see [Commands](../../../docs/cli-reference.md#fixmind-setup).
+
+If you want client-specific setup notes for Claude Code, Codex, Cursor, VS Code, Copilot CLI, OpenCode, Pi, or another MCP client, see [MCP Clients](../../../docs/mcp-clients.md).
 
 ## Guided setup
 
@@ -58,6 +60,8 @@ Run `fixmind setup` on a machine where no supported client is detected to print 
 
 The MCP server sends instructions asking the agent to create a lesson after a meaningful coding fix and skip formatting-only, rename-only, generated-file, and mechanical changes. The current capture mode comes from `~/.fixmind/config.json`: `strict` is the default, while `balanced` tells the agent to be more willing to save borderline-but-useful lessons. Restart your AI client after changing the mode so it receives the updated instructions.
 
+When a new task looks like a past mistake, the agent should call `memory` first and use the returned takeaway and scope notes as guidance for the response.
+
 Automatic use is best-effort because each MCP client decides when to call available tools. The human can explicitly say "save a learning lesson after the fix" if a client does not consistently follow server instructions.
 
 ## Token and context overhead
@@ -74,7 +78,18 @@ If a client isn't consistently calling `save_lesson`, or you want to know why a 
 
 ## Tool input
 
-The MCP tool accepts:
+### `memory`
+
+```json
+{
+  "query": "hydration mismatch",
+  "limit": 5
+}
+```
+
+`query` is optional. `limit` defaults to `5`.
+
+The `save_lesson` tool accepts:
 
 ```json
 {
