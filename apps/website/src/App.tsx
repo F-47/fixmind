@@ -56,15 +56,12 @@ function Hero() {
             remember.
           </p>
           <div className="mt-9 max-w-xl space-y-2">
-            <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 font-mono text-sm text-ink">
-              <span className="text-muted">$</span>
-              <span>npx fixmind setup</span>
+            <div className="flex items-center justify-between rounded-lg border border-line bg-surface px-4 py-2.5 font-mono text-sm text-ink">
+              <div className="flex items-center gap-2">
+                <span className="text-muted">$</span>
+                <span>npx fixmind setup</span>
+              </div>
               <CopyButton text="npx fixmind setup" />
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 font-mono text-sm text-ink">
-              <span className="text-muted">$</span>
-              <span>npx fixmind login</span>
-              <CopyButton text="npx fixmind login" />
             </div>
             <p className="text-sm leading-relaxed text-muted">
               Run the CLI through <code className="text-ink">npx</code> when you
@@ -518,11 +515,14 @@ function HowItWorksSection() {
 
         <div className="mt-14 grid gap-16 lg:grid-cols-[1fr_400px] lg:items-start">
           <div>
-            <HowStep number="01" title="Set up the MCP server" command="npx fixmind setup">
-              Use{" "}
-              <code className="text-ink">npx fixmind setup</code> to register
-              the MCP server with Claude Code, Cursor, or Codex on this device
-              or just this project. No global install is required.
+            <HowStep
+              number="01"
+              title="Set up the MCP server"
+              command="npx fixmind setup"
+            >
+              Use <code className="text-ink">npx fixmind setup</code> to
+              register the MCP server with Claude Code, Cursor, or Codex on this
+              device or just this project. No global install is required.
             </HowStep>
             <HowStep number="02" title="Fix bugs like normal">
               Keep working the way you already do. Your agent calls{" "}
