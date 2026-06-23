@@ -56,7 +56,7 @@ Run `fixmind setup` on a machine where no supported client is detected to print 
 
 ## Agent behavior
 
-The MCP server sends instructions asking the agent to create a lesson after a meaningful coding fix and skip formatting-only, rename-only, generated-file, and mechanical changes.
+The MCP server sends instructions asking the agent to create a lesson after a meaningful coding fix and skip formatting-only, rename-only, generated-file, and mechanical changes. The current capture mode comes from `~/.fixmind/config.json`: `strict` is the default, while `balanced` tells the agent to be more willing to save borderline-but-useful lessons. Restart your AI client after changing the mode so it receives the updated instructions.
 
 Automatic use is best-effort because each MCP client decides when to call available tools. The human can explicitly say "save a learning lesson after the fix" if a client does not consistently follow server instructions.
 

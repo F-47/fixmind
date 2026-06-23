@@ -138,6 +138,7 @@ export function parseArgs(argv: string[]) {
       client: S, scope: S, reason: S, url: S, key: S, email: S, password: S,
       passphrase: S, yes: { ...B, short: "y" }, "include-superseded": B, "no-open": B,
       "dry-run": B, help: B, version: { ...B, short: "v" }, "password-login": B,
+      "capture-mode": S,
     },
   });
   const command = positionals[0];

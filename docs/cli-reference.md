@@ -11,6 +11,7 @@ Detects Claude Code, Cursor, and Codex, and registers the MCP server with whiche
 ```bash
 fixmind setup
 fixmind setup --client codex,claude,cursor
+fixmind setup --capture-mode balanced
 fixmind setup --client cursor --dry-run
 fixmind setup --scope project
 ```
@@ -19,9 +20,23 @@ fixmind setup --scope project
 |---|---|---|
 | `--client <list>` | autodetected | Comma-separated clients to configure: `codex`, `claude`, `cursor`. Skips the interactive picker. |
 | `--scope <user\|project>` | `user` | `user` configures the client globally (every project on this device). `project` scopes Cursor's config, instruction files, and Claude's permissions to the current directory instead. Codex has no project-scope flag, so a project-scoped request for it still registers globally. |
+| `--capture-mode <strict\|balanced>` | `strict` | `strict` keeps capture conservative. `balanced` lets the agent save more borderline-but-useful lessons. |
 | `--dry-run` | off | Print what would change without writing anything. |
 
 Run with no supported client detected and no `--client` flag to print a generic MCP server config for any other stdio-compatible client.
+
+### `fixmind settings`
+
+```bash
+fixmind settings
+fixmind settings --capture-mode balanced
+```
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--capture-mode <strict\|balanced>` | current value | Updates the local capture mode without re-running setup. `strict` is the default; `balanced` captures more borderline-but-useful fixes. |
+
+After changing the mode, restart your AI client so it picks up the updated MCP instructions.
 
 ### `fixmind mcp`
 
