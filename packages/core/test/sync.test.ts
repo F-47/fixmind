@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { createLessonStore, type LessonStore } from "../src/storage.js";
-import { createSyncEngine, type Entitlement, type SessionTokens, type SyncBackend, type SyncRow, type SyncUserRecord } from "../src/sync.js";
+import { autoPullOnStart, autoPushAfterSave, createSyncEngine, type Entitlement, type SessionTokens, type SyncBackend, type SyncRow, type SyncUserRecord } from "../src/sync.js";
 import { validateLessonInput } from "../src/validation.js";
 
 function lessonInput(overrides: Record<string, unknown> = {}) {
@@ -131,6 +131,34 @@ test("login succeeds but reports unentitled without an active Pro/Team plan", as
     const engine = createSyncEngine(store, backend);
     const result = await engine.login(credentials);
     assert.equal(result.entitled, false);
+  })();
+});
+
+test("free accounts skip auto sync without touching the backend", async () => {
+  const backend = new FakeBackend();
+  const credentials = {
+    supabaseUrl: "https://example.supabase.co",
+    supabaseAnonKey: "anon-key",
+    email: "dev@example.com",
+    password: "hunter2",
+    passphrase: "shared passphrase",
+  };
+
+  await withMachine(async (store) => {
+    const engine = createSyncEngine(store, backend);
+    await engine.login(credentials);
+
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async () => {
+      throw new Error("auto sync should not reach the network for free accounts");
+    };
+
+    try {
+      await autoPullOnStart(store);
+      await autoPushAfterSave(store);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   })();
 });
 
