@@ -3,7 +3,7 @@
 > **Bug fixed. You learned nothing.** <br />
 > Your agent patches the code, you accept the diff, and the lesson evaporates. Fixmind catches it on the way out — a local MCP server that turns every AI-assisted fix into a lesson you actually remember.
 
-Fixmind is a local-first CLI and MCP server that records short learning lessons after meaningful coding fixes. It stores everything securely on your machine, integrating natively with your AI agents via the Model Context Protocol (MCP).
+Fixmind is a local-first CLI and MCP server that records short learning lessons after meaningful coding fixes, then reuses reviewed lessons as memory when a new task looks familiar. It stores everything securely on your machine, integrating natively with your AI agents via the Model Context Protocol (MCP).
 
 ## Features
 
@@ -11,6 +11,7 @@ Fixmind is a local-first CLI and MCP server that records short learning lessons 
 - **Speaks MCP:** Works seamlessly with Claude Code, Cursor, and Codex.
 - **Spaced Recall:** New lessons resurface on a schedule (1, 3, 7 days) with a real question to test your understanding before showing the answer.
 - **Real Diffs:** Captures the actual bad and good code from your git diff, not just a vague summary.
+- **Memory Retrieval:** Reviewed lessons can be pulled back into context later, so the agent can reuse the rule instead of relearning the same mistake.
 
 ---
 
@@ -53,6 +54,7 @@ Manage your learning library straight from the terminal.
 fixmind setup                 # Configure detected AI clients
 fixmind setup --scope project # Scope MCP to the current directory
 fixmind mcp                   # Start the MCP server manually (agents do this automatically)
+fixmind memory hydration       # Show reviewed lessons relevant to a topic
 
 # Browse Lessons
 fixmind list                  # View recent lessons

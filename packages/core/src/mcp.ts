@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { z } from "zod";
 import { readConfig } from "./config.js";
+import { formatMemoryLessons, getMemoryLessons } from "./memory.js";
 import { readGitContext } from "./git.js";
 import { databasePath } from "./paths.js";
 import { initializeDataDirectory, createLessonStore, type LessonStore } from "./storage.js";
@@ -23,6 +24,8 @@ export function buildMcpInstructions(captureMode: "strict" | "balanced"): string
 You are the fixmind learning recorder. Your job is to capture lessons that help developers improve over time.
 
 ${captureModeGuidance(captureMode)}
+
+Use the memory tool when a new task looks similar to an earlier mistake or when the user explicitly asks to "use fixmind memory". Retrieve a few relevant reviewed lessons and reuse the underlying rule, not the whole history.
 
 BEFORE calling save_lesson, run this checklist:
   1. Was real logic fixed? (a bug, an incorrect assumption, a missing guard, wrong API usage, bad state management, etc.)
@@ -125,6 +128,11 @@ const reviewQuestionSchema = z.object({
   expectedAnswer: z.string().trim().min(1).describe("The reasoning a developer who understood rootCause/takeaway would give - not just a description of the diff."),
 });
 
+const memoryInputSchema = z.object({
+  query: z.string().trim().min(1).optional().describe("A short memory query derived from the current task or mistake pattern."),
+  limit: z.number().int().min(1).max(10).default(5).describe("How many memory lessons to return."),
+});
+
 export const lessonInputSchema = z.object({
   tool: z.string().trim().min(1).optional().describe("The calling AI tool's name. Usually omit this — it is detected automatically from the MCP client."),
   projectPath: z.string().trim().min(1).optional(),
@@ -166,6 +174,43 @@ export function createLearningLessonServer(
   const server = new McpServer(
     { name: "fixmind", version: "0.2.0" },
     { instructions: buildMcpInstructions(captureMode) },
+  );
+
+  server.registerTool(
+    "memory",
+    {
+      title: "Recall Memory",
+      description: "Retrieve a small set of relevant reviewed lessons to reuse as guidance.",
+      inputSchema: memoryInputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (arguments_) => {
+      try {
+        const lessons = getMemoryLessons(store, {
+          query: arguments_.query,
+          limit: arguments_.limit,
+        });
+        return {
+          content: [{
+            type: "text" as const,
+            text: formatMemoryLessons(lessons),
+          }],
+        };
+      } catch (error) {
+        return {
+          isError: true,
+          content: [{
+            type: "text" as const,
+            text: error instanceof Error ? error.message : String(error),
+          }],
+        };
+      }
+    },
   );
 
   server.registerTool(

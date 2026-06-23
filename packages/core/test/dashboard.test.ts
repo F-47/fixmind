@@ -62,13 +62,13 @@ test("dashboard renders local data and saves reviews", async () => {
         lessonsPerWeek: Array<{ weekStart: string; count: number }>;
         understandingByWeek: Array<{ weekStart: string; understood: number; partial: number; copied_blindly: number; unknown: number }>;
       };
-      summary: { total: number; due: number; learning: number; understood: number };
+      summary: { total: number; due: number; learning: number; understood: number; memoryReady: number };
     };
     assert.equal(data.lessons[0].id, saved.id);
     assert.match(data.lessons[0].displayTakeaway, /server and browser output/);
     assert.equal(data.due.length, 1);
     assert.deepEqual(data.patterns[0], { name: "Hydration timing", count: 1, lessonIds: [saved.id] });
-    assert.deepEqual(data.summary, { total: 1, due: 1, learning: 1, understood: 0 });
+    assert.deepEqual(data.summary, { total: 1, due: 1, learning: 1, understood: 0, memoryReady: 0 });
     assert.equal(data.progress.lessonsPerWeek.length, 12);
     assert.equal(data.progress.understandingByWeek.length, 12);
 

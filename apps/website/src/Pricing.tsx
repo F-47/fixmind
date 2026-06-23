@@ -347,7 +347,7 @@ function WaitlistModal({
 
 export default function Pricing() {
   usePageMeta(
-    "Pricing - fixmind",
+    "Fixmind — Pricing",
     "Fixmind is free and local-first forever. Pro adds encrypted sync across devices.",
   );
 

@@ -10,18 +10,27 @@ import { usePageMeta } from "./router";
 
 import quickstartRaw from "@docs/quickstart.md?raw";
 import cliReferenceRaw from "@docs/cli-reference.md?raw";
+import mcpClientsRaw from "@docs/mcp-clients.md?raw";
 import lessonSchemaRaw from "@docs/lesson-schema.md?raw";
 import faqRaw from "@docs/faq.md?raw";
 import mcpIntegrationRaw from "@core-docs/mcp-integration.md?raw";
 import changelogRaw from "@root/CHANGELOG.md?raw";
 
-const DOCS = [
+type DocEntry = {
+  id: string;
+  title: string;
+  content: string;
+  kind?: "markdown" | "clients";
+};
+
+const DOCS: DocEntry[] = [
   { id: "quickstart", title: "Quickstart", content: quickstartRaw },
   {
     id: "mcp-integration",
     title: "MCP Integration",
     content: mcpIntegrationRaw,
   },
+  { id: "mcp-clients", title: "MCP Clients", content: mcpClientsRaw, kind: "clients" },
   {
     id: "commands",
     title: "Commands",
@@ -35,11 +44,22 @@ const DOCS = [
 const DOC_FILENAME_TO_ID: Record<string, string> = {
   "quickstart.md": "quickstart",
   "mcp-integration.md": "mcp-integration",
+  "mcp-clients.md": "mcp-clients",
   "cli-reference.md": "commands",
   "lesson-schema.md": "lesson-schema",
   "faq.md": "faq",
   "changelog.md": "changelog",
 };
+
+const MCP_CLIENTS = [
+  { id: "claude-code", label: "Claude Code" },
+  { id: "codex", label: "Codex" },
+  { id: "cursor", label: "Cursor" },
+  { id: "visual-studio-code", label: "Visual Studio Code" },
+  { id: "github-copilot-cli", label: "GitHub Copilot CLI" },
+  { id: "opencode", label: "OpenCode" },
+  { id: "other-mcp-clients", label: "Other MCP clients" },
+] as const;
 
 function resolveDocLink(href: string): { docId: string; hash: string } | null {
   const match = /([^/]+\.md)(#.*)?$/i.exec(href);
@@ -57,7 +77,7 @@ export default function Docs() {
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   usePageMeta(
-    "Fixmind - Documentation",
+    `Fixmind — ${activeDoc.title}`,
     "Detailed documentation for Fixmind CLI and MCP integration.",
   );
 
@@ -127,18 +147,23 @@ export default function Docs() {
             <nav className="flex flex-col gap-1">
               {filteredDocs.map((doc) => {
                 const isActive = activeDoc.id === doc.id;
+                const isClients = doc.id === "mcp-clients";
+
                 return (
-                  <Link
-                    key={doc.id}
-                    to={`/docs/${doc.id}`}
-                    className={`rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                      isActive
-                        ? "bg-surface-2 font-medium text-ink"
-                        : "text-muted hover:bg-surface/50 hover:text-ink"
-                    }`}
-                  >
-                    {doc.title}
-                  </Link>
+                  <div key={doc.id} className="rounded-lg">
+                    <Link
+                      to={`/docs/${doc.id}`}
+                      className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                        isActive
+                          ? "bg-surface-2 font-medium text-ink"
+                          : "text-muted hover:bg-surface/50 hover:text-ink"
+                      }`}
+                      >
+                        <span>{doc.title}</span>
+                    </Link>
+
+                    {isClients && isActive && <McpClientsAccordion />}
+                  </div>
                 );
               })}
             </nav>
@@ -281,6 +306,52 @@ export default function Docs() {
       </main>
 
       <Footer />
+    </div>
+  );
+}
+
+function McpClientsAccordion() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [selected, setSelected] = useState<(typeof MCP_CLIENTS)[number]["id"]>(
+    MCP_CLIENTS[0].id,
+  );
+
+  useEffect(() => {
+    const hash = location.hash.replace(/^#/, "");
+    if (MCP_CLIENTS.some((client) => client.id === hash)) {
+      setSelected(hash as (typeof MCP_CLIENTS)[number]["id"]);
+    }
+  }, [location.hash]);
+
+  return (
+    <div className="mt-1 space-y-1 pl-3">
+      {MCP_CLIENTS.map((client) => {
+        const isActive = selected === client.id;
+        return (
+          <a
+            key={client.id}
+            href={`/docs/mcp-clients#${client.id}`}
+            onClick={(event) => {
+              event.preventDefault();
+              setSelected(client.id);
+              navigate("/docs/mcp-clients", { replace: false });
+              setTimeout(() => {
+                document
+                  .getElementById(client.id)
+                  ?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 0);
+            }}
+            className={`block rounded-lg px-3 py-2 text-sm transition-colors ${
+              isActive
+                ? "bg-accent/5 font-medium text-ink"
+                : "text-muted hover:bg-surface/50 hover:text-ink"
+            }`}
+          >
+            {client.label}
+          </a>
+        );
+      })}
     </div>
   );
 }

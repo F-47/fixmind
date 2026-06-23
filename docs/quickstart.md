@@ -10,7 +10,7 @@ to 22.13 or newer.
 npx fixmind setup
 ```
 
-`npx fixmind setup` detects Claude Code, Cursor, and Codex, and registers the fixmind MCP server with whichever ones you pick — globally on this device, or scoped to a single project with `--scope project`. It defaults to strict capture mode; pick `balanced` during setup or later with `fixmind settings` if you want the agent to save borderline-but-useful fixes more often. Restart your AI client after setup finishes. Full flag reference: [Commands](cli-reference.md#fixmind-setup). No supported client installed? See [MCP Integration](../packages/core/docs/mcp-integration.md#other-mcp-clients) for a generic config.
+`npx fixmind setup` detects Claude Code, Cursor, and Codex, and registers the fixmind MCP server with whichever ones you pick — globally on this device, or scoped to a single project with `--scope project`. It defaults to strict capture mode; pick `balanced` during setup or later with `fixmind settings` if you want the agent to save borderline-but-useful fixes more often. Restart your AI client after setup finishes. Full flag reference: [Commands](cli-reference.md#fixmind-setup). Need client-specific setup steps for VS Code, Copilot CLI, OpenCode, Pi, or another MCP client? See [MCP Clients](mcp-clients.md).
 
 ## What happens next
 

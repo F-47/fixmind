@@ -16,7 +16,9 @@ export interface ReviewQuestion {
 export interface DashboardLesson {
   id: string;
   createdAt: string;
+  updatedAt: string;
   tool: string;
+  projectPath: string;
   title: string;
   originalPrompt: string;
   problem: string;
@@ -35,6 +37,9 @@ export interface DashboardLesson {
   codeExplanation?: string;
   reviewQuestions: ReviewQuestion[];
   understanding: Understanding;
+  nextReviewAt: string;
+  reviewCount: number;
+  status: "active" | "superseded";
   displayTakeaway: string;
   displayPattern: string;
 }
@@ -60,5 +65,5 @@ export interface DashboardData {
   topics: RankedItem[];
   patterns: RankedItem[];
   progress: ProgressData;
-  summary: { total: number };
+  summary: { total: number; due: number; learning: number; understood: number; memoryReady: number };
 }

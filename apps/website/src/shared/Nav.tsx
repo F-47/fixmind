@@ -1,16 +1,23 @@
 import { LogIn, User } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import { Link } from "../router";
 import { Logo } from "./Logo";
 
-const SECTION_IDS = ["loop", "features", "tokens", "how"];
+const SECTION_IDS = ["loop", "memory", "features", "tokens", "how"];
 
-const NAV_OFFSET = 80;
+function sectionFromHash(hash: string): string | null {
+  const value = hash.replace(/^#/, "");
+  return SECTION_IDS.includes(value) ? value : null;
+}
 
-function useActiveSection(enabled: boolean): string | null {
-  const [active, setActive] = useState<string | null>(null);
+function useActiveSection(enabled: boolean, hash: string): string | null {
+  const [active, setActive] = useState<string | null>(() => sectionFromHash(hash));
+
+  useEffect(() => {
+    setActive(sectionFromHash(hash));
+  }, [hash]);
 
   useEffect(() => {
     if (!enabled) {
@@ -22,22 +29,27 @@ function useActiveSection(enabled: boolean): string | null {
     ).filter((el): el is HTMLElement => el !== null);
     if (sections.length === 0) return;
 
-    function update() {
-      let current: string | null = null;
-      for (const section of sections) {
-        if (section.getBoundingClientRect().top <= NAV_OFFSET)
-          current = section.id;
-      }
-      setActive(current);
-    }
+    const visible = new Set<string>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) visible.add(entry.target.id);
+          else visible.delete(entry.target.id);
+        }
 
-    update();
-    window.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    return () => {
-      window.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-    };
+        if (visible.size === 0) return;
+        const ordered = SECTION_IDS.filter((id) => visible.has(id));
+        setActive(ordered.at(-1) ?? null);
+      },
+      {
+        root: null,
+        rootMargin: "-88px 0px -52% 0px",
+        threshold: 0,
+      },
+    );
+
+    for (const section of sections) observer.observe(section);
+    return () => observer.disconnect();
   }, [enabled]);
 
   return active;
@@ -67,15 +79,40 @@ function NavLink({
   isActive,
   children,
   onClick,
+  className,
 }: {
   to: string;
   isActive: boolean;
   children: ReactNode;
   onClick?: () => void;
+  className?: string;
 }) {
-  // Starts deactivated so the underline always animates in, even when this
-  // link mounts already-active (e.g. navigating straight to a Docs page).
   const [underlineOn, setUnderlineOn] = useState(false);
+  const hash = to.includes("#") ? to.slice(to.indexOf("#")) : "";
+
+  function handleClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (!hash || typeof window === "undefined" || window.location.pathname !== "/") {
+      onClick?.();
+      return;
+    }
+
+    const target = document.getElementById(hash.slice(1));
+    if (!target) {
+      onClick?.();
+      return;
+    }
+
+    event.preventDefault();
+    const offset = 72;
+    const top = target.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({
+      top: Math.max(0, top),
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
+    onClick?.();
+  }
 
   useEffect(() => {
     const raf = requestAnimationFrame(() => setUnderlineOn(isActive));
@@ -85,8 +122,8 @@ function NavLink({
   return (
     <Link
       to={to}
-      onClick={onClick}
-      className={`relative pb-0.5 transition-colors hover:text-ink ${isActive ? "text-ink" : ""}`}
+      onClick={handleClick}
+      className={`relative pb-0.5 transition-colors hover:text-ink ${isActive ? "text-ink" : ""} ${className ?? ""}`}
     >
       {children}
       <span
@@ -99,19 +136,23 @@ function NavLink({
   );
 }
 
-const NAV_LINKS = [
+const PRIMARY_LINKS = [
   { to: "/#loop", label: "The loop", section: "loop" },
+  { to: "/#memory", label: "Memory", section: "memory" },
   { to: "/#features", label: "Features", section: "features" },
   { to: "/#tokens", label: "Token cost", section: "tokens" },
   { to: "/#how", label: "How it works", section: "how" },
+];
+
+const SECONDARY_LINKS = [
   { to: "/docs", label: "Docs", section: null as string | null },
   { to: "/pricing", label: "Pricing", section: null as string | null },
   { to: "/contact", label: "Contact", section: null as string | null },
 ];
 
 export function Nav() {
-  const { pathname } = useLocation();
-  const active = useActiveSection(pathname === "/");
+  const { pathname, hash } = useLocation();
+  const active = useActiveSection(pathname === "/", hash);
   const [menuOpen, setMenuOpen] = useState(false);
   const loggedIn = useIsLoggedIn();
 
@@ -120,7 +161,9 @@ export function Nav() {
     setMenuOpen(false);
   }, [pathname]);
 
-  function isLinkActive(link: (typeof NAV_LINKS)[0]) {
+  function isLinkActive(
+    link: (typeof PRIMARY_LINKS)[number] | (typeof SECONDARY_LINKS)[number],
+  ) {
     if (link.section) return active === link.section;
     if (link.to === "/docs") return pathname.startsWith("/docs");
     return pathname === link.to;
@@ -128,8 +171,7 @@ export function Nav() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line/60 bg-bg/60 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        {/* Logo */}
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-6">
         <Link
           to="/"
           className="flex items-center gap-2 font-mono text-sm font-medium text-ink"
@@ -138,13 +180,30 @@ export function Nav() {
           fixmind
         </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden items-center gap-8 text-sm text-muted lg:flex">
-          {NAV_LINKS.map((link) => (
-            <NavLink key={link.to} to={link.to} isActive={isLinkActive(link)}>
-              {link.label}
-            </NavLink>
-          ))}
+        <nav className="hidden items-center gap-6 lg:flex">
+          <div className="flex items-center gap-6 text-sm text-muted">
+            {PRIMARY_LINKS.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                isActive={isLinkActive(link)}
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+          <div className="flex items-center gap-4 border-l border-line/70 pl-4 text-sm text-muted">
+            {SECONDARY_LINKS.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                isActive={isLinkActive(link)}
+                className="pb-0"
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -168,7 +227,6 @@ export function Nav() {
             {loggedIn ? <User size={16} /> : <LogIn size={16} />}
           </Link>
 
-          {/* Hamburger button — mobile only */}
           <button
             id="mobile-menu-toggle"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -203,7 +261,10 @@ export function Nav() {
           className="absolute left-0 top-full w-full border-t border-line/60 bg-bg/95 backdrop-blur-md lg:hidden shadow-lg"
         >
           <ul className="mx-auto flex max-w-6xl flex-col px-6 py-2">
-            {NAV_LINKS.map((link) => (
+            <li className="py-2 font-mono text-[10px] uppercase tracking-[.2em] text-muted">
+              Navigate
+            </li>
+            {[...PRIMARY_LINKS, ...SECONDARY_LINKS].map((link) => (
               <li key={link.to}>
                 <Link
                   to={link.to}
