@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { stdin, stdout } from "node:process";
 import { isCancel, log, outro, password } from "@clack/prompts";
+import { readConfig, writeConfig } from "./config.js";
 import { createLessonStore, initializeDataDirectory } from "./storage.js";
 import { createSyncEngine, PRICING_URL } from "./sync.js";
 import type { SetupScope } from "./setup.js";
@@ -29,6 +30,7 @@ const DEFAULT_SUPABASE_URL = "https://jpczzgekindvuivnwjuw.supabase.co";
 const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwY3p6Z2VraW5kdnVpdm53anV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwNzEyMjEsImV4cCI6MjA5NzY0NzIyMX0.qG-9H5BZi3sKHVQrzL3iI9ALmJgoTizLCU4Bxzpw0Bo";
 export async function setup(options: Record<string, string | boolean>): Promise<void> {
   const paths = initializeDataDirectory();
+  const config = readConfig();
   const detected = detectClients();
   const supplied = parseList(optionString(options.client));
   let clients = supplied.length ? validateClients(supplied) : detected;
@@ -36,10 +38,19 @@ export async function setup(options: Record<string, string | boolean>): Promise<
   const suppliedScope = optionString(options.scope);
   let scope: SetupScope = suppliedScope ? validateScope(suppliedScope) : "user";
   const projectDirectory = process.cwd();
+  const captureModeInput = optionString(options["capture-mode"]);
 
   const interactive = stdin.isTTY && stdout.isTTY;
-  if (!supplied.length && interactive) {
+  if (interactive) {
     intro("Configure Learning Lessons", common);
+  }
+  const captureMode = captureModeInput
+    ? validateCaptureMode(captureModeInput)
+    : await chooseCaptureMode(config.captureMode, interactive);
+  if (!options["dry-run"] && captureMode !== config.captureMode) {
+    writeConfig({ ...config, captureMode });
+  }
+  if (!supplied.length && interactive) {
     note("Pick the AI clients that should receive the MCP server configuration.", "Setup", common);
     const selected = await multiselect({
       message: "Clients to configure",
@@ -77,6 +88,7 @@ export async function setup(options: Record<string, string | boolean>): Promise<
   const permissions = configurePermissions(setupOptions);
   console.log(`Local data initialized at ${paths.directory}.`);
   console.log(scope === "project" ? `Scope: this project only (${projectDirectory}).` : "Scope: this device (every project).");
+  console.log(`Capture mode: ${captureMode}.`);
   for (const result of results) console.log(`${result.client}: ${result.status} - ${result.detail}`);
   for (const result of instructions) console.log(`${result.client} instructions: ${result.status} - ${result.filePath}`);
   for (const result of permissions) console.log(`${result.client} permissions: ${result.status} - ${result.filePath}`);
@@ -122,6 +134,47 @@ export async function setup(options: Record<string, string | boolean>): Promise<
       }
     }
   }
+}
+
+export async function settingsCommand(options: Record<string, string | boolean>): Promise<void> {
+  initializeDataDirectory();
+  const current = readConfig();
+  const interactive = stdin.isTTY && stdout.isTTY;
+  const captureModeInput = optionString(options["capture-mode"]);
+  const captureMode = captureModeInput ? validateCaptureMode(captureModeInput) : await chooseCaptureMode(current.captureMode, interactive);
+  const next = { ...current, captureMode };
+  writeConfig(next);
+  console.log(`Capture mode set to ${captureMode}.`);
+  console.log(
+    captureMode === "balanced"
+      ? "Balanced mode captures more borderline fixes; the quality gate still rejects shallow lessons."
+      : "Strict mode keeps capture conservative and only logs clear learning-worthy fixes.",
+  );
+}
+
+async function chooseCaptureMode(
+  current: "strict" | "balanced",
+  interactive = stdin.isTTY && stdout.isTTY,
+): Promise<"strict" | "balanced"> {
+  if (!interactive) return current;
+
+  const selected = await select({
+    message: "Capture mode",
+    options: [
+      { value: "strict", label: "Strict", hint: "Default. Capture only clear, learning-worthy fixes." },
+      { value: "balanced", label: "Balanced", hint: "Capture more borderline fixes, while still rejecting junk." },
+    ],
+    initialValue: current,
+    ...common,
+  });
+  return isCancel(selected) ? current : (selected as "strict" | "balanced");
+}
+
+function validateCaptureMode(value: string): "strict" | "balanced" {
+  if (value !== "strict" && value !== "balanced") {
+    throw new Error("Unsupported capture mode: use strict or balanced.");
+  }
+  return value;
 }
 
 async function launchLoginCommand(): Promise<void> {

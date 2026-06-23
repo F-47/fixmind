@@ -34,6 +34,8 @@ Before a lesson from an agent or `save-ai-summary` is stored, `assessLessonQuali
 - **Rejected outright** (no lesson is saved): a UI/styling-only change with no described behavior break; `mistake`/`rootCause`/`fixSummary` reduced to a generic placeholder like "fixed the bug"; every review question is recall-only ("what did you change") with no transfer question; a pure refactor (move/rename/extract) with no behavior signal and no code comparison.
 - **Saved with a warning**: `rootCause` or `fixSummary` substantially repeats another field instead of adding the missing *why*.
 
+Capture mode (`strict` vs `balanced`) only changes how aggressively the agent is instructed to try saving lessons. It does not relax this quality gate.
+
 This is the same bar whether the lesson came from an AI agent or a script — `fixmind save-manual`'s interactive flow doesn't run it, since a human typing their own lesson is trusted not to need the gate.
 
 ## Spaced repetition
