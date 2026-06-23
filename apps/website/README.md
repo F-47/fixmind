@@ -12,16 +12,8 @@ The marketing site for fixmind - a static-output, client-side-routed React app. 
 
 | Variable | Purpose |
 |---|---|
+| `VITE_PRO_CHECKOUT_URL` | Polar checkout link used on the Pro card in `/pricing`. Team and Enterprise are waitlist-only for now. |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Same Supabase project the CLI uses (`packages/core/src/sync.ts`). Powers sign-in on `/account`. If unset, `/account` shows a "not configured" message instead of erroring. |
-
-Polar checkout is created server-side by the Supabase Edge Function `create-polar-checkout`, not from a public checkout link. Configure these Supabase secrets before deploying that function:
-
-| Secret | Purpose |
-|---|---|
-| `POLAR_ACCESS_TOKEN` | Polar organization access token with `checkouts:write`. |
-| `POLAR_PRO_PRODUCT_ID` | Polar product ID for the Pro subscription. |
-| `POLAR_SERVER` | Optional. Use `sandbox` for sandbox checkout sessions; omit for production. |
-| `SITE_URL` | Optional. Base URL for checkout success/return links. Defaults to `https://fixmind.dev`. |
 
 ## Develop
 
