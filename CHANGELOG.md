@@ -4,6 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.22]
+
+### Fixed
+- The global `fixmind` launcher now runs correctly through npm shims, so `fixmind -v` and `fixmind setup` no longer silently exit after a global install.
+
 ## [1.0.21]
 
 ### Fixed
