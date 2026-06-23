@@ -1,3 +1,4 @@
+import type { Session } from "@supabase/supabase-js";
 import { PolarEmbedCheckout } from "@polar-sh/checkout/embed";
 import { Check, Lock, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -97,12 +98,16 @@ const PLANS: Plan[] = [
 function PlanCard({
   plan,
   active,
+  session,
   onJoinWaitlist,
 }: {
   plan: Plan;
   active: boolean;
+  session: Session | null | undefined;
   onJoinWaitlist: (plan: string) => void;
 }) {
+  const checkoutReady = Boolean(plan.checkoutUrl);
+
   return (
     <div
       className={`flex flex-col rounded-xl border p-6 ${
@@ -168,7 +173,18 @@ function PlanCard({
           >
             Get started - it's free
           </Link>
-        ) : plan.cta === "checkout" ? (
+        ) : plan.cta === "checkout" && session === undefined ? (
+          <div className="rounded-md border border-line px-3 py-2 text-center text-sm text-muted">
+            Checking account...
+          </div>
+        ) : plan.cta === "checkout" && !session ? (
+          <Link
+            to="/account?next=/pricing"
+            className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+          >
+            Sign in to subscribe
+          </Link>
+        ) : plan.cta === "checkout" && checkoutReady ? (
           <a
             href={plan.checkoutUrl}
             data-polar-checkout
@@ -177,6 +193,10 @@ function PlanCard({
           >
             Subscribe
           </a>
+        ) : plan.cta === "checkout" ? (
+          <div className="rounded-md border border-line px-3 py-2 text-center text-sm text-muted">
+            Checkout unavailable
+          </div>
         ) : (
           <button
             type="button"
@@ -333,13 +353,36 @@ export default function Pricing() {
 
   const [activePlan, setActivePlan] = useState<string | null | undefined>(undefined);
   const [waitlistPlan, setWaitlistPlan] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
     PolarEmbedCheckout.init();
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     if (!supabase) {
+      setSession(null);
+      return;
+    }
+
+    let mounted = true;
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (mounted) setSession(data.session);
+    })();
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!supabase || !session) {
       setActivePlan(null);
       return;
     }
@@ -361,7 +404,7 @@ export default function Pricing() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [session]);
 
   const selectedPlan = activePlan === "pro" ? "Pro" : null;
 
@@ -401,6 +444,7 @@ export default function Pricing() {
                 key={plan.name}
                 plan={plan}
                 active={selectedPlan === plan.name}
+                session={session}
                 onJoinWaitlist={(nextPlan) => setWaitlistPlan(nextPlan)}
               />
             ))}

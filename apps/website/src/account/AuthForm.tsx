@@ -9,8 +9,8 @@ function emailFromQuery(): string {
   return new URLSearchParams(window.location.search).get("email") ?? "";
 }
 
-function accountCallbackUrl(): string {
-  return `${window.location.origin}/account/callback`;
+function accountUrl(): string {
+  return `${window.location.origin}/account`;
 }
 
 export function AuthForm() {
@@ -31,7 +31,7 @@ export function AuthForm() {
             email,
             password,
             options: {
-              emailRedirectTo: accountCallbackUrl(),
+              emailRedirectTo: accountUrl(),
             },
           });
     setPending(false);
@@ -54,7 +54,7 @@ export function AuthForm() {
     await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
-        redirectTo: accountCallbackUrl(),
+        redirectTo: accountUrl(),
       },
     });
   }
