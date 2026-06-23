@@ -9,6 +9,7 @@ All notable changes to the `fixmind` package are documented here. Format follows
 ### Fixed
 - Removed the experimental browser-to-account session handoff and kept CLI sync login separate from website account sign-in.
 - Clarified the account and CLI copy so the website manages plan status while `npx fixmind login` handles encrypted sync on a device.
+- Raised the minimum Node requirement to 22.13 and added a launcher guard so older Node versions show a clear upgrade message instead of crashing on `node:sqlite`.
 
 ## [1.0.20]
 
