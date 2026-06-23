@@ -3,12 +3,12 @@ import { PolarEmbedCheckout } from "@polar-sh/checkout/embed";
 import { Check, Lock, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { toast } from "sonner";
 import { supabase } from "./lib/supabase";
 import { Link, usePageMeta } from "./router";
 import { Footer } from "./shared/Footer";
 import { Nav } from "./shared/Nav";
 
+const PRO_CHECKOUT_URL = import.meta.env.VITE_PRO_CHECKOUT_URL;
 const WEB3FORMS_ACCESS_KEY = "9ea2eed4-81f4-4dc3-b5d8-feac9d67b566";
 const WAITLIST_FRAME_NAME = "waitlist-form-frame";
 
@@ -19,6 +19,7 @@ interface Plan {
   note?: string;
   status: "available" | "roadmap";
   cta: "install" | "checkout" | "contact";
+  checkoutUrl?: string;
   tagline: string;
   features: string[];
   highlight?: boolean;
@@ -27,13 +28,6 @@ interface Plan {
 interface Entitlement {
   plan: string;
   status: string;
-}
-
-interface CheckoutFunctionError {
-  code?: string;
-  error?: string;
-  detail?: string | null;
-  message?: string;
 }
 
 const PLANS: Plan[] = [
@@ -56,6 +50,7 @@ const PLANS: Plan[] = [
     unit: "/mo per developer",
     status: "available",
     cta: "checkout",
+    checkoutUrl: PRO_CHECKOUT_URL,
     tagline:
       "For developers who switch machines and want encrypted sync across every device.",
     features: [
@@ -104,17 +99,15 @@ function PlanCard({
   plan,
   active,
   session,
-  checkoutPending,
-  onCheckout,
   onJoinWaitlist,
 }: {
   plan: Plan;
   active: boolean;
   session: Session | null | undefined;
-  checkoutPending: boolean;
-  onCheckout: () => void;
   onJoinWaitlist: (plan: string) => void;
 }) {
+  const checkoutReady = Boolean(plan.checkoutUrl);
+
   return (
     <div
       className={`flex flex-col rounded-xl border p-6 ${
@@ -191,15 +184,19 @@ function PlanCard({
           >
             Sign in to subscribe
           </Link>
-        ) : plan.cta === "checkout" ? (
-          <button
-            type="button"
-            onClick={onCheckout}
-            disabled={checkoutPending}
-            className="block w-full rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent disabled:cursor-not-allowed disabled:opacity-60"
+        ) : plan.cta === "checkout" && checkoutReady ? (
+          <a
+            href={plan.checkoutUrl}
+            data-polar-checkout
+            data-polar-checkout-theme="dark"
+            className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
           >
-            {checkoutPending ? "Opening checkout..." : "Subscribe"}
-          </button>
+            Subscribe
+          </a>
+        ) : plan.cta === "checkout" ? (
+          <div className="rounded-md border border-line px-3 py-2 text-center text-sm text-muted">
+            Checkout unavailable
+          </div>
         ) : (
           <button
             type="button"
@@ -348,41 +345,6 @@ function WaitlistModal({
   );
 }
 
-async function checkoutErrorMessage(response: Response | undefined, error: unknown): Promise<string> {
-  if (!response) {
-    console.error("Checkout function invocation failed", error);
-    return "Checkout backend could not be reached.";
-  }
-
-  const body = await response.clone().json().catch(() => null) as CheckoutFunctionError | null;
-  console.error("Checkout function returned an error", {
-    status: response.status,
-    body,
-    error,
-  });
-
-  if (response.status === 404 || body?.code === "NOT_FOUND") {
-    return "Checkout backend is not deployed yet.";
-  }
-  if (body?.code === "config_missing") {
-    return "Checkout backend is missing Polar configuration.";
-  }
-  if (body?.code === "not_authenticated") {
-    return "Please sign in again before subscribing.";
-  }
-  if (body?.detail) {
-    return `Polar rejected checkout: ${body.detail}`;
-  }
-  if (body?.error) {
-    return body.error;
-  }
-  if (body?.message) {
-    return body.message;
-  }
-
-  return "Could not open checkout. Please try again.";
-}
-
 export default function Pricing() {
   usePageMeta(
     "Pricing - fixmind",
@@ -392,7 +354,10 @@ export default function Pricing() {
   const [activePlan, setActivePlan] = useState<string | null | undefined>(undefined);
   const [waitlistPlan, setWaitlistPlan] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null | undefined>(undefined);
-  const [checkoutPending, setCheckoutPending] = useState(false);
+
+  useEffect(() => {
+    PolarEmbedCheckout.init();
+  }, [session]);
 
   useEffect(() => {
     if (!supabase) {
@@ -443,30 +408,6 @@ export default function Pricing() {
 
   const selectedPlan = activePlan === "pro" ? "Pro" : null;
 
-  async function handleCheckout() {
-    if (!supabase || !session) return;
-
-    setCheckoutPending(true);
-    const { data, error, response } = await supabase.functions.invoke<{ url: string }>(
-      "create-polar-checkout",
-      { body: {} },
-    );
-
-    if (error || !data?.url) {
-      setCheckoutPending(false);
-      toast.error(await checkoutErrorMessage(response, error));
-      return;
-    }
-
-    try {
-      await PolarEmbedCheckout.create(data.url, { theme: "dark" });
-    } catch {
-      toast.error("Could not open checkout. Please try again.");
-    } finally {
-      setCheckoutPending(false);
-    }
-  }
-
   return (
     <div>
       <Nav />
@@ -504,8 +445,6 @@ export default function Pricing() {
                 plan={plan}
                 active={selectedPlan === plan.name}
                 session={session}
-                checkoutPending={checkoutPending}
-                onCheckout={handleCheckout}
                 onJoinWaitlist={(nextPlan) => setWaitlistPlan(nextPlan)}
               />
             ))}

@@ -1,5 +1,2 @@
 [functions.polar-webhook]
 verify_jwt = false
-
-[functions.create-polar-checkout]
-verify_jwt = false
