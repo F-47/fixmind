@@ -4,13 +4,25 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { z } from "zod";
+import { readConfig } from "./config.js";
 import { readGitContext } from "./git.js";
 import { databasePath } from "./paths.js";
 import { initializeDataDirectory, createLessonStore, type LessonStore } from "./storage.js";
 import { assessLessonQuality, validateLessonInput } from "./validation.js";
 
-export const MCP_INSTRUCTIONS = `
+function captureModeGuidance(captureMode: "strict" | "balanced"): string {
+  return captureMode === "balanced"
+    ? `Capture mode: balanced.
+Balanced mode is more willing to save borderline-but-useful fixes. If a change teaches a reusable rule and the lesson is not obviously junk, lean toward saving it.`
+    : `Capture mode: strict.
+Strict mode only saves clear, learning-worthy fixes. If a lesson feels borderline or mostly descriptive, skip it.`;
+}
+
+export function buildMcpInstructions(captureMode: "strict" | "balanced"): string {
+  return `
 You are the fixmind learning recorder. Your job is to capture lessons that help developers improve over time.
+
+${captureModeGuidance(captureMode)}
 
 BEFORE calling save_lesson, run this checklist:
   1. Was real logic fixed? (a bug, an incorrect assumption, a missing guard, wrong API usage, bad state management, etc.)
@@ -106,6 +118,7 @@ fixes that turned out to be incorrect or incomplete — not for pure rewording.
 
 Write as a teacher, not as an agent log. Keep lessons short and human-readable.
 `.trim();
+}
 
 const reviewQuestionSchema = z.object({
   question: z.string().trim().min(1).describe("A TRANSFER question - apply the lesson to a different situation, spot the same mistake elsewhere, or predict an outcome. Do not ask 'what did you change' or 'summarize the fix'."),
@@ -149,9 +162,10 @@ export const lessonInputSchema = z.object({
 export function createLearningLessonServer(
   store: LessonStore = createLessonStore(),
 ): { server: McpServer; close: () => void } {
+  const captureMode = readConfig().captureMode;
   const server = new McpServer(
     { name: "fixmind", version: "0.2.0" },
-    { instructions: MCP_INSTRUCTIONS },
+    { instructions: buildMcpInstructions(captureMode) },
   );
 
   server.registerTool(

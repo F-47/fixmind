@@ -8,13 +8,13 @@ If it's calling the tool but nothing's showing up in `fixmind list`, the lesson 
 
 ## Where is my data?
 
-`~/.fixmind/learning.db` (a SQLite file) and `~/.fixmind/config.json` (informational only — see below). Override the directory with `FIXMIND_DATA_DIR` before running any `fixmind` command, including `fixmind setup`.
+`~/.fixmind/learning.db` (a SQLite file) and `~/.fixmind/config.json` (local config for review timing and capture mode). Override the directory with `FIXMIND_DATA_DIR` before running any `fixmind` command, including `fixmind setup`.
 
 Nothing is ever uploaded anywhere. `fixmind export` (or the dashboard's Backup & export panel) is the only thing that writes a copy of your data outside that directory.
 
 ## What's `config.json` for?
 
-It's written once, by the first command you run, and never read back by anything. It records the version and the spaced-repetition intervals fixmind happened to ship with at the time, as a readable reference — editing it won't change review timing (that logic is in code; see [Lesson Schema](lesson-schema.md#spaced-repetition)).
+It's written by `fixmind setup` and `fixmind settings`, and fixmind reads it back on startup. It records the version, the spaced-repetition intervals, and the current capture mode. Editing it manually is possible, but `fixmind settings` is the supported way to switch between `strict` and `balanced`.
 
 ## How do I back up or move my lessons to another machine?
 
