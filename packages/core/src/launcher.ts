@@ -57,6 +57,17 @@ export function runLauncher(): void {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+export function shouldRunLauncher(entry: string | undefined = process.argv[1]): boolean {
+  if (!entry) return false;
+  const normalized = path.basename(entry).toLowerCase();
+  return (
+    normalized === "launcher.js" ||
+    normalized === "fixmind" ||
+    normalized === "fixmind.cmd" ||
+    normalized === "fixmind.ps1"
+  );
+}
+
+if (shouldRunLauncher()) {
   runLauncher();
 }
