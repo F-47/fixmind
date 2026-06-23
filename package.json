@@ -9,7 +9,7 @@
     "apps/*"
   ],
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "build": "npm run build -w @fixmind/dashboard && npm run build -w fixmind && npm run build -w @fixmind/website",

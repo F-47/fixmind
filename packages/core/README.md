@@ -16,7 +16,11 @@ Fixmind is a local-first CLI and MCP server that records short learning lessons 
 
 ## Quickstart
 
-**Requirements:** Node.js 22.5+
+**Requirements:** Node.js 22.13+
+
+Fixmind uses Node's built-in `node:sqlite` module. If setup fails with
+`ERR_UNKNOWN_BUILTIN_MODULE: No such built-in module: node:sqlite`, upgrade Node
+to 22.13 or newer.
 
 ```sh
 npx fixmind setup
