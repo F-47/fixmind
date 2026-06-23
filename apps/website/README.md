@@ -12,7 +12,7 @@ The marketing site for fixmind — a static-output, client-side-routed React app
 
 | Variable | Purpose |
 |---|---|
-| `VITE_PRO_CHECKOUT_URL`, `VITE_TEAM_CHECKOUT_URL` | Polar checkout links used on `/pricing`. |
+| `VITE_PRO_CHECKOUT_URL` | Polar checkout link used on the Pro card in `/pricing`. Team and Enterprise are waitlist-only for now. |
 | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Same Supabase project the CLI uses (`packages/core/src/sync.ts`). Powers sign-in on `/account`. If unset, `/account` shows a "not configured" message instead of erroring. |
 
 ## Develop
