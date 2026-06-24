@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { ArrowRight, Database, Mail, ShieldCheck } from "lucide-react";
+import { ArrowRight, Mail, ShieldCheck, SquareTerminal } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "../lib/supabase";
 import { InfoPill } from "./InfoPill";
@@ -82,21 +82,26 @@ export function AuthForm() {
                 <ShieldCheck size={16} />
               </div>
               <div>
-                <p className="text-sm font-medium text-ink">Local-first by default</p>
+                <p className="text-sm font-medium text-ink">
+                  Local-first by default
+                </p>
                 <p className="text-sm text-muted">
                   Nothing changes unless you opt into sync.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-2 px-4 py-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-line bg-bg/40 text-accent">
-                <Database size={16} />
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-bg/40 text-accent">
+                <SquareTerminal size={16} className="shrink-0" />
               </div>
               <div>
-                <p className="text-sm font-medium text-ink">Terminal sync on this device</p>
+                <p className="text-sm font-medium text-ink">
+                  Terminal sync on this device
+                </p>
                 <p className="text-sm text-muted">
-                  Run <code className="text-ink">npx fixmind login</code> when you want encrypted sync on this machine.
-                  The passphrase encrypts your lessons before they sync.
+                  Run <code className="text-ink">npx fixmind login</code> when
+                  you want encrypted sync on this machine. The passphrase
+                  encrypts your lessons before they sync.
                 </p>
               </div>
             </div>
@@ -114,7 +119,9 @@ export function AuthForm() {
               {mode === "signIn" ? "Welcome back" : "Create access"}
             </h2>
           </div>
-          <InfoPill>{mode === "signIn" ? "Returning user" : "New account"}</InfoPill>
+          <InfoPill>
+            {mode === "signIn" ? "Returning user" : "New account"}
+          </InfoPill>
         </div>
 
         <form className="mt-6 space-y-3" onSubmit={handleSubmit}>

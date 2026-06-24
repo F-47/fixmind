@@ -13,7 +13,9 @@ function sectionFromHash(hash: string): string | null {
 }
 
 function useActiveSection(enabled: boolean, hash: string): string | null {
-  const [active, setActive] = useState<string | null>(() => sectionFromHash(hash));
+  const [active, setActive] = useState<string | null>(() =>
+    sectionFromHash(hash),
+  );
 
   useEffect(() => {
     setActive(sectionFromHash(hash));
@@ -91,7 +93,11 @@ function NavLink({
   const hash = to.includes("#") ? to.slice(to.indexOf("#")) : "";
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>) {
-    if (!hash || typeof window === "undefined" || window.location.pathname !== "/") {
+    if (
+      !hash ||
+      typeof window === "undefined" ||
+      window.location.pathname !== "/"
+    ) {
       onClick?.();
       return;
     }
@@ -170,24 +176,28 @@ export function Nav() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-line/60 bg-bg/60 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-6">
-        <Link
-          to="/"
-          className="flex items-center gap-2 font-mono text-sm font-medium text-ink"
-        >
-          <Logo />
+    <>
+      <a
+        href="#content"
+        className="fixed left-4 top-4 z-[60] rounded-md bg-accent px-3 py-2 text-sm font-medium text-bg opacity-0 shadow-lg transition focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+      >
+        Skip to content
+      </a>
+
+      <header className="sticky top-0 z-50 border-b border-line/60 bg-bg/60 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-6">
+          <Link
+            to="/"
+            className="flex items-center gap-2 font-mono text-sm font-medium text-ink"
+          >
+            <Logo />
           fixmind
         </Link>
 
         <nav className="hidden items-center gap-6 lg:flex">
           <div className="flex items-center gap-6 text-sm text-muted">
             {PRIMARY_LINKS.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                isActive={isLinkActive(link)}
-              >
+              <NavLink key={link.to} to={link.to} isActive={isLinkActive(link)}>
                 {link.label}
               </NavLink>
             ))}
@@ -208,7 +218,7 @@ export function Nav() {
 
         <div className="flex items-center gap-3">
           <Link
-            to="/#install"
+            to="/docs/quickstart"
             className="rounded-md border border-line px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
           >
             Install
@@ -252,37 +262,38 @@ export function Nav() {
             />
           </button>
         </div>
-      </div>
+        </div>
 
-      {/* Mobile dropdown */}
-      {menuOpen && (
-        <nav
-          id="mobile-menu"
-          className="absolute left-0 top-full w-full border-t border-line/60 bg-bg/95 backdrop-blur-md lg:hidden shadow-lg"
-        >
-          <ul className="mx-auto flex max-w-6xl flex-col px-6 py-2">
-            <li className="py-2 font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-              Navigate
-            </li>
-            {[...PRIMARY_LINKS, ...SECONDARY_LINKS].map((link) => (
-              <li key={link.to}>
-                <Link
-                  to={link.to}
-                  onClick={() => setMenuOpen(false)}
-                  className={`flex items-center gap-2 border-b border-line/40 py-3.5 text-sm transition-colors last:border-0 hover:text-ink ${
-                    isLinkActive(link) ? "text-ink" : "text-muted"
-                  }`}
-                >
-                  {isLinkActive(link) && (
-                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
-                  )}
-                  {link.label}
-                </Link>
+        {/* Mobile dropdown */}
+        {menuOpen && (
+          <nav
+            id="mobile-menu"
+            className="absolute left-0 top-full w-full border-t border-line/60 bg-bg/95 shadow-lg backdrop-blur-md lg:hidden"
+          >
+            <ul className="mx-auto flex max-w-6xl flex-col px-6 py-2">
+              <li className="py-2 font-mono text-[10px] uppercase tracking-[.2em] text-muted">
+                Navigate
               </li>
-            ))}
-          </ul>
-        </nav>
-      )}
-    </header>
+              {[...PRIMARY_LINKS, ...SECONDARY_LINKS].map((link) => (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    onClick={() => setMenuOpen(false)}
+                    className={`flex items-center gap-2 border-b border-line/40 py-3.5 text-sm transition-colors last:border-0 hover:text-ink ${
+                      isLinkActive(link) ? "text-ink" : "text-muted"
+                    }`}
+                  >
+                    {isLinkActive(link) && (
+                      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                    )}
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+      </header>
+    </>
   );
 }

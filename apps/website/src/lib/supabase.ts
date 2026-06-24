@@ -42,9 +42,6 @@ if (
   );
 }
 
-// Same Supabase project the CLI authenticates against in
-// packages/core/src/sync.ts — a web account here is the same account
-// `fixmind login` signs in to.
 export const supabase = supabaseConfigured
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
   : null;

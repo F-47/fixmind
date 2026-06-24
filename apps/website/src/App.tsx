@@ -8,6 +8,7 @@ import {
   Search,
 } from "lucide-react";
 import { CopyButton } from "./components/CopyButton";
+import { CommandSnippet } from "./components/CommandSnippet";
 import { usePageMeta } from "./router";
 import { Footer } from "./shared/Footer";
 import { Nav } from "./shared/Nav";
@@ -47,24 +48,18 @@ function Hero() {
             MCP server · runs on your machine
           </p>
           <h1 className="mt-5 font-display text-5xl font-semibold leading-[1.05] tracking-tight text-ink sm:text-6xl">
-            Bug fixed.
+            Don&apos;t just let AI fix it.
             <br />
-            <span className="text-accent text-glow">You learned nothing.</span>
+            <span className="text-accent text-glow">Learn from it.</span>
           </h1>
-          <p className="mt-6 max-w-md text-lg leading-relaxed text-muted">
+          <p className="mt-6 text-lg leading-relaxed text-muted text-justify">
             Your agent patches the code, you accept the diff, and the lesson
             evaporates. Fixmind catches it on the way out — a local MCP server
-            that turns every AI&#8209;assisted fix into something you actually
+            that turns every AI-assisted fix into something you actually
             remember.
           </p>
           <div className="mt-9 max-w-xl space-y-2">
-            <div className="flex items-center justify-between rounded-lg border border-line bg-surface px-4 py-2.5 font-mono text-sm text-ink">
-              <div className="flex items-center gap-2">
-                <span className="text-muted">$</span>
-                <span>npx fixmind setup</span>
-              </div>
-              <CopyButton text="npx fixmind setup" />
-            </div>
+            <CommandSnippet command="npx fixmind setup" />
             <p className="text-sm leading-relaxed text-muted">
               Run the CLI through <code className="text-ink">npx</code> when you
               want a one-off setup or login. If you want a persistent binary on

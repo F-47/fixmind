@@ -7,13 +7,23 @@ A local-first CLI and MCP server that turns every AI-assisted bug fix into a les
 
 ![fixmind demo: fixmind setup registering the MCP server, fixmind list showing a saved lesson, and fixmind review walking through a recall question](docs/demo.gif)
 
-## Quick start
+## Installation
+
+Recommended:
 
 ```bash
 npx fixmind setup
 ```
 
-`npx fixmind setup` detects Claude Code, Cursor, and Codex, and wires the MCP server into whichever ones you pick — globally on this device, or scoped to a single project with `--scope project`. It defaults to strict capture mode; use `balanced` during setup or later with `fixmind settings` if you want the agent to save more borderline-but-useful lessons. Full usage lives in [packages/core/README.md](packages/core/README.md).
+`npx fixmind setup` runs Fixmind without requiring a global install. It detects Claude Code, Cursor, and Codex, then wires the MCP server into whichever ones you pick - globally on this device, or scoped to a single project with `--scope project`. It also initializes Fixmind's local data and config files. Full usage lives in [packages/core/README.md](packages/core/README.md).
+
+Optional, for frequent terminal use:
+
+```bash
+npm install -g fixmind
+```
+
+If you install the CLI globally, you can run `fixmind setup`, `fixmind review`, and the other commands directly from your terminal.
 
 ## Documentation
 
@@ -23,7 +33,7 @@ npx fixmind setup
 | [docs/cli-reference.md](docs/cli-reference.md) | Every command and flag — setup, capture, browse, review, edit, export. |
 | [docs/lesson-schema.md](docs/lesson-schema.md) | What a lesson contains, the quality gate that rejects shallow ones, the spaced-repetition schedule, and where it's all stored. |
 | [docs/faq.md](docs/faq.md) | Troubleshooting: agents not saving lessons, backups, resets, scope quirks per client. |
-| [packages/core/docs/mcp-integration.md](packages/core/docs/mcp-integration.md) | The MCP server itself — the tool schema, memory retrieval, token overhead, configuring clients fixmind doesn't autodetect. |
+| [docs/mcp-integration.md](docs/mcp-integration.md) | The MCP server itself - the tool schema, memory retrieval, token overhead, and manual client setup. |
 | [CHANGELOG.md](CHANGELOG.md) | Notable changes to the published `fixmind` package. |
 
 ## Repository layout
@@ -32,10 +42,10 @@ This is an npm workspaces monorepo.
 
 | Path | What it is |
 |---|---|
-| [`packages/core`](packages/core) | The published `fixmind` package — the CLI and MCP server. |
+| [`packages/core`](packages/core) | The published `fixmind` package - the CLI and MCP server. |
 | [`packages/dashboard`](packages/dashboard) | `@fixmind/dashboard`, the React dashboard SPA bundled into `packages/core`'s build. |
 | [`apps/website`](apps/website) | `@fixmind/website`, the marketing site (Vite + React + Tailwind). |
-| [`apps/desktop`](apps/desktop) | Reserved for a future Tauri desktop shell wrapping the dashboard — not yet built. |
+| [`apps/desktop`](apps/desktop) | Reserved for a future Tauri desktop shell wrapping the dashboard - not yet built. |
 
 ## Working in this repo
 
@@ -49,4 +59,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full setup, the per-workspace com
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE).

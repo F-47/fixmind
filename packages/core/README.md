@@ -1,15 +1,15 @@
 # Fixmind
 
 > **Bug fixed. You learned nothing.** <br />
-> Your agent patches the code, you accept the diff, and the lesson evaporates. Fixmind catches it on the way out — a local MCP server that turns every AI-assisted fix into a lesson you actually remember.
+> Your agent patches the code, you accept the diff, and the lesson disappears. Fixmind catches it on the way out - a local MCP server that turns every AI-assisted fix into a lesson you can review later.
 
-Fixmind is a local-first CLI and MCP server that records short learning lessons after meaningful coding fixes, then reuses reviewed lessons as memory when a new task looks familiar. It stores everything securely on your machine, integrating natively with your AI agents via the Model Context Protocol (MCP).
+Fixmind is a local-first CLI and MCP server. It records short learning lessons after meaningful coding fixes, then reuses reviewed lessons as memory when a new task looks familiar. Everything stays on your machine and connects to your AI agents through the Model Context Protocol (MCP).
 
 ## Features
 
-- **Local by Default:** Lessons live in `~/.fixmind/learning.db`. No account needed, no external APIs.
-- **Speaks MCP:** Works seamlessly with Claude Code, Cursor, and Codex.
-- **Spaced Recall:** New lessons resurface on a schedule (1, 3, 7 days) with a real question to test your understanding before showing the answer.
+- **Local by Default:** Lessons live in `~/.fixmind/learning.db`. No account needed, no external API calls.
+- **Speaks MCP:** Works with Claude Code, Cursor, and Codex.
+- **Spaced Recall:** New lessons come back on a schedule with a real question before the answer.
 - **Real Diffs:** Captures the actual bad and good code from your git diff, not just a vague summary.
 - **Memory Retrieval:** Reviewed lessons can be pulled back into context later, so the agent can reuse the rule instead of relearning the same mistake.
 
@@ -27,32 +27,32 @@ to 22.13 or newer.
 npx fixmind setup
 ```
 
-`npx fixmind setup` initializes local storage and automatically configures detected installations of Cursor, Claude Code, and Codex. _Restart your AI clients after running setup._
+`npx fixmind setup` initializes local storage and automatically configures detected installations of Cursor, Claude Code, and Codex. Restart your AI clients after setup finishes.
 
 ## How It Works
 
 1. **Fix bugs like normal:** Hand a bug to your agent. It patches it.
-2. **Agent saves the lesson:** If the fix involved actual learning (not just formatting/renaming), the agent automatically calls the MCP tool to log the problem, root cause, and the bad/good code.
+2. **Agent saves the lesson:** If the fix involved actual learning, the agent calls the MCP tool to log the problem, root cause, and the bad/good code.
 3. **Stored locally:** The lesson lands safely in your local SQLite database.
-4. **Browse & Review:** Fixmind quizzes you on the lesson in 1, 3, and 7 days so you actually retain the knowledge.
+4. **Browse & review:** Fixmind quizzes you on the lesson over time so you actually retain the knowledge.
 
 ## The Quality Gate
 
 The MCP server doesn't just blindly accept data; it acts as a strict teacher for your AI agent. Before any lesson is stored, Fixmind runs it through a local validation gate:
 
-- **No Garbage:** If the agent tries to save a formatting change, a pure refactor, or a UI tweak without a behavioral break, the server **rejects the save outright** and forces the agent to skip it.
-- **Enforcing the "Why":** If the agent repeats the symptom as the root cause, the server throws an error and demands a deeper explanation.
-- **Transfer, Not Recall:** The server instructs the agent to write _transfer questions_ (e.g., "How would this apply to a different framework?") instead of basic recall questions (e.g., "What line did you change?").
-- **Superseding Mistakes:** If an agent saves a lesson for a fix that turns out to be wrong, it can link the corrected lesson to the old one to supersede it, keeping your library clean.
+- **No junk:** If the agent tries to save a formatting change, a pure refactor, or a UI tweak without a behavior break, the server rejects it.
+- **Explain the why:** If the agent repeats the symptom as the root cause, the server asks for a deeper explanation.
+- **Transfer, not recall:** The server asks the agent to write transfer questions instead of simple recall questions.
+- **Superseding mistakes:** If a saved lesson turns out to be wrong, the corrected lesson can supersede the old one instead of replacing history.
 
 ## CLI Usage
 
-Manage your learning library straight from the terminal.
+Manage your learning library from the terminal.
 
 ```sh
 # Setup & MCP
-fixmind setup                 # Configure detected AI clients
-fixmind setup --scope project # Scope MCP to the current directory
+npx fixmind setup             # Configure detected AI clients
+npx fixmind setup --scope project # Scope MCP to the current directory
 fixmind mcp                   # Start the MCP server manually (agents do this automatically)
 fixmind memory hydration       # Show reviewed lessons relevant to a topic
 

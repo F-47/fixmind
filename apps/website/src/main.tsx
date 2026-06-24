@@ -1,20 +1,21 @@
-import { StrictMode, useEffect, useLayoutEffect, useRef } from "react";
+import { Suspense, StrictMode, useEffect, useLayoutEffect, useRef, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "sonner";
-import Account from "./Account";
-import AccountCallback from "./account/Callback";
-import App from "./App";
-import Contact from "./Contact";
-import Docs from "./Docs";
-import Pricing from "./Pricing";
 import { initialAuthRedirectPath } from "./lib/supabase";
 import "./styles.css";
+
+const App = lazy(() => import("./App"));
+const Pricing = lazy(() => import("./Pricing"));
+const Docs = lazy(() => import("./Docs"));
+const Contact = lazy(() => import("./Contact"));
+const Account = lazy(() => import("./Account"));
+const AccountCallback = lazy(() => import("./account/Callback"));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [pathname]);
 
@@ -109,16 +110,22 @@ createRoot(document.getElementById("root")!).render(
       <ScrollToTop />
       <AuthHashRedirect />
       <ScrollToHash />
-      <Routes>
-        <Route path="/" element={<App />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/docs" element={<Navigate to="/docs/quickstart" replace />} />
-        <Route path="/docs/*" element={<Docs />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/account" element={<Account />} />
-        <Route path="/account/callback" element={<AccountCallback />} />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<App />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/docs" element={<Navigate to="/docs/quickstart" replace />} />
+          <Route path="/docs/*" element={<Docs />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/account" element={<Account />} />
+          <Route path="/account/callback" element={<AccountCallback />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
     <Toaster theme="dark" position="bottom-right" richColors />
   </StrictMode>,
 );
+
+function RouteFallback() {
+  return <div className="min-h-screen bg-page" />;
+}
