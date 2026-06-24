@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
 import type { RefObject } from "react";
+import { cn } from "@/lib/cn";
 import { highlightText, type SearchResult } from "./docs-data";
 
 type DocSearchModalProps = {
@@ -37,9 +38,10 @@ export function DocSearchModal({
         onClick={(event) => event.stopPropagation()}
       >
         <div
-          className={`flex items-center gap-3 px-4 py-4 ${
-            resultsQuery.trim().length > 0 ? "border-b border-line" : ""
-          }`}
+          className={cn(
+            "flex items-center gap-3 px-4 py-4",
+            resultsQuery.trim().length > 0 && "border-b border-line",
+          )}
         >
           <Search size={16} className="text-muted" />
           <input
@@ -74,11 +76,12 @@ export function DocSearchModal({
                       key={`${result.doc.id}:${result.section.id}`}
                       type="button"
                       onClick={() => onSelect(result)}
-                      className={`flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors ${
+                      className={cn(
+                        "flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors",
                         isActive
                           ? "bg-accent/12 text-ink ring-1 ring-accent/30"
-                          : "text-muted hover:bg-surface/50 hover:text-ink"
-                      }`}
+                          : "text-muted hover:bg-surface/50 hover:text-ink",
+                      )}
                     >
                       <span className="flex min-h-8 min-w-0 flex-1 flex-col">
                         <span className="block text-sm font-medium text-ink">

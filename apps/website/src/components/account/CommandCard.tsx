@@ -1,4 +1,4 @@
-import { CommandSnippet } from "../components/CommandSnippet";
+import { CommandSnippet } from "@/components/ui/CommandSnippet";
 
 export function CommandCard({
   label,

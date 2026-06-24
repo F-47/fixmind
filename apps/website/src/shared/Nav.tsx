@@ -1,9 +1,10 @@
 import { LogIn, User } from "lucide-react";
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
-import { supabase } from "../lib/supabase";
-import { Link } from "../router";
+import { supabase } from "@/lib/supabase";
+import { Link } from "@/router";
 import { Logo } from "./Logo";
+import { cn } from "@/lib/cn";
 
 const SECTION_IDS = ["loop", "memory", "features", "tokens", "how"];
 
@@ -129,14 +130,19 @@ function NavLink({
     <Link
       to={to}
       onClick={handleClick}
-      className={`relative pb-0.5 transition-colors hover:text-ink ${isActive ? "text-ink" : ""} ${className ?? ""}`}
+      className={cn(
+        "relative pb-0.5 transition-colors hover:text-ink",
+        isActive && "text-ink",
+        className,
+      )}
     >
       {children}
       <span
         aria-hidden="true"
-        className={`absolute inset-x-0 -bottom-px h-[2px] origin-left scale-x-0 bg-accent transition-transform duration-300 ${
-          underlineOn ? "scale-x-100" : ""
-        }`}
+        className={cn(
+          "absolute inset-x-0 -bottom-px h-[2px] origin-left scale-x-0 bg-accent transition-transform duration-300",
+          underlineOn && "scale-x-100",
+        )}
       />
     </Link>
   );
@@ -162,7 +168,6 @@ export function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const loggedIn = useIsLoggedIn();
 
-  // Close menu on route change
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
@@ -191,77 +196,85 @@ export function Nav() {
             className="flex items-center gap-2 font-mono text-sm font-medium text-ink"
           >
             <Logo />
-          fixmind
-        </Link>
-
-        <nav className="hidden items-center gap-6 lg:flex">
-          <div className="flex items-center gap-6 text-sm text-muted">
-            {PRIMARY_LINKS.map((link) => (
-              <NavLink key={link.to} to={link.to} isActive={isLinkActive(link)}>
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
-          <div className="flex items-center gap-4 border-l border-line/70 pl-4 text-sm text-muted">
-            {SECONDARY_LINKS.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                isActive={isLinkActive(link)}
-                className="pb-0"
-              >
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <Link
-            to="/docs/quickstart"
-            className="rounded-md border border-line px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
-          >
-            Install
+            fixmind
           </Link>
 
-          <Link
-            to="/account"
-            aria-label={loggedIn ? "Account" : "Sign in"}
-            title={loggedIn ? "Account" : "Sign in"}
-            className={`flex h-8 w-8 items-center justify-center rounded-md border transition-colors hover:border-accent/60 hover:text-accent ${
-              pathname === "/account"
-                ? "border-accent/60 text-accent"
-                : "border-line text-ink"
-            }`}
-          >
-            {loggedIn ? <User size={16} /> : <LogIn size={16} />}
-          </Link>
+          <nav className="hidden items-center gap-6 lg:flex">
+            <div className="flex items-center gap-6 text-sm text-muted">
+              {PRIMARY_LINKS.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  isActive={isLinkActive(link)}
+                >
+                  {link.label}
+                </NavLink>
+              ))}
+            </div>
+            <div className="flex items-center gap-4 border-l border-line/70 pl-4 text-sm text-muted">
+              {SECONDARY_LINKS.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  isActive={isLinkActive(link)}
+                  className="pb-0"
+                >
+                  {link.label}
+                </NavLink>
+              ))}
+            </div>
+          </nav>
 
-          <button
-            id="mobile-menu-toggle"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            aria-expanded={menuOpen}
-            aria-controls="mobile-menu"
-            onClick={() => setMenuOpen((o) => !o)}
-            className="flex h-8 w-8 flex-col items-center justify-center gap-[5px] lg:hidden"
-          >
-            <span
-              className={`block h-px w-5 bg-ink transition-all duration-200 origin-center ${
-                menuOpen ? "translate-y-[6px] rotate-45" : ""
-              }`}
-            />
-            <span
-              className={`block h-px w-5 bg-ink transition-opacity duration-200 ${
-                menuOpen ? "opacity-0" : ""
-              }`}
-            />
-            <span
-              className={`block h-px w-5 bg-ink transition-all duration-200 origin-center ${
-                menuOpen ? "-translate-y-[6px] -rotate-45" : ""
-              }`}
-            />
-          </button>
-        </div>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/docs/quickstart"
+              className="rounded-md border border-line px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+            >
+              Install
+            </Link>
+
+            <Link
+              to="/account"
+              aria-label={loggedIn ? "Account" : "Sign in"}
+              title={loggedIn ? "Account" : "Sign in"}
+              className={cn(
+                "flex h-8 w-8 items-center justify-center rounded-md border transition-colors hover:border-accent/60 hover:text-accent",
+                pathname === "/account"
+                  ? "border-accent/60 text-accent"
+                  : "border-line text-ink",
+              )}
+            >
+              {loggedIn ? <User size={16} /> : <LogIn size={16} />}
+            </Link>
+
+            <button
+              id="mobile-menu-toggle"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+              onClick={() => setMenuOpen((o) => !o)}
+              className="flex h-8 w-8 flex-col items-center justify-center gap-[5px] lg:hidden"
+            >
+              <span
+                className={cn(
+                  "block h-px w-5 bg-ink transition-all duration-200 origin-center",
+                  menuOpen && "translate-y-[6px] rotate-45",
+                )}
+              />
+              <span
+                className={cn(
+                  "block h-px w-5 bg-ink transition-opacity duration-200",
+                  menuOpen && "opacity-0",
+                )}
+              />
+              <span
+                className={cn(
+                  "block h-px w-5 bg-ink transition-all duration-200 origin-center",
+                  menuOpen && "-translate-y-[6px] -rotate-45",
+                )}
+              />
+            </button>
+          </div>
         </div>
 
         {/* Mobile dropdown */}
@@ -279,9 +292,10 @@ export function Nav() {
                   <Link
                     to={link.to}
                     onClick={() => setMenuOpen(false)}
-                    className={`flex items-center gap-2 border-b border-line/40 py-3.5 text-sm transition-colors last:border-0 hover:text-ink ${
-                      isLinkActive(link) ? "text-ink" : "text-muted"
-                    }`}
+                    className={cn(
+                      "flex items-center gap-2 border-b border-line/40 py-3.5 text-sm transition-colors last:border-0 hover:text-ink",
+                      isLinkActive(link) ? "text-ink" : "text-muted",
+                    )}
                   >
                     {isLinkActive(link) && (
                       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />

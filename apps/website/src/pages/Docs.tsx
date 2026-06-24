@@ -1,14 +1,23 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
-import { Footer } from "./shared/Footer";
-import { Nav } from "./shared/Nav";
-import { usePageMeta } from "./router";
-import { DOCS, extractDocOutline, searchDocs } from "./docs/docs-data";
+import { cn } from "@/lib/cn";
+import { usePageMeta } from "@/router";
+import {
+  DOCS,
+  extractDocOutline,
+  searchDocs,
+} from "@/components/docs/docs-data";
 
-const DocContent = lazy(() => import("./docs/DocContent").then((module) => ({ default: module.DocContent })));
+const DocContent = lazy(() =>
+  import("@/components/docs/DocContent").then((module) => ({
+    default: module.DocContent,
+  })),
+);
 const DocSearchModal = lazy(() =>
-  import("./docs/DocSearchModal").then((module) => ({ default: module.DocSearchModal })),
+  import("@/components/docs/DocSearchModal").then((module) => ({
+    default: module.DocSearchModal,
+  })),
 );
 
 export default function Docs() {
@@ -21,14 +30,20 @@ export default function Docs() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  usePageMeta(`Fixmind - ${activeDoc.title}`, "Detailed documentation for Fixmind CLI and MCP integration.");
+  usePageMeta(
+    `Fixmind - ${activeDoc.title}`,
+    "Detailed documentation for Fixmind CLI and MCP integration.",
+  );
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(searchQuery), 180);
     return () => window.clearTimeout(timer);
   }, [searchQuery]);
 
-  const searchResults = useMemo(() => searchDocs(debouncedQuery), [debouncedQuery]);
+  const searchResults = useMemo(
+    () => searchDocs(debouncedQuery),
+    [debouncedQuery],
+  );
 
   const openSearch = () => {
     setSearchQuery("");
@@ -48,9 +63,17 @@ export default function Docs() {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const isTypingTarget =
-        target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
 
-      if (event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey && !isTypingTarget) {
+      if (
+        event.key === "/" &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !isTypingTarget
+      ) {
         event.preventDefault();
         openSearch();
       }
@@ -68,7 +91,10 @@ export default function Docs() {
 
         if (event.key === "ArrowUp") {
           event.preventDefault();
-          setSelectedIndex((current) => (current - 1 + searchResults.length) % searchResults.length);
+          setSelectedIndex(
+            (current) =>
+              (current - 1 + searchResults.length) % searchResults.length,
+          );
         }
 
         if (event.key === "Enter") {
@@ -77,7 +103,9 @@ export default function Docs() {
             event.preventDefault();
             const query = searchQuery.trim();
             const searchSuffix = query ? `?q=${encodeURIComponent(query)}` : "";
-            navigate(`/docs/${selected.doc.id}${searchSuffix}#${selected.section.id}`);
+            navigate(
+              `/docs/${selected.doc.id}${searchSuffix}#${selected.section.id}`,
+            );
             closeSearch();
           }
         }
@@ -132,7 +160,9 @@ export default function Docs() {
     const timeout = window.setTimeout(() => {
       scrollToHash();
       window.requestAnimationFrame(scrollToHash);
-      window.requestAnimationFrame(() => window.requestAnimationFrame(scrollToHash));
+      window.requestAnimationFrame(() =>
+        window.requestAnimationFrame(scrollToHash),
+      );
     }, 0);
 
     return () => {
@@ -146,14 +176,18 @@ export default function Docs() {
     return params.get("q")?.trim() ?? "";
   }, [location.search]);
 
-  const outline = useMemo(() => extractDocOutline(activeDoc.content), [activeDoc.content]);
+  const outline = useMemo(
+    () => extractDocOutline(activeDoc.content),
+    [activeDoc.content],
+  );
   const showOutline = outline.length > 0 && outline.length <= 8;
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Nav />
-
-      <main id="content" className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-10 px-6 py-12 md:flex-row md:items-start md:py-20">
+      <main
+        id="content"
+        className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-10 px-6 py-12 md:flex-row md:items-start md:py-20"
+      >
         <aside className="w-full shrink-0 md:sticky md:top-24 md:w-64">
           <button
             type="button"
@@ -177,9 +211,12 @@ export default function Docs() {
                 <div key={doc.id} className="rounded-lg">
                   <Link
                     to={`/docs/${doc.id}`}
-                    className={`flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                      isActive ? "bg-surface-2 font-medium text-ink" : "text-muted hover:bg-surface/50 hover:text-ink"
-                    }`}
+                    className={cn(
+                      "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                      isActive
+                        ? "bg-surface-2 font-medium text-ink"
+                        : "text-muted hover:bg-surface/50 hover:text-ink",
+                    )}
                   >
                     <span>{doc.title}</span>
                   </Link>
@@ -191,7 +228,11 @@ export default function Docs() {
 
         <article className="min-w-0 flex-1">
           <Suspense fallback={<DocContentFallback />}>
-            <DocContent content={activeDoc.content} navigate={navigate} highlightQuery={highlightedQuery} />
+            <DocContent
+              content={activeDoc.content}
+              navigate={navigate}
+              highlightQuery={highlightedQuery}
+            />
           </Suspense>
         </article>
 
@@ -208,11 +249,13 @@ export default function Docs() {
                     <Link
                       key={item.id}
                       to={`/docs/${activeDoc.id}#${item.id}`}
-                      className={`block rounded-md px-2 py-1.5 text-sm transition-colors ${
-                        item.level === 3 ? "pl-4 text-[13px]" : "text-sm"
-                      } ${
-                        isActive ? "bg-accent/10 text-ink" : "text-muted hover:bg-surface-2 hover:text-ink"
-                      }`}
+                      className={cn(
+                        "block rounded-md px-2 py-1.5 text-sm transition-colors",
+                        item.level === 3 ? "pl-4 text-[13px]" : "text-sm",
+                        isActive
+                          ? "bg-accent/10 text-ink"
+                          : "text-muted hover:bg-surface-2 hover:text-ink",
+                      )}
                     >
                       {item.title}
                     </Link>
@@ -223,7 +266,6 @@ export default function Docs() {
           </aside>
         )}
       </main>
-
       <Suspense fallback={null}>
         <DocSearchModal
           isOpen={isSearchOpen}
@@ -237,13 +279,13 @@ export default function Docs() {
           onSelect={(result) => {
             const query = searchQuery.trim();
             const searchSuffix = query ? `?q=${encodeURIComponent(query)}` : "";
-            navigate(`/docs/${result.doc.id}${searchSuffix}#${result.section.id}`);
+            navigate(
+              `/docs/${result.doc.id}${searchSuffix}#${result.section.id}`,
+            );
             closeSearch();
           }}
         />
       </Suspense>
-
-      <Footer />
     </div>
   );
 }

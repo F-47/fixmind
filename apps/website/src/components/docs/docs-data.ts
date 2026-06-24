@@ -136,7 +136,9 @@ export const DOC_FILENAME_TO_ID: Record<string, string> = {
   "changelog.md": "changelog",
 };
 
-export function resolveDocLink(href: string): { docId: string; hash: string } | null {
+export function resolveDocLink(
+  href: string,
+): { docId: string; hash: string } | null {
   const match = /([^/]+\.md)(#.*)?$/i.exec(href);
   if (!match) return null;
   const docId = DOC_FILENAME_TO_ID[match[1].toLowerCase()];
@@ -145,11 +147,7 @@ export function resolveDocLink(href: string): { docId: string; hash: string } | 
 }
 
 export function normalizeSearchQuery(query: string): string[] {
-  return query
-    .toLowerCase()
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+  return query.toLowerCase().trim().split(/\s+/).filter(Boolean);
 }
 
 export function highlightText(text: string, query: string): ReactNode {
@@ -167,7 +165,11 @@ export function highlightText(text: string, query: string): ReactNode {
     if (terms.some((term) => part.toLowerCase() === term.toLowerCase())) {
       return createElement(
         "mark",
-        { key, className: "rounded bg-accent px-1 text-bg ring-1 ring-accent/70 shadow-[0_0_0_1px_rgba(0,0,0,0.04)]" },
+        {
+          key,
+          className:
+            "rounded bg-accent px-1 text-bg ring-1 ring-accent/70 shadow-[0_0_0_1px_rgba(0,0,0,0.04)]",
+        },
         part,
       );
     }
@@ -223,7 +225,10 @@ function buildSearchText(doc: DocEntry): string {
   const withoutCode = doc.content
     .replace(/```[\s\S]*?```/g, " ")
     .replace(/`([^`]+)`/g, "$1");
-  const headings = Array.from(withoutCode.matchAll(/^#{1,3}\s+(.+)$/gm), (match) => match[1]).join(" ");
+  const headings = Array.from(
+    withoutCode.matchAll(/^#{1,3}\s+(.+)$/gm),
+    (match) => match[1],
+  ).join(" ");
   return `${doc.title} ${doc.summary} ${doc.keywords.join(" ")} ${headings} ${withoutCode}`.toLowerCase();
 }
 
@@ -269,7 +274,8 @@ function buildDocSections(doc: DocEntry): DocSection[] {
         {
           id: slugify(doc.title),
           title: doc.title,
-          searchText: `${doc.title} ${doc.summary} ${doc.content}`.toLowerCase(),
+          searchText:
+            `${doc.title} ${doc.summary} ${doc.content}`.toLowerCase(),
           preview: doc.summary,
         },
       ];
@@ -284,7 +290,10 @@ function selectSectionMatch(doc: SearchDoc, terms: string[]): SearchResult {
   return {
     doc,
     section: best && best.score > 0 ? best.section : doc.sections[0],
-    score: best && best.score > 0 ? scoreDoc(doc, terms) + best.score : scoreDoc(doc, terms),
+    score:
+      best && best.score > 0
+        ? scoreDoc(doc, terms) + best.score
+        : scoreDoc(doc, terms),
   };
 }
 
@@ -302,11 +311,23 @@ function scoreDoc(doc: SearchDoc, terms: string[]): number {
     const summaryBonus = lowSignal ? 6 : 10;
     const searchTextBonus = lowSignal ? 1 : 4;
 
-    score += scoreText(title, term, { exactBonus: titleBonus, prefixBonus: lowSignal ? 4 : 8, allowSubstring: false });
-    score += scoreText(summary, term, { exactBonus: summaryBonus, prefixBonus: lowSignal ? 2 : 3, allowSubstring: false });
+    score += scoreText(title, term, {
+      exactBonus: titleBonus,
+      prefixBonus: lowSignal ? 4 : 8,
+      allowSubstring: false,
+    });
+    score += scoreText(summary, term, {
+      exactBonus: summaryBonus,
+      prefixBonus: lowSignal ? 2 : 3,
+      allowSubstring: false,
+    });
     score += scoreKeywords(keywords, term) * (lowSignal ? 0.7 : 1);
-    score += scoreText(doc.searchText, term, { exactBonus: searchTextBonus, prefixBonus: 1, allowSubstring: term.length >= 5 }) *
-      (lowSignal ? 0.4 : 1);
+    score +=
+      scoreText(doc.searchText, term, {
+        exactBonus: searchTextBonus,
+        prefixBonus: 1,
+        allowSubstring: term.length >= 5,
+      }) * (lowSignal ? 0.4 : 1);
   }
 
   if (terms.every((term) => hasWholeWord(doc.searchText, term))) {
@@ -324,12 +345,17 @@ function scoreSection(section: DocSection, terms: string[]): number {
 
   for (const term of terms) {
     const lowSignal = isLowSignalTerm(term);
-    score += scoreText(title, term, { exactBonus: lowSignal ? 14 : 20, prefixBonus: lowSignal ? 5 : 8, allowSubstring: false });
-    score += scoreText(section.searchText, term, {
-      exactBonus: lowSignal ? 3 : 6,
-      prefixBonus: lowSignal ? 1 : 2,
-      allowSubstring: term.length >= 5,
-    }) * (lowSignal ? 0.5 : 1);
+    score += scoreText(title, term, {
+      exactBonus: lowSignal ? 14 : 20,
+      prefixBonus: lowSignal ? 5 : 8,
+      allowSubstring: false,
+    });
+    score +=
+      scoreText(section.searchText, term, {
+        exactBonus: lowSignal ? 3 : 6,
+        prefixBonus: lowSignal ? 1 : 2,
+        allowSubstring: term.length >= 5,
+      }) * (lowSignal ? 0.5 : 1);
   }
 
   if (terms.every((term) => hasWholeWord(section.searchText, term))) {
@@ -377,7 +403,8 @@ function scoreText(
 
   let score = 0;
   if (prefix) score += options.prefixBonus;
-  if (wholeWordCount > 0) score += options.exactBonus + Math.min(wholeWordCount - 1, 2);
+  if (wholeWordCount > 0)
+    score += options.exactBonus + Math.min(wholeWordCount - 1, 2);
   if (score === 0 && options.allowSubstring && normalized.includes(term)) {
     score += 1;
   }
