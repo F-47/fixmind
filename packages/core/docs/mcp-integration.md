@@ -110,7 +110,7 @@ The `save_lesson` tool accepts:
   "originalPrompt": "The user's original request",
   "problem": "What behavior was broken",
   "mistake": "The specific mistake",
-  "rootCause": "Why the mistake caused the behavior",
+  "rootCause": "Why the mistake caused the behavior, including the runtime or package boundary when relevant",
   "fixSummary": "What changed and why it works",
   "takeaway": "One plain sentence the developer should remember",
   "whenNotApplicable": "When this advice needs a different approach",
