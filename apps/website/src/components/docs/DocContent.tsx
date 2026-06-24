@@ -1,9 +1,16 @@
-import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import type { NavigateFunction } from "react-router-dom";
-import { CommandSnippet } from "../components/CommandSnippet";
+import { CommandSnippet } from "@/components/ui/CommandSnippet";
+import { cn } from "@/lib/cn";
 import { highlightText, normalizeSearchQuery } from "./docs-data";
 import { resolveDocLink } from "./docs-data";
 
@@ -13,7 +20,11 @@ type DocContentProps = {
   highlightQuery: string;
 };
 
-export function DocContent({ content, navigate, highlightQuery }: DocContentProps) {
+export function DocContent({
+  content,
+  navigate,
+  highlightQuery,
+}: DocContentProps) {
   const searchTerms = normalizeSearchQuery(highlightQuery);
 
   return (
@@ -38,7 +49,10 @@ export function DocContent({ content, navigate, highlightQuery }: DocContentProp
           </h2>
         ),
         h3: ({ node, children, ...props }) => (
-          <h3 className="mb-4 mt-8 scroll-mt-36 font-display text-xl font-medium text-ink" {...props}>
+          <h3
+            className="mb-4 mt-8 scroll-mt-36 font-display text-xl font-medium text-ink"
+            {...props}
+          >
             {renderHighlightedChildren(children, searchTerms)}
           </h3>
         ),
@@ -53,7 +67,10 @@ export function DocContent({ content, navigate, highlightQuery }: DocContentProp
           </ul>
         ),
         ol: ({ node, children, ...props }) => (
-          <ol className="mb-6 list-decimal space-y-2 pl-6 text-muted" {...props}>
+          <ol
+            className="mb-6 list-decimal space-y-2 pl-6 text-muted"
+            {...props}
+          >
             {renderHighlightedChildren(children, searchTerms)}
           </ol>
         ),
@@ -63,7 +80,11 @@ export function DocContent({ content, navigate, highlightQuery }: DocContentProp
           </li>
         ),
         img: ({ node, alt, ...props }) => (
-          <img alt={alt} className="mb-1 mr-5 inline-block h-8 w-auto align-middle last:mr-0" {...props} />
+          <img
+            alt={alt}
+            className="mb-1 mr-5 inline-block h-8 w-auto align-middle last:mr-0"
+            {...props}
+          />
         ),
         a: ({ node, href, ...props }) => {
           const docLink = href ? resolveDocLink(href) : null;
@@ -76,7 +97,9 @@ export function DocContent({ content, navigate, highlightQuery }: DocContentProp
                   navigate(`/docs/${docLink.docId}`);
                   if (docLink.hash) {
                     window.setTimeout(() => {
-                      document.getElementById(docLink.hash.slice(1))?.scrollIntoView({ block: "start" });
+                      document
+                        .getElementById(docLink.hash.slice(1))
+                        ?.scrollIntoView({ block: "start" });
                     }, 0);
                   }
                 }}
@@ -99,35 +122,58 @@ export function DocContent({ content, navigate, highlightQuery }: DocContentProp
           const isInline = !match && !className;
           const language = match?.[1]?.toLowerCase() ?? "";
           const text = String(children);
-          const isCommandBlock = ["bash", "sh", "shell", "powershell", "ps1", "zsh"].includes(language);
+          const isCommandBlock = [
+            "bash",
+            "sh",
+            "shell",
+            "powershell",
+            "ps1",
+            "zsh",
+          ].includes(language);
 
           return isInline ? (
-            <code className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[13px] text-ink" {...props}>
+            <code
+              className="rounded bg-surface-2 px-1.5 py-0.5 font-mono text-[13px] text-ink"
+              {...props}
+            >
               {highlightText(text, highlightQuery)}
             </code>
           ) : isCommandBlock ? (
             <CommandSnippet
               command={text}
-              prefix={language === "powershell" || language === "ps1" ? ">" : "$"}
+              prefix={
+                language === "powershell" || language === "ps1" ? ">" : "$"
+              }
               className="mb-6"
             />
           ) : (
             <code
-              className={`mb-6 block overflow-x-auto rounded-xl border border-line bg-surface-2 p-5 text-sm font-mono text-ink ${className || ""}`}
+              className={cn(
+                "mb-6 block overflow-x-auto rounded-xl border border-line bg-surface-2 p-5 text-sm font-mono text-ink",
+                className,
+              )}
               {...props}
             >
               {highlightText(text, highlightQuery)}
             </code>
           );
         },
-        pre: ({ node, ...props }) => <pre className="m-0 bg-transparent p-0" {...props} />,
+        pre: ({ node, ...props }) => (
+          <pre className="m-0 bg-transparent p-0" {...props} />
+        ),
         table: ({ node, ...props }) => (
           <div className="mb-6 overflow-x-auto rounded-xl border border-line">
-            <table className="w-full text-left text-sm [&_tr:last-child>td]:border-b-0" {...props} />
+            <table
+              className="w-full text-left text-sm [&_tr:last-child>td]:border-b-0"
+              {...props}
+            />
           </div>
         ),
         th: ({ node, children, ...props }) => (
-          <th className="border-b border-line bg-surface px-4 py-3 font-medium text-ink" {...props}>
+          <th
+            className="border-b border-line bg-surface px-4 py-3 font-medium text-ink"
+            {...props}
+          >
             {renderHighlightedChildren(children, searchTerms)}
           </th>
         ),
@@ -137,11 +183,16 @@ export function DocContent({ content, navigate, highlightQuery }: DocContentProp
           </td>
         ),
         blockquote: ({ node, children, ...props }) => (
-          <blockquote className="my-6 border-l-4 border-accent/50 pl-5 italic text-muted" {...props}>
+          <blockquote
+            className="my-6 border-l-4 border-accent/50 pl-5 italic text-muted"
+            {...props}
+          >
             {renderHighlightedChildren(children, searchTerms)}
           </blockquote>
         ),
-        hr: ({ node, ...props }) => <hr className="my-10 border-t border-line" {...props} />,
+        hr: ({ node, ...props }) => (
+          <hr className="my-10 border-t border-line" {...props} />
+        ),
       }}
     >
       {content}
@@ -149,7 +200,10 @@ export function DocContent({ content, navigate, highlightQuery }: DocContentProp
   );
 }
 
-function renderHighlightedChildren(children: ReactNode, terms: string[]): ReactNode {
+function renderHighlightedChildren(
+  children: ReactNode,
+  terms: string[],
+): ReactNode {
   if (!terms.length) return children;
 
   return Children.map(children, (child) => {

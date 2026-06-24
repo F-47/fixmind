@@ -1,4 +1,5 @@
-import { CopyButton } from "./CopyButton";
+import { CopyButton } from "@/components/ui/CopyButton";
+import { cn } from "@/lib/cn";
 
 type CommandSnippetProps = {
   command: string;
@@ -17,7 +18,10 @@ export function CommandSnippet({
 }: CommandSnippetProps) {
   return (
     <div
-      className={`rounded-lg border border-line bg-surface px-4 py-2.5 ${className ?? ""}`}
+      className={cn(
+        "rounded-lg border border-line bg-surface px-4 py-2.5",
+        className,
+      )}
     >
       {caption ? (
         <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.15em] text-muted">

@@ -43,7 +43,6 @@ Outputs a static bundle to `dist/`. `public/_redirects` is a Netlify-style SPA f
 | `src/App.tsx` | The landing page. |
 | `src/Pricing.tsx` | The pricing page. |
 | `src/Account.tsx` | Sign-in / account-status page (Supabase auth, no separate CLI pairing). |
-| `src/account/Callback.tsx` | Auth callback page for email links, magic links, and password recovery. |
 | `src/lib/supabase.ts` | Browser Supabase client, shared by `Account.tsx`. |
 | `src/account/` | Account UI pieces like `AuthForm` and `AccountStatus`. |
 | `src/components/` | Small reusable bits (e.g. `CopyButton`). |

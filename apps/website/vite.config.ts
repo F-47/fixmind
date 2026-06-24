@@ -13,6 +13,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
+      "@": path.resolve(directory, "src"),
       "@docs": path.resolve(directory, "..", "..", "docs"),
       "@root": path.resolve(directory, "..", ".."),
     },

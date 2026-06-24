@@ -2,7 +2,7 @@ export function Logo({ size = 20 }: { size?: number }) {
   return (
     <img
       src="/logo.jpeg"
-      alt=""
+      alt="Fixmind Logo"
       aria-hidden="true"
       width={size}
       height={size}

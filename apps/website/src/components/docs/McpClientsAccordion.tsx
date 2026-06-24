@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { cn } from "@/lib/cn";
 
 const MCP_CLIENTS = [
   { id: "claude-code", label: "Claude Code" },
@@ -13,7 +14,9 @@ const MCP_CLIENTS = [
 
 export function McpClientsAccordion() {
   const location = useLocation();
-  const [selected, setSelected] = useState<(typeof MCP_CLIENTS)[number]["id"]>(MCP_CLIENTS[0].id);
+  const [selected, setSelected] = useState<(typeof MCP_CLIENTS)[number]["id"]>(
+    MCP_CLIENTS[0].id,
+  );
 
   useEffect(() => {
     const hash = location.hash.replace(/^#/, "");
@@ -32,9 +35,12 @@ export function McpClientsAccordion() {
             key={client.id}
             to={`/docs/mcp-clients#${client.id}`}
             onClick={() => setSelected(client.id)}
-            className={`block rounded-lg px-3 py-2 text-sm transition-colors ${
-              isActive ? "bg-accent/5 font-medium text-ink" : "text-muted hover:bg-surface/50 hover:text-ink"
-            }`}
+            className={cn(
+              "block rounded-lg px-3 py-2 text-sm transition-colors",
+              isActive
+                ? "bg-accent/5 font-medium text-ink"
+                : "text-muted hover:bg-surface/50 hover:text-ink",
+            )}
           >
             {client.label}
           </Link>
