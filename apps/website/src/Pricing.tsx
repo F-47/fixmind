@@ -115,7 +115,7 @@ function PlanCard({
           ? "border-accent/45 bg-surface shadow-[0_0_40px_-28px_var(--color-accent-dim)]"
           : plan.highlight
             ? "border-accent/50 bg-surface shadow-[0_0_60px_-25px_var(--color-accent-dim)]"
-          : "border-line bg-surface"
+            : "border-line bg-surface"
       }`}
     >
       <div className="flex items-center justify-between">
@@ -248,7 +248,8 @@ function WaitlistModal({
             You’re on the waitlist
           </h3>
           <p className="mt-2 text-center text-sm text-muted">
-            We’ll reach out at <span className="text-ink">{email}</span> when {plan} is ready.
+            We’ll reach out at <span className="text-ink">{email}</span> when{" "}
+            {plan} is ready.
           </p>
           <button
             type="button"
@@ -290,7 +291,8 @@ function WaitlistModal({
           </button>
         </div>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          Leave your email and I’ll only use it for the {plan.toLowerCase()} waitlist.
+          Leave your email and I’ll only use it for the {plan.toLowerCase()}{" "}
+          waitlist.
         </p>
 
         <form
@@ -316,11 +318,7 @@ function WaitlistModal({
             name="subject"
             value={`New ${plan} waitlist request from fixmind.dev`}
           />
-          <input
-            type="hidden"
-            name="plan"
-            value={plan}
-          />
+          <input type="hidden" name="plan" value={plan} />
           <label className="block">
             <span className="sr-only">Email</span>
             <input
@@ -351,7 +349,9 @@ export default function Pricing() {
     "Fixmind is free and local-first forever. Pro adds encrypted sync across devices.",
   );
 
-  const [activePlan, setActivePlan] = useState<string | null | undefined>(undefined);
+  const [activePlan, setActivePlan] = useState<string | null | undefined>(
+    undefined,
+  );
   const [waitlistPlan, setWaitlistPlan] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null | undefined>(undefined);
 
@@ -371,9 +371,11 @@ export default function Pricing() {
       if (mounted) setSession(data.session);
     })();
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, nextSession) => {
+        setSession(nextSession);
+      },
+    );
 
     return () => {
       mounted = false;
@@ -430,10 +432,10 @@ export default function Pricing() {
               Pro adds encrypted sync so the same lessons follow you across
               machines.
             </p>
-            <p className="mx-auto mt-4 max-w-xl rounded-md border border-line bg-surface px-4 py-2 font-mono text-xs text-muted">
-            Free and Pro are available today. Team and Enterprise are waitlist
-            tiers for later.
-          </p>
+            <p className="mx-auto mt-4 max-w-2xl rounded-md border border-line bg-surface px-4 py-2 font-mono text-xs text-muted">
+              Free and Pro are available today. Team and Enterprise are waitlist
+              tiers for later.
+            </p>
           </div>
         </section>
 

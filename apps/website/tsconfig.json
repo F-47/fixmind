@@ -18,7 +18,6 @@
     "baseUrl": ".",
     "paths": {
       "@docs/*": ["../../docs/*"],
-      "@core-docs/*": ["../../packages/core/docs/*"],
       "@root/*": ["../../*"]
     }
   },

@@ -1,12 +1,12 @@
-# CLI reference
+﻿# CLI reference
 
-Every `fixmind` command, with every flag it accepts. For the MCP tool an agent calls automatically, see [MCP Integration](../packages/core/docs/mcp-integration.md). For what a lesson actually contains, see [Lesson Schema](lesson-schema.md).
+This page lists every `fixmind` command and flag. If you're new here, start with [Quickstart](quickstart.md) first. For the MCP tool an agent calls automatically, see [MCP Integration](mcp-integration.md). For what a lesson actually contains, see [Lesson Schema](lesson-schema.md).
 
 ## Setup
 
 ### `fixmind setup`
 
-Detects Claude Code, Cursor, and Codex, and registers the MCP server with whichever ones you pick.
+Sets up Claude Code, Cursor, and Codex, then registers the MCP server with whichever ones you pick.
 
 ```bash
 fixmind setup
@@ -23,7 +23,7 @@ fixmind setup --scope project
 | `--capture-mode <strict\|balanced>` | `strict` | `strict` keeps capture conservative. `balanced` lets the agent save more borderline-but-useful lessons. |
 | `--dry-run` | off | Print what would change without writing anything. |
 
-Run with no supported client detected and no `--client` flag to print a generic MCP server config for any other stdio-compatible client.
+If no supported client is found and you do not pass `--client`, Fixmind prints a generic MCP server config you can paste into any other stdio-compatible client.
 
 ### `fixmind settings`
 
@@ -50,13 +50,13 @@ Returns the small set of reviewed, active lessons that are most relevant to the 
 
 ### `fixmind mcp`
 
-Starts the MCP server on stdio. You don't run this yourself — the AI client you configured with `fixmind setup` launches it.
+Starts the MCP server on stdio. You usually do not run this yourself - the AI client you configured with `fixmind setup` launches it for you.
 
 ## Reviewing
 
 ### `fixmind review`
 
-Interactive. Walks through every lesson that's currently due, one at a time: shows the problem and takeaway, asks each recall question, shows the expected answer after you respond (or type `skip`), then asks how well you understood it (`understood` / `partial` / `copied_blindly`). Requires a real terminal (TTY) — see [Lesson Schema](lesson-schema.md#spaced-repetition) for how your answer changes the next review date. No flags.
+Interactive. Walks through every lesson that's currently due, one at a time. It shows the problem and takeaway, asks each question, shows the expected answer after you respond (or type `skip`), then asks how well you understood it (`understood` / `partial` / `copied_blindly`). Requires a real terminal (TTY) - see [Lesson Schema](lesson-schema.md#spaced-repetition) for how your answer changes the next review date. No flags.
 
 ## Dashboard
 
@@ -68,9 +68,9 @@ fixmind dashboard --port 8080
 fixmind dashboard --no-open
 ```
 
-Opens the visual dashboard, bound to `127.0.0.1` only. `--port <n>` picks the port (default `4317`); `--no-open` skips auto-opening the browser.
+Opens the visual dashboard on `127.0.0.1` only. `--port <n>` picks the port (default `4317`); `--no-open` skips auto-opening the browser.
 
-## Browsing
+## Browsing lessons
 
 ### `fixmind list`
 
@@ -96,17 +96,17 @@ Matches title, problem, root cause, fix summary, takeaway, mistake pattern, conc
 
 ### `fixmind stats`
 
-Prints two tables: how often each concept recurs, and how often each mistake pattern recurs. No flags.
+Prints two tables: how often each concept shows up, and how often each mistake pattern shows up. No flags.
 
 ### `fixmind status`
 
-One line: how many lessons are due for review right now, or that none are. Used by shells/prompts that want a quick due-count check. No flags.
+One line: how many lessons are due for review right now, or that none are. Useful for shells or prompts that want a quick due-count check. No flags.
 
 ## Capturing lessons
 
 ### `fixmind save-manual` (alias: `fixmind save`)
 
-Interactive prompts for every field, for logging a lesson yourself without going through an agent. Every field also has a flag, so it can be scripted non-interactively:
+Interactive prompts for every field, for logging a lesson yourself without going through an agent. Every field also has a flag, so you can script it non-interactively too:
 
 ```bash
 fixmind save-manual \
@@ -124,7 +124,7 @@ fixmind save-manual \
 
 | Flag | Notes |
 |---|---|
-| `--title`, `--problem`, `--mistake`, `--root-cause`, `--fix-summary`, `--takeaway`, `--when-not-applicable`, `--concepts` | Required fields — see [Lesson Schema](lesson-schema.md). |
+| `--title`, `--problem`, `--mistake`, `--root-cause`, `--fix-summary`, `--takeaway`, `--when-not-applicable`, `--concepts` | Required fields - see [Lesson Schema](lesson-schema.md). |
 | `--original-prompt` | What you originally asked for. |
 | `--mistake-pattern` | Short reusable category, e.g. "Stale closure". |
 | `--concepts`, `--files-changed`, `--tags` | Comma-separated lists. `--files-changed` defaults to the current git diff if omitted. |
@@ -134,18 +134,18 @@ fixmind save-manual \
 | `--tool` | Defaults to `manual`. |
 | `--understanding` | `understood` \| `partial` \| `copied_blindly` \| `unknown` (default). |
 
-Any field's flag can be omitted in an interactive terminal — you'll be prompted instead. Outside a terminal (e.g. piped into a script), omitted fields fall back to empty and required ones will fail validation.
+Any field's flag can be omitted in an interactive terminal - you'll be prompted instead. Outside a terminal (for example, when piped into a script), omitted fields fall back to empty and required ones will fail validation.
 
 ### `fixmind save-ai-summary` (alias: `fixmind save-from-summary`)
 
-Pipes a JSON lesson payload — the same shape the MCP tool accepts — into storage, for scripts and integrations that aren't a live MCP client.
+Pipes a JSON lesson payload - the same shape the MCP tool accepts - into storage, for scripts and integrations that are not live MCP clients.
 
 ```bash
 fixmind save-ai-summary --file lesson.json
 cat lesson.json | fixmind save-ai-summary
 ```
 
-Rejects the input with a list of reasons if it doesn't clear the same quality bar the MCP tool enforces (see [Lesson Schema](lesson-schema.md#quality-gate)).
+Rejects the input with a list of reasons if it does not meet the same quality bar the MCP tool enforces (see [Lesson Schema](lesson-schema.md#quality-gate)).
 
 ## Editing
 
@@ -165,7 +165,7 @@ fixmind delete 8d7571ed
 fixmind delete 8d7571ed --yes
 ```
 
-Asks for confirmation interactively. Outside a terminal, requires `--yes` (or `-y`) or it refuses to delete. Permanent — there's no undo beyond restoring from an export.
+Asks for confirmation interactively. Outside a terminal, requires `--yes` (or `-y`) or it refuses to delete. Permanent - there's no undo beyond restoring from an export.
 
 ### `fixmind supersede <oldId> <newId>`
 
@@ -173,11 +173,11 @@ Asks for confirmation interactively. Outside a terminal, requires `--yes` (or `-
 fixmind supersede 8d7571ed a3f9c021 --reason "The first fix didn't handle the SSR case"
 ```
 
-Marks `oldId` as superseded by `newId` — linked, not deleted. Superseded lessons drop out of `list`, `search`, and `review` by default (pass `--include-superseded` to see them), but stay in your history with a link to the corrected lesson. Use this when a fix turned out to be wrong or incomplete, not for simple rewording.
+Marks `oldId` as superseded by `newId` - linked, not deleted. Superseded lessons drop out of `list`, `search`, and `review` by default (pass `--include-superseded` to see them), but stay in your history with a link to the corrected lesson. Use this when a fix turned out to be wrong or incomplete, not for simple rewording.
 
 ## Sync (Pro)
 
-Encrypted sync across machines via a Supabase project you (or your org) own. See [sync-setup.md](../packages/core/docs/sync-setup.md) for how to create the project and apply the schema.
+Sync is an optional Pro feature for keeping the same lessons on more than one machine. See [Sync setup](sync-setup.md) for the user flow and what to expect after you sign in.
 
 ### `fixmind login`
 
@@ -186,16 +186,16 @@ fixmind login
 fixmind login --password-login --email you@example.com --password ... --passphrase ...
 ```
 
-By default this opens your browser to sign in with **GitHub** (via Supabase's GitHub OAuth provider — see [sync-setup.md](../packages/core/docs/sync-setup.md) for the one-time GitHub OAuth App setup). Pass `--password-login` to use email/password instead. Either way it stores a session locally at `~/.fixmind/sync.json` and asks for an encryption passphrase: lesson content is encrypted on your machine with a key derived from it before it's ever sent to Supabase — use the **same passphrase on every machine**, since it can't be recovered or changed without losing access to already-synced data.
+By default this opens your browser to sign in. Pass `--password-login` to use email/password instead. Either way it stores a session locally at `~/.fixmind/sync.json` and asks for an encryption passphrase. Fixmind encrypts lesson content on your machine before it ever leaves the device, so use the **same passphrase on every machine**. It cannot be recovered or changed without losing access to already-synced data.
 
-`fixmind login` succeeds and saves your session even without an active Pro/Team plan — it just tells you sync isn't active yet. That way subscribing later only requires `fixmind sync push`, not a second GitHub sign-in.
+`fixmind login` succeeds and saves your session even without an active Pro/Team plan - it just tells you sync isn't active yet. That way subscribing later only requires `fixmind sync push`, not a second sign-in.
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--url <url>` | `$FIXMIND_SUPABASE_URL` | Supabase project URL. |
-| `--key <key>` | `$FIXMIND_SUPABASE_ANON_KEY` | Supabase anon public key. |
+| `--url <url>` | `$FIXMIND_SUPABASE_URL` | Sync service URL. |
+| `--key <key>` | `$FIXMIND_SUPABASE_ANON_KEY` | Sync service public key. |
 | `--passphrase` | prompted | Required outside an interactive terminal. |
-| `--password-login` | off | Use email/password instead of the GitHub browser flow. |
+| `--password-login` | off | Use email/password instead of the browser sign-in flow. |
 | `--email`, `--password` | prompted | Only used with `--password-login`; required outside an interactive terminal. |
 
 ### `fixmind sync push`
@@ -204,16 +204,16 @@ Encrypts and uploads every lesson changed since the last push.
 
 ### `fixmind sync pull`
 
-Downloads and decrypts lessons changed (on other machines) since the last pull, and applies them locally. If a lesson was also edited locally, the newer `updatedAt` wins — a locally newer edit is kept even if an older remote version arrives.
+Downloads and decrypts lessons changed on other machines since the last pull, then applies them locally. If a lesson was also edited locally, the newer `updatedAt` wins - the local edit is kept even if an older remote version arrives.
 
 ### Automatic sync
 
 If you're logged in (`fixmind login` has been run), two things happen without needing the explicit commands above:
 
-- Saving a lesson — via `fixmind save`, `fixmind save-from-summary`, or the AI agent's `save_lesson` MCP tool call — automatically pushes it.
+- Saving a lesson - via `fixmind save`, `fixmind save-from-summary`, or the AI agent's `save_lesson` MCP tool call - automatically pushes it.
 - Opening `fixmind dashboard` automatically pulls first, so it shows lessons synced from other machines.
 
-Both are best-effort: a failed auto-push/pull (offline, timeout) logs a one-line warning but never blocks the save or the dashboard from loading. If you're not logged in, neither does anything.
+Both are best-effort: a failed auto-push or auto-pull (offline, timeout) logs a one-line warning but never blocks the save or the dashboard from loading. If you're not logged in, neither does anything.
 
 ### `fixmind sync status`
 
@@ -221,7 +221,7 @@ Prints whether you're logged in, and the last push/pull times.
 
 ### `fixmind logout`
 
-Removes the local session at `~/.fixmind/sync.json`. Does not delete anything from Supabase.
+Removes the local session at `~/.fixmind/sync.json`. It does not delete anything from the sync service.
 
 ## Backup and export
 
@@ -239,4 +239,4 @@ fixmind export --id 8d7571ed --format md
 | `--output <file>` | stdout | Write to a file instead of printing. |
 | `--id <id>` | all lessons | Export a single lesson instead of the whole library. |
 
-Same export is available from the dashboard (`fixmind dashboard` → Backup & export) for a point-and-click download.
+You can also export from the dashboard (`fixmind dashboard` -> Backup & export) if you want a point-and-click download.
