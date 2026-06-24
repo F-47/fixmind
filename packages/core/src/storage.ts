@@ -3,6 +3,7 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { configPath, dataDirectory, databasePath } from "./paths.js";
+import { DEFAULT_CONFIG } from "./config.js";
 import { assertRealLineBreaks } from "./validation.js";
 import type {
   Lesson,
@@ -72,11 +73,7 @@ export function initializeDataDirectory(): { directory: string; database: string
   fs.mkdirSync(directory, { recursive: true });
   const config = configPath();
   if (!fs.existsSync(config)) {
-    fs.writeFileSync(
-      config,
-      `${JSON.stringify({ version: 1, reviewIntervalsDays: { understood: 7, partial: 3, copied_blindly: 1 } }, null, 2)}\n`,
-      "utf8",
-    );
+    fs.writeFileSync(config, `${JSON.stringify(DEFAULT_CONFIG, null, 2)}\n`, "utf8");
   }
   return { directory, database: databasePath(), config };
 }

@@ -7,6 +7,26 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { createLessonStore } from "../src/storage.js";
 
+function memoryLesson(title: string, takeaway: string) {
+  return {
+    tool: "claude",
+    projectPath: "/tmp/fixmind-memory",
+    title,
+    originalPrompt: `Fix ${title}`,
+    problem: `${title} broke the task`,
+    mistake: `Used the wrong approach for ${title}`,
+    rootCause: `The code assumed the wrong behavior for ${title}`,
+    fixSummary: `Changed the logic for ${title}`,
+    takeaway,
+    whenNotApplicable: `Does not apply when ${title.toLowerCase()} is already correct`,
+    concepts: [title.toLowerCase()],
+    reviewQuestions: [{
+      question: `How does ${title} transfer?`,
+      expectedAnswer: takeaway,
+    }],
+  };
+}
+
 test("MCP exposes one save tool and persists a lesson", async () => {
   const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-"));
   const transport = new StdioClientTransport({
@@ -20,7 +40,7 @@ test("MCP exposes one save tool and persists a lesson", async () => {
   try {
     await client.connect(transport);
     const tools = await client.listTools();
-    assert.deepEqual(tools.tools.map((tool) => tool.name), ["save_lesson"]);
+    assert.deepEqual(tools.tools.map((tool) => tool.name), ["memory", "save_lesson"]);
 
     const result = await client.callTool({
       name: "save_lesson",
@@ -67,6 +87,47 @@ test("MCP exposes one save tool and persists a lesson", async () => {
     } finally {
       store.close();
     }
+  } finally {
+    await client.close();
+    fs.rmSync(dataDirectory, { recursive: true, force: true });
+  }
+});
+
+test("MCP memory returns reviewed active lessons and skips superseded ones", async () => {
+  const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-memory-"));
+  const dbPath = path.join(dataDirectory, "learning.db");
+  const store = createLessonStore(dbPath);
+  const oldLesson = store.save(memoryLesson("Hydration mismatch", "Keep the first server and browser render identical."));
+  store.updateReview(oldLesson.id, oldLesson.reviewQuestions, "understood");
+  const newLesson = store.save(memoryLesson("Hydration fix", "Read browser-only state after mount."));
+  store.updateReview(newLesson.id, newLesson.reviewQuestions, "understood");
+  store.supersede(oldLesson.id, newLesson.id, "The first lesson described the wrong fix.");
+  const unrelated = store.save(memoryLesson("Stale closure", "Use the latest value in the effect."));
+  store.updateReview(unrelated.id, unrelated.reviewQuestions, "understood");
+  store.close();
+
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.resolve("dist/src/cli.js"), "mcp"],
+    env: { ...process.env, FIXMIND_DATA_DIR: dataDirectory } as Record<string, string>,
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "fixmind-test", version: "1.0.0" });
+
+  try {
+    await client.connect(transport);
+    const result = await client.callTool({
+      name: "memory",
+      arguments: {
+        query: "hydration",
+        limit: 5,
+      },
+    });
+    assert.equal(result.isError, undefined);
+    const text = (result.content as Array<{ text: string }>)[0].text;
+    assert.match(text, /Hydration fix/);
+    assert.doesNotMatch(text, /Hydration mismatch/);
+    assert.doesNotMatch(text, /Stale closure/);
   } finally {
     await client.close();
     fs.rmSync(dataDirectory, { recursive: true, force: true });
@@ -214,7 +275,7 @@ test("MCP supersedes a previous lesson via supersedesLessonId", async () => {
   try {
     await client.connect(transport);
     const tools = await client.listTools();
-    assert.deepEqual(tools.tools.map((tool) => tool.name), ["save_lesson"]);
+    assert.deepEqual(tools.tools.map((tool) => tool.name), ["memory", "save_lesson"]);
 
     const first = await client.callTool({
       name: "save_lesson",

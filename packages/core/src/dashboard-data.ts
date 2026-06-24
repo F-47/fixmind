@@ -41,6 +41,7 @@ export interface DashboardData {
     due: number;
     learning: number;
     understood: number;
+    memoryReady: number;
   };
 }
 
@@ -65,6 +66,7 @@ export function buildDashboardData(
       due: dueIds.size,
       learning: all.filter((lesson) => isLearning(lesson.understanding)).length,
       understood: all.filter((lesson) => lesson.understanding === "understood").length,
+      memoryReady: all.filter((lesson) => lesson.status === "active" && lesson.reviewCount > 0).length,
     },
   };
 }

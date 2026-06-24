@@ -17,6 +17,7 @@ import {
   text,
 } from "@clack/prompts";
 import { lessonsToJson, lessonsToMarkdown } from "./export.js";
+import { formatMemoryLessons, getMemoryLessons } from "./memory.js";
 import { readGitContext } from "./git.js";
 import {
   createLessonStore,
@@ -29,6 +30,7 @@ import { isAddressInUseError, parseArgs as parseCliArgs } from "./cli-utils.js";
 import {
   loginCommand as runLoginCommand,
   logoutCommand as runLogoutCommand,
+  settingsCommand as runSettingsCommand,
   setup as runSetupCommand,
   syncCommand as runSyncCommand,
 } from "./cli-sync.js";
@@ -121,6 +123,22 @@ async function main(): Promise<void> {
 
   if (args.command === "setup") {
     await runSetupCommand(args.options);
+    return;
+  }
+
+  if (args.command === "settings") {
+    await runSettingsCommand(args.options);
+    return;
+  }
+
+  if (args.command === "memory") {
+    initializeDataDirectory();
+    const store = createLessonStore();
+    try {
+      showMemory(store, args.options, args.positionals);
+    } finally {
+      store.close();
+    }
     return;
   }
 
@@ -678,8 +696,22 @@ async function readStdin(): Promise<string> {
 
 function printHelp(): void {
   console.log(
-    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--dry-run] [--no-dashboard]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind login [--url <supabase-url> --key <anon-key> --passphrase ...]  (opens browser for GitHub sign in)\n  fixmind login --password-login --email ... --password ... --passphrase ...  (email/password instead)\n  fixmind logout\n  fixmind sync push\n  fixmind sync pull\n  fixmind sync status\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nOptions:\n  -v, --version  Show the installed CLI version.\n  -h, --help     Show this help text.\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
+    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--capture-mode strict|balanced] [--dry-run] [--no-dashboard]\n  fixmind settings [--capture-mode strict|balanced]\n  fixmind memory [query] [--limit 5]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind login [--url <supabase-url> --key <anon-key> --passphrase ...]  (opens browser for GitHub sign in)\n  fixmind login --password-login --email ... --password ... --passphrase ...  (email/password instead)\n  fixmind logout\n  fixmind sync push\n  fixmind sync pull\n  fixmind sync status\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nOptions:\n  -v, --version  Show the installed CLI version.\n  -h, --help     Show this help text.\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
   );
+}
+
+function showMemory(
+  store: LessonStore,
+  options: Record<string, string | boolean>,
+  positionals: string[],
+): void {
+  const query = positionals.join(" ").trim();
+  const memory = getMemoryLessons(store, {
+    query,
+    limit: numberOption(options.limit, 5),
+  });
+  console.log(query ? `Memory for "${query}"` : "Memory");
+  console.log(formatMemoryLessons(memory));
 }
 
 main().catch((error: unknown) => {

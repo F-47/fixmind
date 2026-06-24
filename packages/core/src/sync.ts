@@ -20,6 +20,7 @@ interface SyncConfig {
   refreshToken: string;
   salt: string;
   keyBase64: string;
+  entitled?: boolean;
   lastPushedAt?: string;
   lastPulledAt?: string;
 }
@@ -66,6 +67,8 @@ async function withTimeout<T>(promise: Promise<T>): Promise<T> {
 }
 
 export async function autoPushAfterSave(store: LessonStore): Promise<void> {
+  const config = readSyncConfig();
+  if (config?.entitled !== true) return;
   const engine = createSyncEngine(store);
   if (!(await engine.status()).syncEnabled) return;
   try {
@@ -78,6 +81,8 @@ export async function autoPushAfterSave(store: LessonStore): Promise<void> {
 }
 
 export async function autoPullOnStart(store: LessonStore): Promise<void> {
+  const config = readSyncConfig();
+  if (config?.entitled !== true) return;
   const engine = createSyncEngine(store);
   if (!(await engine.status()).syncEnabled) return;
   try {
@@ -191,6 +196,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
         refreshToken: session.refreshToken,
         salt,
         keyBase64: key.toString("base64"),
+        entitled,
       });
       if (entitled) {
         try {
@@ -221,6 +227,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
         refreshToken: session.refreshToken,
         salt,
         keyBase64: key.toString("base64"),
+        entitled,
       });
       if (entitled) {
         try {

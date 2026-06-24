@@ -41,6 +41,7 @@ test("groups patterns and keeps summary totals independent of search results", (
     title: "Clean subscriptions",
     mistakePattern: "Resource cleanup",
     understanding: "understood",
+    reviewCount: 1,
   });
   const data = buildDashboardData(
     [first, second],
@@ -49,7 +50,7 @@ test("groups patterns and keeps summary totals independent of search results", (
     [{ name: "Resource cleanup", count: 2 }],
   );
   assert.equal(data.lessons.length, 1);
-  assert.deepEqual(data.summary, { total: 2, due: 1, learning: 1, understood: 1 });
+  assert.deepEqual(data.summary, { total: 2, due: 1, learning: 1, understood: 1, memoryReady: 1 });
   assert.deepEqual(data.patterns[0], {
     name: "Resource cleanup",
     count: 2,

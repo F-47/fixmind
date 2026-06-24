@@ -4,11 +4,22 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+### Changed
+- `fixmind setup` now defaults to strict capture mode, and `fixmind settings` lets users switch to balanced capture mode later without re-running setup.
+- The MCP server now reads capture mode from local config so the agent can be more or less aggressive about saving borderline-but-useful lessons.
+- Added `fixmind memory` plus an MCP `memory` tool so the agent can retrieve reviewed lessons and reuse them as guidance in new tasks.
+
+## [1.0.22]
+
+### Fixed
+- The global `fixmind` launcher now runs correctly through npm shims, so `fixmind -v` and `fixmind setup` no longer silently exit after a global install.
+
 ## [1.0.21]
 
 ### Fixed
 - Removed the experimental browser-to-account session handoff and kept CLI sync login separate from website account sign-in.
 - Clarified the account and CLI copy so the website manages plan status while `npx fixmind login` handles encrypted sync on a device.
+- Raised the minimum Node requirement to 22.13 and added a launcher guard so older Node versions show a clear upgrade message instead of crashing on `node:sqlite`.
 
 ## [1.0.20]
 

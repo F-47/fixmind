@@ -1,3 +1,5 @@
+/// <reference path="../deno.d.ts" />
+
 // Supabase Edge Function: receives Polar subscription webhooks and keeps
 // the `entitlements` table in sync, so `fixmind login` can check
 // whether an account has an active Pro/Team subscription.

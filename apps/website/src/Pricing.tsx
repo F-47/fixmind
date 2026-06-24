@@ -1,3 +1,4 @@
+import type { Session } from "@supabase/supabase-js";
 import { PolarEmbedCheckout } from "@polar-sh/checkout/embed";
 import { Check, Lock, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -97,12 +98,16 @@ const PLANS: Plan[] = [
 function PlanCard({
   plan,
   active,
+  session,
   onJoinWaitlist,
 }: {
   plan: Plan;
   active: boolean;
+  session: Session | null | undefined;
   onJoinWaitlist: (plan: string) => void;
 }) {
+  const checkoutReady = Boolean(plan.checkoutUrl);
+
   return (
     <div
       className={`flex flex-col rounded-xl border p-6 ${
@@ -110,7 +115,7 @@ function PlanCard({
           ? "border-accent/45 bg-surface shadow-[0_0_40px_-28px_var(--color-accent-dim)]"
           : plan.highlight
             ? "border-accent/50 bg-surface shadow-[0_0_60px_-25px_var(--color-accent-dim)]"
-          : "border-line bg-surface"
+            : "border-line bg-surface"
       }`}
     >
       <div className="flex items-center justify-between">
@@ -168,7 +173,18 @@ function PlanCard({
           >
             Get started - it's free
           </Link>
-        ) : plan.cta === "checkout" ? (
+        ) : plan.cta === "checkout" && session === undefined ? (
+          <div className="rounded-md border border-line px-3 py-2 text-center text-sm text-muted">
+            Checking account...
+          </div>
+        ) : plan.cta === "checkout" && !session ? (
+          <Link
+            to="/account?next=/pricing"
+            className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
+          >
+            Sign in to subscribe
+          </Link>
+        ) : plan.cta === "checkout" && checkoutReady ? (
           <a
             href={plan.checkoutUrl}
             data-polar-checkout
@@ -177,6 +193,10 @@ function PlanCard({
           >
             Subscribe
           </a>
+        ) : plan.cta === "checkout" ? (
+          <div className="rounded-md border border-line px-3 py-2 text-center text-sm text-muted">
+            Checkout unavailable
+          </div>
         ) : (
           <button
             type="button"
@@ -228,7 +248,8 @@ function WaitlistModal({
             You’re on the waitlist
           </h3>
           <p className="mt-2 text-center text-sm text-muted">
-            We’ll reach out at <span className="text-ink">{email}</span> when {plan} is ready.
+            We’ll reach out at <span className="text-ink">{email}</span> when{" "}
+            {plan} is ready.
           </p>
           <button
             type="button"
@@ -270,7 +291,8 @@ function WaitlistModal({
           </button>
         </div>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          Leave your email and I’ll only use it for the {plan.toLowerCase()} waitlist.
+          Leave your email and I’ll only use it for the {plan.toLowerCase()}{" "}
+          waitlist.
         </p>
 
         <form
@@ -296,11 +318,7 @@ function WaitlistModal({
             name="subject"
             value={`New ${plan} waitlist request from fixmind.dev`}
           />
-          <input
-            type="hidden"
-            name="plan"
-            value={plan}
-          />
+          <input type="hidden" name="plan" value={plan} />
           <label className="block">
             <span className="sr-only">Email</span>
             <input
@@ -327,19 +345,46 @@ function WaitlistModal({
 
 export default function Pricing() {
   usePageMeta(
-    "Pricing - fixmind",
+    "Fixmind — Pricing",
     "Fixmind is free and local-first forever. Pro adds encrypted sync across devices.",
   );
 
-  const [activePlan, setActivePlan] = useState<string | null | undefined>(undefined);
+  const [activePlan, setActivePlan] = useState<string | null | undefined>(
+    undefined,
+  );
   const [waitlistPlan, setWaitlistPlan] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   useEffect(() => {
     PolarEmbedCheckout.init();
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     if (!supabase) {
+      setSession(null);
+      return;
+    }
+
+    let mounted = true;
+    void (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (mounted) setSession(data.session);
+    })();
+
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, nextSession) => {
+        setSession(nextSession);
+      },
+    );
+
+    return () => {
+      mounted = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!supabase || !session) {
       setActivePlan(null);
       return;
     }
@@ -361,7 +406,7 @@ export default function Pricing() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [session]);
 
   const selectedPlan = activePlan === "pro" ? "Pro" : null;
 
@@ -387,10 +432,10 @@ export default function Pricing() {
               Pro adds encrypted sync so the same lessons follow you across
               machines.
             </p>
-            <p className="mx-auto mt-4 max-w-xl rounded-md border border-line bg-surface px-4 py-2 font-mono text-xs text-muted">
-            Free and Pro are available today. Team and Enterprise are waitlist
-            tiers for later.
-          </p>
+            <p className="mx-auto mt-4 max-w-2xl rounded-md border border-line bg-surface px-4 py-2 font-mono text-xs text-muted">
+              Free and Pro are available today. Team and Enterprise are waitlist
+              tiers for later.
+            </p>
           </div>
         </section>
 
@@ -401,6 +446,7 @@ export default function Pricing() {
                 key={plan.name}
                 plan={plan}
                 active={selectedPlan === plan.name}
+                session={session}
                 onJoinWaitlist={(nextPlan) => setWaitlistPlan(nextPlan)}
               />
             ))}

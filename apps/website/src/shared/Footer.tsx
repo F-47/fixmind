@@ -1,4 +1,4 @@
-import { CONTACT_EMAIL } from "./constants";
+﻿import { CONTACT_EMAIL } from "./constants";
 import { Logo } from "./Logo";
 
 export function Footer() {
@@ -21,7 +21,7 @@ export function Footer() {
           </a>
         </div>
         <p className="mt-6 border-t border-line pt-6 text-center font-mono text-[11px] uppercase tracking-[0.2em] text-muted">
-          MIT licensed · No telemetry · Node 22.5+
+          Private product · No telemetry · Node 22.13+
         </p>
       </div>
     </footer>

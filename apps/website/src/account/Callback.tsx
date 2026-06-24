@@ -1,6 +1,7 @@
 import type { Session } from "@supabase/supabase-js";
 import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Check, KeyRound, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase, supabaseConfigured } from "../lib/supabase";
@@ -11,12 +12,33 @@ import { InfoPill } from "./InfoPill";
 
 function isRecoveryUrl(): boolean {
   const params = new URLSearchParams(window.location.search);
-  return params.get("type") === "recovery" || params.get("flow") === "recovery";
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return (
+    params.get("type") === "recovery" ||
+    params.get("flow") === "recovery" ||
+    hashParams.get("type") === "recovery" ||
+    hashParams.get("flow") === "recovery"
+  );
+}
+
+function hasCallbackPayload(): boolean {
+  const params = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  return (
+    params.has("code") ||
+    params.has("error") ||
+    hashParams.has("access_token") ||
+    hashParams.has("refresh_token") ||
+    hashParams.has("error") ||
+    isRecoveryUrl()
+  );
 }
 
 export default function AccountCallback() {
+  const navigate = useNavigate();
+
   usePageMeta(
-    "Finishing sign-in - fixmind",
+    "Fixmind — Sign in",
     "Complete your Fixmind sign-in, magic-link login, or password reset.",
   );
 
@@ -26,6 +48,11 @@ export default function AccountCallback() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    if (!hasCallbackPayload()) {
+      navigate("/account", { replace: true });
+      return;
+    }
+
     const client = supabase;
     if (!client) {
       setSession(null);
@@ -49,7 +76,7 @@ export default function AccountCallback() {
       mounted = false;
       subscription.subscription.unsubscribe();
     };
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     if (!session || recoveryMode) return;

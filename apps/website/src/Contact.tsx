@@ -156,7 +156,7 @@ function ReasonCard({ reason }: { reason: Reason }) {
 
 export default function Contact() {
   usePageMeta(
-    "Contact — fixmind",
+    "Fixmind — Contact",
     "Get in touch with fixmind for support, feedback, or questions about Team and Enterprise plans.",
   );
   return (

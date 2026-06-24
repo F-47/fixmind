@@ -5,22 +5,25 @@ import {
   Lock,
   Plug,
   Repeat,
+  Search,
 } from "lucide-react";
 import { CopyButton } from "./components/CopyButton";
+import { CommandSnippet } from "./components/CommandSnippet";
 import { usePageMeta } from "./router";
 import { Footer } from "./shared/Footer";
 import { Nav } from "./shared/Nav";
 
 export default function App() {
   usePageMeta(
-    "fixmind — close the loop on AI bug fixes",
-    "Fixmind is a local-first MCP server that turns every AI bug fix into a lesson you actually remember. Local by default, no account required.",
+    "Fixmind — Close the loop on AI bug fixes",
+    "Fixmind is a local-first MCP server that turns every AI bug fix into a lesson you actually remember, then reuses those lessons as memory in later tasks. Local by default, no account required.",
   );
   return (
     <div>
       <Nav />
       <Hero />
       <LoopSection />
+      <MemorySection />
       <FeaturesSection />
       <TokensSection />
       <HowItWorksSection />
@@ -45,27 +48,18 @@ function Hero() {
             MCP server · runs on your machine
           </p>
           <h1 className="mt-5 font-display text-5xl font-semibold leading-[1.05] tracking-tight text-ink sm:text-6xl">
-            Bug fixed.
+            Don&apos;t just let AI fix it.
             <br />
-            <span className="text-accent text-glow">You learned nothing.</span>
+            <span className="text-accent text-glow">Learn from it.</span>
           </h1>
-          <p className="mt-6 max-w-md text-lg leading-relaxed text-muted">
+          <p className="mt-6 text-lg leading-relaxed text-muted text-justify">
             Your agent patches the code, you accept the diff, and the lesson
             evaporates. Fixmind catches it on the way out — a local MCP server
-            that turns every AI&#8209;assisted fix into something you actually
+            that turns every AI-assisted fix into something you actually
             remember.
           </p>
           <div className="mt-9 max-w-xl space-y-2">
-            <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 font-mono text-sm text-ink">
-              <span className="text-muted">$</span>
-              <span>npx fixmind setup</span>
-              <CopyButton text="npx fixmind setup" />
-            </div>
-            <div className="flex items-center gap-2 rounded-lg border border-line bg-surface px-4 py-2.5 font-mono text-sm text-ink">
-              <span className="text-muted">$</span>
-              <span>npx fixmind login</span>
-              <CopyButton text="npx fixmind login" />
-            </div>
+            <CommandSnippet command="npx fixmind setup" />
             <p className="text-sm leading-relaxed text-muted">
               Run the CLI through <code className="text-ink">npx</code> when you
               want a one-off setup or login. If you want a persistent binary on
@@ -228,17 +222,143 @@ function LoopSection() {
   );
 }
 
+function MemorySection() {
+  return (
+    <section id="memory" className="border-y border-line bg-surface/40">
+      <div className="mx-auto grid max-w-6xl gap-10 px-6 py-24 lg:grid-cols-[1fr_.95fr] lg:items-start">
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
+            Memory retrieval
+          </p>
+          <h2 className="mt-3 max-w-xl font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+            Reviewed lessons come back when the next task looks familiar.
+          </h2>
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-muted">
+            Fixmind does not just store what went wrong. It pulls a few reviewed
+            lessons back into context so the agent reuses the rule faster
+            instead of relearning the same mistake from scratch.
+          </p>
+
+          <div className="mt-8 grid gap-4">
+            <div className="rounded-xl border border-line bg-page/70 p-5">
+              <div className="font-mono text-[10px] uppercase tracking-[.18em] text-muted">
+                Trigger
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-ink">
+                The current task looks like an older bug pattern.
+              </p>
+            </div>
+            <div className="rounded-xl border border-line bg-page/70 p-5">
+              <div className="font-mono text-[10px] uppercase tracking-[.18em] text-muted">
+                Retrieval
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-ink">
+                The agent calls{" "}
+                <code className="rounded bg-surface-2 px-1 py-0.5 font-mono text-[12px] text-ink">
+                  memory
+                </code>{" "}
+                and gets a small, relevant set of lessons.
+              </p>
+            </div>
+            <div className="rounded-xl border border-line bg-page/70 p-5">
+              <div className="font-mono text-[10px] uppercase tracking-[.18em] text-muted">
+                Result
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-ink">
+                Less repeat debugging, faster responses, cleaner fixes.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-line bg-page p-6 shadow-[0_0_80px_-40px_var(--color-accent-dim)]">
+          <div className="flex items-center justify-between gap-4 border-b border-line pb-4">
+            <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[.18em] text-accent">
+              <BrainCircuit className="size-4" />
+              Memory snapshot
+            </div>
+            <span className="rounded-full border border-line bg-surface/70 px-3 py-1 font-mono text-[10px] uppercase tracking-[.16em] text-muted">
+              reviewed only
+            </span>
+          </div>
+
+          <div className="mt-6 grid gap-5">
+            <div className="flex items-end justify-between gap-6">
+              <div>
+                <div className="font-serif text-5xl font-bold tracking-tight text-ink">
+                  3
+                </div>
+                <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">
+                  lessons ready to resurface as guidance when the next fix
+                  matches an old pattern.
+                </p>
+              </div>
+              <div className="w-full max-w-[250px] rounded-lg border border-accent/20 bg-accent/5 px-4 py-2.5 font-mono text-sm text-ink">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-accent">$</span>
+                  <span className="truncate">use fixmind memory</span>
+                  <CopyButton text="use fixmind memory" />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 rounded-xl border border-line bg-surface p-4">
+                <span className="mt-1 size-2 rounded-full bg-accent" />
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-[.16em] text-muted">
+                    Active
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed text-ink">
+                    Only lessons that still matter stay eligible.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-xl border border-line bg-surface p-4">
+                <span className="mt-1 size-2 rounded-full bg-good" />
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-[.16em] text-muted">
+                    Reviewed
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed text-ink">
+                    Memory pulls from lessons you already checked.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 rounded-xl border border-accent/20 bg-accent/8 p-4">
+                <span className="mt-1 size-2 rounded-full bg-accent shadow-[0_0_0_3px_rgba(var(--color-accent-rgb),0.12)]" />
+                <div>
+                  <div className="font-mono text-[10px] uppercase tracking-[.16em] text-accent">
+                    Relevant
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed text-ink">
+                    It surfaces a few matches, not the whole archive.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function FeatureCard({
   icon,
   title,
+  className,
   children,
 }: {
   icon: React.ReactNode;
   title: string;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-line bg-surface p-6 transition-colors hover:border-accent/40">
+    <div
+      className={`rounded-xl border border-line bg-surface p-6 transition-colors hover:border-accent/40 ${className ?? ""}`}
+    >
       <div className="mb-4 flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10 text-accent">
         {icon}
       </div>
@@ -251,35 +371,57 @@ function FeatureCard({
 function FeaturesSection() {
   return (
     <section id="features" className="mx-auto max-w-6xl px-6 py-24">
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
+      <p className="font-mono text-xs uppercase text-center tracking-[0.2em] text-accent">
         Built for how you already work
       </p>
-      <h2 className="mt-3 max-w-xl font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
+      <h2 className="mt-3 text-center font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
         Local by default. Accounts are opt-in, not required.
       </h2>
 
-      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <FeatureCard icon={<Lock size={18} />} title="Local-first">
+      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-12">
+        <FeatureCard
+          className="lg:col-span-4"
+          icon={<Lock size={18} />}
+          title="Local-first"
+        >
           Lessons live in{" "}
           <code className="text-ink">~/.fixmind/learning.db</code>. No account
           needed, no paid AI API in the loop.
         </FeatureCard>
-        <FeatureCard icon={<Plug size={18} />} title="Speaks MCP">
+        <FeatureCard
+          className="lg:col-span-4"
+          icon={<Plug size={18} />}
+          title="Speaks MCP"
+        >
           Works with Claude Code, Cursor, and Codex.{" "}
           <code className="text-ink">npx fixmind setup</code> wires itself into
           whatever you already run — on this device, or scoped to a single
           project.
         </FeatureCard>
         <FeatureCard
+          className="lg:col-span-4"
           icon={<GitCompare size={18} />}
           title="Real diffs, not summaries"
         >
           Captures the actual bad and good code from your git diff — not a vague
           paraphrase of what changed.
         </FeatureCard>
-        <FeatureCard icon={<BrainCircuit size={18} />} title="Spaced recall">
+        <FeatureCard
+          className="lg:col-span-4 lg:col-start-3"
+          icon={<BrainCircuit size={18} />}
+          title="Spaced recall"
+        >
           New lessons resurface on a schedule with a real question, so you
           answer before you see the takeaway.
+        </FeatureCard>
+        <FeatureCard
+          className="lg:col-span-4 lg:col-start-7"
+          icon={<Search size={18} />}
+          title="Memory retrieval"
+        >
+          Reviewed lessons can be pulled back into context when a new task looks
+          familiar, so the agent reuses the rule instead of relearning the same
+          mistake.
         </FeatureCard>
       </div>
     </section>
@@ -336,7 +478,9 @@ function SessionTimeline() {
       <p className="mt-8 border-t border-line pt-4 text-sm leading-relaxed text-muted">
         Everything in between &mdash; the turns spent reading code, writing
         patches, running tests &mdash; calls{" "}
-        <code className="text-ink">save_lesson</code> zero times.
+        <code className="text-ink">save_lesson</code> zero times. Later, the
+        agent can call <code className="text-ink">memory</code> to pull a few
+        reviewed lessons back into context when the next task looks familiar.
       </p>
     </div>
   );
@@ -518,11 +662,14 @@ function HowItWorksSection() {
 
         <div className="mt-14 grid gap-16 lg:grid-cols-[1fr_400px] lg:items-start">
           <div>
-            <HowStep number="01" title="Set up the MCP server" command="npx fixmind setup">
-              Use{" "}
-              <code className="text-ink">npx fixmind setup</code> to register
-              the MCP server with Claude Code, Cursor, or Codex on this device
-              or just this project. No global install is required.
+            <HowStep
+              number="01"
+              title="Set up the MCP server"
+              command="npx fixmind setup"
+            >
+              Use <code className="text-ink">npx fixmind setup</code> to
+              register the MCP server with Claude Code, Cursor, or Codex on this
+              device or just this project. No global install is required.
             </HowStep>
             <HowStep number="02" title="Fix bugs like normal">
               Keep working the way you already do. Your agent calls{" "}

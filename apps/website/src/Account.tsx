@@ -1,5 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { usePageMeta } from "./router";
 import { Footer } from "./shared/Footer";
 import { Nav } from "./shared/Nav";
@@ -8,9 +9,21 @@ import { AuthForm } from "./account/AuthForm";
 import { AccountStatus } from "./account/AccountStatus";
 import { InfoPill } from "./account/InfoPill";
 
+const POST_LOGIN_PATH_KEY = "fixmind:post-login-path";
+
+function safeNextPath(search: string): string | null {
+  const next = new URLSearchParams(search).get("next");
+  if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
+  if (next === "/account" || next.startsWith("/account?")) return null;
+  return next;
+}
+
 export default function Account() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   usePageMeta(
-    "Account and sync - fixmind",
+    "Fixmind — Account",
     "Manage your fixmind account, optional sync, and paid plan status.",
   );
 
@@ -38,6 +51,22 @@ export default function Account() {
       subscription.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    const next = safeNextPath(location.search);
+    if (next) sessionStorage.setItem(POST_LOGIN_PATH_KEY, next);
+  }, [location.search]);
+
+  useEffect(() => {
+    if (!session) return;
+
+    const next =
+      safeNextPath(location.search) ?? sessionStorage.getItem(POST_LOGIN_PATH_KEY);
+    if (!next) return;
+
+    sessionStorage.removeItem(POST_LOGIN_PATH_KEY);
+    navigate(next, { replace: true });
+  }, [location.search, navigate, session]);
 
   return (
     <div>
