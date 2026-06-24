@@ -6,11 +6,12 @@
 
 `fixmind setup` detects and configures Claude Code, Cursor, and Codex. Other MCP-compatible clients work too. See [Other MCP clients](#other-mcp-clients).
 
-Fixmind exposes a local stdio MCP server. Any compatible AI coding client can start it and call one tool:
+Fixmind exposes a local stdio MCP server with two tools:
 
-`save_lesson`
+- `memory` retrieves a small set of reviewed, active lessons related to the current task.
+- `save_lesson` records a new learning lesson after a meaningful coding fix.
 
-It also exposes a `memory` tool that returns a small set of reviewed, active lessons related to the current task. Everything stays local. The tools do not call an AI API, upload code, or expose your lesson history in bulk. For what gets stored and how it is reviewed afterward, see [Lesson Schema](./lesson-schema.md). For the `fixmind setup` flags used below, see [CLI reference](./cli-reference.md#fixmind-setup).
+Everything stays local. The MCP server does not call an AI API, upload code, or expose your lesson history in bulk. Opt-in encrypted sync is a separate feature; it is not part of an MCP tool call. For what gets stored and how it is reviewed afterward, see [Lesson Schema](./lesson-schema.md). For the `fixmind setup` flags used below, see [CLI reference](./cli-reference.md#fixmind-setup).
 
 If you want client-specific setup notes for Claude Code, Codex, Cursor, VS Code, Copilot CLI, OpenCode, Pi, or another MCP client, see [MCP Clients](./mcp-clients.md).
 
@@ -56,19 +57,30 @@ If no supported client is detected, `fixmind setup` prints a generic MCP configu
 }
 ```
 
+## How it works
+
+1. Your MCP client starts `fixmind mcp` as a local stdio process and receives the server instructions plus both tool schemas.
+2. For a task that resembles a previous mistake, the agent can call `memory` and apply the returned guidance.
+3. After a qualifying fix, the agent can call `save_lesson`. If `projectPath` is available, Fixmind fills omitted changed-file and source-diff context from the current Git working tree.
+4. Fixmind validates the lesson and its learning quality locally, then stores accepted lessons in its local SQLite database. If sync is configured, the normal post-save sync path runs separately.
+
+Tool use is best-effort: the MCP client and agent decide whether to call either tool.
+
 ## Agent behavior
 
 The MCP server tells the agent to save a lesson after a meaningful coding fix and skip formatting-only, rename-only, generated-file, and mechanical changes. The current capture mode comes from `~/.fixmind/config.json`: `strict` is the default, while `balanced` tells the agent to be more willing to save borderline-but-useful lessons. Restart your AI client after changing the mode so it picks up the new instructions.
 
 When a new task looks like a past mistake, the agent should call `memory` first and use the returned takeaway and scope notes as guidance for the response.
 
-Automatic use is best-effort because each MCP client decides when to call available tools. If a client is not consistently saving lessons, you can ask it directly: "save a learning lesson after the fix."
+If a client is not consistently saving lessons, you can ask it directly: "save a learning lesson after the fix."
+
+If a save does not meet the quality bar, `save_lesson` returns an error explaining what is missing or too generic. The agent can revise the payload and retry; no lesson is stored until validation succeeds.
 
 ## Token and context overhead
 
 Connecting the fixmind MCP server adds a small, mostly one-time cost to an agent's context:
 
-- The server's instructions and the `save_lesson` tool schema are sent once when the client connects. Clients that support prompt caching reuse this across later turns in the same session.
+- The server's instructions and both tool schemas are sent once when the client connects. Clients that support prompt caching reuse this across later turns in the same session.
 - `save_lesson` is called only when the agent decides a meaningful fix happened. Sessions with no qualifying fixes add nothing beyond the initial connection cost.
 - When a lesson is saved, the generated payload is similar in size to a short commit message or code review comment.
 
@@ -101,6 +113,7 @@ The `save_lesson` tool accepts:
   "rootCause": "Why the mistake caused the behavior",
   "fixSummary": "What changed and why it works",
   "takeaway": "One plain sentence the developer should remember",
+  "whenNotApplicable": "When this advice needs a different approach",
   "mistakePattern": "A short reusable category",
   "concepts": ["Reusable concept"],
   "filesChanged": ["src/example.ts"],
@@ -111,7 +124,7 @@ The `save_lesson` tool accepts:
   "practiceTask": "A small exercise to apply the concept",
   "reviewQuestions": [
     {
-      "question": "A recall question",
+      "question": "A transfer question that applies the rule elsewhere",
       "expectedAnswer": "A concise expected answer"
     }
   ],
@@ -122,6 +135,8 @@ The `save_lesson` tool accepts:
 }
 ```
 
-`tool` is optional and usually omitted. Fixmind reads it from the connected MCP client's `clientInfo.name` during the initialize handshake. Each `tags` entry is `{ name, url? }`; only set `url` when it points to real official documentation. Otherwise omit it and the tag is shown as a plain label.
+`tool`, `projectPath`, `filesChanged`, `sourceDiff`, code examples, tags, and supersession fields are optional. Fixmind reads `tool` from the connected MCP client's `clientInfo.name` during the initialize handshake. Each `tags` entry is `{ name, url? }`; only set `url` when it points to real official documentation. Otherwise omit it and the tag is shown as a plain label.
 
 If Git is available at `projectPath`, omitted changed files and source diff are collected from the current working tree.
+
+To replace a previously saved lesson that turned out to be wrong or incomplete, include `supersedesLessonId` and `supersedeReason`. The previous lesson remains in history but is hidden from normal search and review.

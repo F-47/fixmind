@@ -2,8 +2,8 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { ArrowRight, Mail, ShieldCheck, SquareTerminal } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "../lib/supabase";
-import { InfoPill } from "./InfoPill";
+import { supabase } from "@/lib/supabase";
+import { InfoPill } from "@/components/ui/InfoPill";
 
 function emailFromQuery(): string {
   return new URLSearchParams(window.location.search).get("email") ?? "";

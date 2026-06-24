@@ -1,10 +1,18 @@
 import type { Session } from "@supabase/supabase-js";
-import { ArrowRight, Globe, LogOut, ShieldCheck, Sparkles, TerminalSquare } from "lucide-react";
+import {
+  ArrowRight,
+  Globe,
+  LogOut,
+  ShieldCheck,
+  Sparkles,
+  TerminalSquare,
+} from "lucide-react";
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
-import { Link } from "../router";
+import { supabase } from "@/lib/supabase";
+import { Link } from "@/router";
+import { cn } from "@/lib/cn";
 import { CommandCard } from "./CommandCard";
-import { InfoPill } from "./InfoPill";
+import { InfoPill } from "@/components/ui/InfoPill";
 
 interface Entitlement {
   plan: string;
@@ -16,8 +24,12 @@ function capitalize(value: string): string {
 }
 
 export function AccountStatus({ session }: { session: Session }) {
-  const [entitlement, setEntitlement] = useState<Entitlement | null | undefined>(undefined);
-  const [lessonCount, setLessonCount] = useState<number | null | undefined>(undefined);
+  const [entitlement, setEntitlement] = useState<
+    Entitlement | null | undefined
+  >(undefined);
+  const [lessonCount, setLessonCount] = useState<number | null | undefined>(
+    undefined,
+  );
 
   useEffect(() => {
     if (!supabase) return;
@@ -67,14 +79,13 @@ export function AccountStatus({ session }: { session: Session }) {
         : state === "free"
           ? "You can use fixmind locally on this machine without a subscription."
           : "This account still works locally. Upgrade only if you want sync.";
-  const lessonCountLabel =
-    syncEnabled
-      ? lessonCount === undefined
-        ? "Loading lessons..."
-        : lessonCount === null
-          ? "Lessons unavailable"
-          : `${lessonCount} synced lesson${lessonCount === 1 ? "" : "s"}`
-      : "Lessons stay on this device.";
+  const lessonCountLabel = syncEnabled
+    ? lessonCount === undefined
+      ? "Loading lessons..."
+      : lessonCount === null
+        ? "Lessons unavailable"
+        : `${lessonCount} synced lesson${lessonCount === 1 ? "" : "s"}`
+    : "Lessons stay on this device.";
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-line bg-surface p-7">
@@ -111,7 +122,14 @@ export function AccountStatus({ session }: { session: Session }) {
           </button>
         </div>
 
-        <div className={`mt-6 grid gap-3 ${syncEnabled ? "sm:grid-cols-2 md:grid-cols-4" : "sm:grid-cols-2 md:grid-cols-3"}`}>
+        <div
+          className={cn(
+            "mt-6 grid gap-3",
+            syncEnabled
+              ? "sm:grid-cols-2 md:grid-cols-4"
+              : "sm:grid-cols-2 md:grid-cols-3",
+          )}
+        >
           <div className="rounded-xl border border-line bg-surface-2 p-4">
             <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
               Signed in as
@@ -243,8 +261,9 @@ export function AccountStatus({ session }: { session: Session }) {
                   Keep your lessons in sync on every machine.
                 </h3>
                 <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-                  Fixmind stays local on this device for free. Pro adds encrypted sync,
-                  so the same lessons follow you from laptop to desktop without extra setup.
+                  Fixmind stays local on this device for free. Pro adds
+                  encrypted sync, so the same lessons follow you from laptop to
+                  desktop without extra setup.
                 </p>
               </div>
               <div className="hidden rounded-full border border-accent/30 bg-accent/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-accent sm:block">
@@ -281,7 +300,9 @@ export function AccountStatus({ session }: { session: Session }) {
           >
             <div>
               <p className="text-sm font-medium text-ink">How sync works</p>
-              <p className="text-sm text-muted">See the login and sync commands.</p>
+              <p className="text-sm text-muted">
+                See the login and sync commands.
+              </p>
             </div>
             <span className="text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-accent">
               &rarr;
