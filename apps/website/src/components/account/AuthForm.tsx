@@ -164,8 +164,14 @@ export function AuthForm() {
         <button
           type="button"
           onClick={handleGithub}
-          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-line px-4 py-3 text-sm font-medium text-ink transition-colors hover:border-accent/60 hover:text-accent"
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-black/90 bg-[#0d1117] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#161b22] hover:text-white"
         >
+          <img
+            src="/logos/github.svg"
+            alt=""
+            aria-hidden="true"
+            className="size-4 shrink-0"
+          />
           Continue with GitHub
         </button>
 
