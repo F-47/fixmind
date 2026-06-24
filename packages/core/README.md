@@ -41,7 +41,7 @@ npx fixmind setup
 The MCP server doesn't just blindly accept data; it acts as a strict teacher for your AI agent. Before any lesson is stored, Fixmind runs it through a local validation gate:
 
 - **No junk:** If the agent tries to save a formatting change, a pure refactor, or a UI tweak without a behavior break, the server rejects it.
-- **Explain the why:** If the agent repeats the symptom as the root cause, the server asks for a deeper explanation.
+- **Explain the why:** If the agent repeats the symptom as the root cause, the server asks for a deeper explanation. For package or runtime failures, it also requires the boundary behind the error: where code runs, what belongs in the client bundle, and the supported interface between systems.
 - **Transfer, not recall:** The server asks the agent to write transfer questions instead of simple recall questions.
 - **Superseding mistakes:** If a saved lesson turns out to be wrong, the corrected lesson can supersede the old one instead of replacing history.
 
@@ -68,7 +68,7 @@ fixmind review                # Answer recall questions for due lessons
 
 ## Local Dashboard
 
-Prefer a GUI? Fixmind comes with a beautiful, local-only web dashboard to view your progress, review lessons, and browse your knowledge base.
+Prefer a GUI? Fixmind comes with a beautiful, local-only web dashboard to view your progress, review lessons, and browse your knowledge base. Lesson prose and review questions support Markdown, including inline code and fenced code blocks.
 
 ```sh
 fixmind dashboard

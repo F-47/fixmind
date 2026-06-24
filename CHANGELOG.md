@@ -4,6 +4,14 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.23]
+
+### Added
+- The local dashboard now renders Markdown in lesson prose and review questions, including inline code, headings, lists, links, blockquotes, and fenced code blocks.
+
+### Changed
+- Lessons about package, runtime, build, or deployment failures now require the underlying architectural boundary: where code runs, what can enter the client bundle, and the supported interface between systems.
+
 ### Changed
 - `fixmind setup` now defaults to strict capture mode, and `fixmind settings` lets users switch to balanced capture mode later without re-running setup.
 - The MCP server now reads capture mode from local config so the agent can be more or less aggressive about saving borderline-but-useful lessons.
