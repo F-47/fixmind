@@ -63,14 +63,17 @@ export function useDashboardController() {
     }
   }
 
-  async function refreshDashboard(): Promise<void> {
+  async function refreshDashboard(): Promise<boolean> {
     setRefreshing(true);
     setError("");
+    let synced = false;
     try {
       const status = await syncStatus();
       setSyncMeta(status);
       if (status.syncEnabled) {
         await syncPull();
+        setSyncMeta(await syncStatus());
+        synced = true;
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
@@ -80,6 +83,7 @@ export function useDashboardController() {
     } finally {
       setRefreshing(false);
     }
+    return synced;
   }
 
   useEffect(() => {

@@ -46,9 +46,16 @@ export interface LoginResult {
   session: SessionTokens;
 }
 
+export interface GithubLoginResult {
+  email: string;
+  userId: string;
+  session: SessionTokens;
+}
+
 export interface SyncEngine {
   login(params: { supabaseUrl: string; supabaseAnonKey: string; email: string; password: string; passphrase: string }): Promise<LoginResult>;
-  loginWithGithub(params: { supabaseUrl: string; supabaseAnonKey: string; passphrase: string; onAuthUrl?: (url: string) => void }): Promise<LoginResult>;
+  loginWithGithub(params: { supabaseUrl: string; supabaseAnonKey: string; onAuthUrl?: (url: string) => void }): Promise<GithubLoginResult>;
+  completeGithubLogin(params: { supabaseUrl: string; supabaseAnonKey: string; email: string; userId: string; session: SessionTokens; passphrase: string }): Promise<LoginResult>;
   logout(): void;
   status(): Promise<{ loggedIn: boolean; syncEnabled: boolean; needsReauth?: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string }>;
   push(): Promise<{ pushed: number }>;
@@ -173,6 +180,47 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
     }
   }
 
+  function isIncorrectPassphraseError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    return /Incorrect passphrase for this sync account/i.test(message);
+  }
+
+  async function completeLogin(params: {
+    supabaseUrl: string;
+    supabaseAnonKey: string;
+    email: string;
+    userId: string;
+    session: SessionTokens;
+    passphrase: string;
+  }): Promise<LoginResult> {
+    const activeBackend = backend ?? createSupabaseBackend(params.supabaseUrl, params.supabaseAnonKey);
+    const entitled = await isEntitled(activeBackend, params.session);
+    const { key, salt } = await establishKey(activeBackend, params.userId, params.session, params.passphrase);
+
+    writeSyncConfig({
+      supabaseUrl: params.supabaseUrl,
+      supabaseAnonKey: params.supabaseAnonKey,
+      email: params.email,
+      userId: params.userId,
+      accessToken: params.session.accessToken,
+      refreshToken: params.session.refreshToken,
+      salt,
+      keyBase64: key.toString("base64"),
+      entitled,
+    });
+    if (entitled) {
+      try {
+        const config = readSyncConfig();
+        if (config) await withTimeout(pushPendingLessons(config, activeBackend, params.session, key));
+      } catch (error) {
+        console.error(
+          `fixmind: initial sync push after login failed (run \`npx fixmind sync push\` manually): ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+    return { email: params.email, entitled, session: params.session };
+  }
+
   return {
     async login({ supabaseUrl, supabaseAnonKey, email, password, passphrase }) {
       const activeBackend = backend ?? createSupabaseBackend(supabaseUrl, supabaseAnonKey);
@@ -184,62 +232,21 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
         session = await activeBackend.signUp(email, password);
       }
       const sessionTokens: SessionTokens = { accessToken: session.accessToken, refreshToken: session.refreshToken };
-      const entitled = await isEntitled(activeBackend, sessionTokens);
-      const { key, salt } = await establishKey(activeBackend, session.userId, sessionTokens, passphrase);
-
-      writeSyncConfig({
-        supabaseUrl,
-        supabaseAnonKey,
-        email,
-        userId: session.userId,
-        accessToken: session.accessToken,
-        refreshToken: session.refreshToken,
-        salt,
-        keyBase64: key.toString("base64"),
-        entitled,
-      });
-      if (entitled) {
-        try {
-          const config = readSyncConfig();
-          if (config) await withTimeout(pushPendingLessons(config, activeBackend, sessionTokens, key));
-        } catch (error) {
-          console.error(
-            `fixmind: initial sync push after login failed (run \`npx fixmind sync push\` manually): ${error instanceof Error ? error.message : String(error)}`,
-          );
-        }
-      }
-      return { email, entitled, session: sessionTokens };
+      return await completeLogin({ supabaseUrl, supabaseAnonKey, email, userId: session.userId, session: sessionTokens, passphrase });
     },
 
-    async loginWithGithub({ supabaseUrl, supabaseAnonKey, passphrase, onAuthUrl }) {
+    async loginWithGithub({ supabaseUrl, supabaseAnonKey, onAuthUrl }) {
       const activeBackend = backend ?? createSupabaseBackend(supabaseUrl, supabaseAnonKey);
       const session = await activeBackend.signInWithGithub(onAuthUrl);
-      const sessionTokens: SessionTokens = { accessToken: session.accessToken, refreshToken: session.refreshToken };
-      const entitled = await isEntitled(activeBackend, sessionTokens);
-      const { key, salt } = await establishKey(activeBackend, session.userId, sessionTokens, passphrase);
+      return { email: session.email, userId: session.userId, session: { accessToken: session.accessToken, refreshToken: session.refreshToken } };
+    },
 
-      writeSyncConfig({
-        supabaseUrl,
-        supabaseAnonKey,
-        email: session.email,
-        userId: session.userId,
-        accessToken: session.accessToken,
-        refreshToken: session.refreshToken,
-        salt,
-        keyBase64: key.toString("base64"),
-        entitled,
-      });
-      if (entitled) {
-        try {
-          const config = readSyncConfig();
-          if (config) await withTimeout(pushPendingLessons(config, activeBackend, sessionTokens, key));
-        } catch (error) {
-          console.error(
-            `fixmind: initial sync push after login failed (run \`npx fixmind sync push\` manually): ${error instanceof Error ? error.message : String(error)}`,
-          );
-        }
+    async completeGithubLogin({ supabaseUrl, supabaseAnonKey, email, userId, session, passphrase }) {
+      try {
+        return await completeLogin({ supabaseUrl, supabaseAnonKey, email, userId, session, passphrase });
+      } catch (error) {
+        throw error;
       }
-      return { email: session.email, entitled, session: sessionTokens };
     },
 
     logout() {

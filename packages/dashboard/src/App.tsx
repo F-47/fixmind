@@ -1,15 +1,17 @@
-import { Brain, BrainCircuit, Download, RefreshCw, Search } from "lucide-react";
-import { useEffect } from "react";
+import { Download, RefreshCw, Search, Trash } from "lucide-react";
+import { useEffect, useState } from "react";
+import { exportUrl } from "./api";
 import { LessonCard } from "./components/LessonCard";
 import { LessonPage } from "./components/LessonPage";
 import { MarginArt } from "./components/MarginArt";
 import { ProgressChart } from "./components/ProgressChart";
 import { RankList } from "./components/RankList";
-import { exportUrl } from "./api";
 import { formatToolName, formatWeek } from "./format";
 import { useDashboardController } from "./useDashboardController";
 
 export default function App() {
+  const [syncJustCompleted, setSyncJustCompleted] = useState(false);
+
   useEffect(() => {
     document.title = "fixmind - close the loop on AI bug fixes";
     document
@@ -21,7 +23,6 @@ export default function App() {
   }, []);
 
   const {
-    confirmingReset,
     data,
     error,
     filters,
@@ -55,6 +56,8 @@ export default function App() {
     toggleWeek,
     navigate,
   } = useDashboardController();
+  const canSync = Boolean(syncMeta?.loggedIn && syncMeta.syncEnabled);
+  const syncButtonLabel = syncJustCompleted ? "Synced" : "Sync";
 
   if (!data)
     return (
@@ -75,14 +78,6 @@ export default function App() {
               <span className="size-1.5 rounded-full bg-accent" />
               {data.summary.total} lessons
             </span>
-            {syncMeta?.syncEnabled && (
-              <p className="mt-1 font-mono text-[10px] uppercase tracking-[.18em] text-muted">
-                Last sync pull:{" "}
-                {syncMeta.lastPulledAt
-                  ? new Date(syncMeta.lastPulledAt).toLocaleString()
-                  : "never"}
-              </p>
-            )}
           </div>
         </header>
 
@@ -90,28 +85,23 @@ export default function App() {
           <div className="flex items-center justify-between gap-10">
             <div className="max-w-2xl">
               <div className="font-mono text-[11px] uppercase tracking-[.2em] text-accent">
-                Fixmind &mdash; a developer&rsquo;s lesson log
+                Fixmind &mdash; a record of fixes that became lessons
               </div>
               <h1 className="mt-3 font-serif text-[clamp(2.8rem,5.4vw,4.8rem)] leading-[1.02] font-bold tracking-tight">
                 <span className="block whitespace-nowrap">
-                  Don&rsquo;t just let <br /> AI fix it.
+                  Don&rsquo;t stop at <br /> the fix.
                 </span>
-                <span className="block text-accent">Learn from it.</span>
+                <span className="block text-accent">Turn it into a rule.</span>
               </h1>
               <p className="mt-4 max-w-lg text-base leading-relaxed text-muted">
-                A running record of the bugs you&rsquo;ve fixed and the lessons
-                behind them &mdash; what to remember, why it happened, and how
-                to avoid it next time.
+                A running record of fixes, root causes, and reusable lessons.
               </p>
             </div>
             <div
               className="relative hidden shrink-0 min-[900px]:block"
               aria-hidden="true"
             >
-              <Brain className="size-56 text-line" strokeWidth={1} />
-              <span className="absolute top-7 right-5 size-2.5 rounded-full bg-accent" />
-              <span className="absolute bottom-10 left-3 size-2 rounded-full bg-accent/60" />
-              <span className="absolute top-1/2 right-1 size-2 rounded-full border border-accent" />
+              <img src="/logo.jpeg" alt="" className="size-52 rounded-3xl" />
             </div>
           </div>
         </section>
@@ -142,70 +132,6 @@ export default function App() {
           />
         </section>
 
-        <section className="border-b border-line py-10">
-          <div className="grid gap-5 lg:grid-cols-[1.4fr_.9fr]">
-            <div className="rounded-3xl border border-accent/30 bg-accent/5 p-6">
-              <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[.2em] text-accent">
-                <BrainCircuit className="size-4" />
-                Memory retrieval
-              </div>
-              <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
-                <div>
-                  <div className="font-serif text-5xl font-bold tracking-tight text-ink">
-                    {data.summary.memoryReady}
-                  </div>
-                  <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">
-                    reviewed lesson{data.summary.memoryReady === 1 ? "" : "s"} ready to reuse
-                  </p>
-                </div>
-                <p className="max-w-xl text-sm leading-relaxed text-muted">
-                  When a new task looks familiar, Fixmind can pull a few
-                  reviewed lessons back into context so the agent reuses the
-                  rule instead of relearning the same mistake. That cuts repeat
-                  debugging and keeps the next response moving faster.
-                </p>
-              </div>
-              <div className="mt-5 flex flex-wrap gap-2 font-mono text-[10px] uppercase tracking-[.15em]">
-                <span className="rounded-full border border-accent/25 bg-page/50 px-3 py-1.5 text-accent">
-                  fixmind memory
-                </span>
-                <span className="rounded-full border border-line bg-page/50 px-3 py-1.5 text-muted">
-                  use fixmind memory
-                </span>
-                <span className="rounded-full border border-line bg-page/50 px-3 py-1.5 text-muted">
-                  reviewed lessons only
-                </span>
-              </div>
-            </div>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-1">
-              <div className="rounded-3xl border border-line bg-surface p-6">
-                <div className="font-mono text-[11px] uppercase tracking-[.18em] text-muted">
-                  What it saves
-                </div>
-                <p className="mt-3 text-lg font-semibold tracking-tight text-ink">
-                  Fewer repeat fixes.
-                </p>
-                <p className="mt-2 text-sm leading-relaxed text-muted">
-                  Memory turns old lessons into a reusable reminder when the
-                  same pattern shows up again.
-                </p>
-              </div>
-              <div className="rounded-3xl border border-line bg-surface p-6">
-                <div className="font-mono text-[11px] uppercase tracking-[.18em] text-muted">
-                  Ready now
-                </div>
-                <p className="mt-3 text-lg font-semibold tracking-tight text-ink">
-                  {data.summary.memoryReady} lesson{data.summary.memoryReady === 1 ? "" : "s"}
-                </p>
-                <p className="mt-2 text-sm leading-relaxed text-muted">
-                  Only active lessons with real reviews are eligible for memory
-                  retrieval.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {route.kind === "lesson" ? (
           <LessonPage
             lesson={selectedLesson}
@@ -222,27 +148,70 @@ export default function App() {
           <div className="grid grid-cols-[1fr_300px] gap-10 py-10 max-[900px]:grid-cols-1 max-[900px]:gap-10">
             <main>
               <div className="mb-5 space-y-4 rounded-3xl">
-              <div className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3 w-full">
                     <h2 className="text-2xl font-semibold tracking-tight">
                       Your lessons{" "}
                       <span className="text-lg text-muted">
                         ({modelVisible.length})
                       </span>
                     </h2>
-                    <button
-                      type="button"
-                      onClick={() => void refreshDashboard()}
-                      disabled={refreshing}
-                      className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-muted transition-colors hover:border-accent/40 hover:text-ink disabled:cursor-not-allowed disabled:opacity-50"
-                      title={syncMeta?.syncEnabled ? "Pull the latest lessons from sync" : "Reload local lessons"}
-                    >
-                      <RefreshCw
-                        size={12}
-                        className={refreshing ? "animate-spin" : ""}
-                      />
-                      {refreshing ? "Syncing" : "Refresh"}
-                    </button>
+                    <div className="flex items-center gap-x-1.5">
+                      {canSync && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void (async () => {
+                              const synced = await refreshDashboard();
+                              if (!synced) return;
+                              setSyncJustCompleted(true);
+                              window.setTimeout(
+                                () => setSyncJustCompleted(false),
+                                1400,
+                              );
+                            })();
+                          }}
+                          disabled={refreshing}
+                          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                            syncJustCompleted
+                              ? "border-positive/40 bg-positive/10 text-positive hover:border-positive/40 hover:text-positive"
+                              : "border-line bg-surface-2 text-muted hover:border-accent/40 hover:text-ink"
+                          }`}
+                          title={
+                            syncJustCompleted
+                              ? "Sync completed"
+                              : "Pull the latest lessons from sync"
+                          }
+                        >
+                          <RefreshCw
+                            size={12}
+                            className={
+                              refreshing
+                                ? "animate-spin"
+                                : syncJustCompleted
+                                  ? "text-positive"
+                                  : ""
+                            }
+                          />
+                          {refreshing ? "Syncing" : syncButtonLabel}
+                        </button>
+                      )}
+                      {!canSync && (
+                        <button
+                          type="button"
+                          disabled
+                          onClick={undefined}
+                          className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-muted opacity-70"
+                          title="Requires an active Pro or Team plan"
+                        >
+                          <RefreshCw size={12} />
+                          Sync
+                          <span className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[9px] tracking-[.22em] text-accent">
+                            Pro
+                          </span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
                     Filter by learning state or model.
@@ -370,7 +339,7 @@ export default function App() {
                 <p className="mb-3 text-sm leading-relaxed text-muted">
                   Your lessons are stored locally. Export a copy any time.
                 </p>
-                <div className="flex flex-wrap gap-x-5 gap-y-2 font-mono text-[11px] uppercase tracking-[.15em]">
+                <div className="flex flex-col space-y-1.5 items-start text-sm font-mono ">
                   <a
                     className="inline-flex items-center gap-1.5 text-accent hover:underline"
                     href={exportUrl("json")}
@@ -387,13 +356,14 @@ export default function App() {
                     <Download className="size-3.5" />
                     Export Markdown
                   </a>
+                  <button
+                    className="inline-flex items-center gap-1.5 cursor-pointer border-0 bg-transparent p-0 text-danger hover:underline"
+                    onClick={() => setConfirmingReset(true)}
+                  >
+                    <Trash className="size-3.5" />
+                    Reset all data
+                  </button>
                 </div>
-                <button
-                  className="mt-4 cursor-pointer border-0 bg-transparent p-0 font-mono text-[11px] uppercase tracking-[.15em] text-danger hover:underline"
-                  onClick={() => setConfirmingReset(true)}
-                >
-                  Reset all data
-                </button>
                 <dialog
                   ref={resetDialogRef}
                   className="fixed top-1/2 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 border border-line bg-page p-6 text-ink shadow-[0_40px_100px_-30px_rgba(0,0,0,0.7)]"

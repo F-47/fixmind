@@ -146,7 +146,7 @@ function oauthCallbackPage(options: { ok: boolean; message: string; redirectUrl?
 <body>
   <div class="card">
     <div class="icon">${options.ok ? "&#10003;" : "&#33;"}</div>
-    <h1>${options.ok ? "You're signed in" : "Sign in failed"}</h1>
+    <h1>${options.ok ? "Sign-in complete" : "Sign in failed"}</h1>
     <p>${escapeHtml(options.message)}</p>
     ${options.redirectUrl ? `<a class="redirect" href="${escapeHtml(options.redirectUrl)}">${escapeHtml(options.redirectLabel ?? "Try again")}</a>` : ""}
     <div class="brand">Fixmind</div>
@@ -155,40 +155,58 @@ function oauthCallbackPage(options: { ok: boolean; message: string; redirectUrl?
 </html>`;
 }
 
-function waitForOAuthCode(port: number, authUrl: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const server = http.createServer((req, res) => {
+function createOAuthFlow(port: number, authUrl: string): {
+  codePromise: Promise<string>;
+} {
+  let server: http.Server;
+  let timeout: NodeJS.Timeout;
+  const closeServer = () => {
+    clearTimeout(timeout);
+    server.close();
+  };
+  const codePromise = new Promise<string>((resolve, reject) => {
+    server = http.createServer((req, res) => {
       const url = new URL(req.url ?? "/", `http://127.0.0.1:${port}`);
       const code = url.searchParams.get("code");
       const errorDescription = url.searchParams.get("error_description") ?? url.searchParams.get("error");
 
-      res.writeHead(200, { "Content-Type": "text/html" });
-      res.end(
-        errorDescription
-          ? oauthCallbackPage({
-              ok: false,
-              message: `${errorDescription}. You can close this window and return to the terminal.`,
-              redirectUrl: authUrl,
-            })
-          : oauthCallbackPage({
-              ok: true,
-              message: "CLI sign-in is complete. You can close this window and return to the terminal.",
-              redirectUrl: ACCOUNT_URL,
-              redirectLabel: "Open website account",
-            }),
-      );
+      if (errorDescription) {
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end(oauthCallbackPage({
+          ok: false,
+          message: `${errorDescription}. You can close this window and return to the terminal.`,
+          redirectUrl: authUrl,
+          redirectLabel: "Try again",
+        }));
+        closeServer();
+        reject(new Error(`GitHub sign in failed: ${errorDescription}`));
+        return;
+      }
 
-      clearTimeout(timeout);
-      server.close();
-      if (errorDescription) reject(new Error(`GitHub sign in failed: ${errorDescription}`));
-      else if (code) resolve(code);
-      else reject(new Error("No authorization code received from Supabase."));
+      if (code) {
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end(oauthCallbackPage({
+          ok: true,
+          message: "GitHub sign-in is complete. Return to the terminal to enter your sync passphrase.",
+          redirectUrl: ACCOUNT_URL,
+          redirectLabel: "Open website account",
+        }));
+        closeServer();
+        resolve(code);
+        return;
+      }
+
+      res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end("No authorization code received from Supabase.");
+      closeServer();
+      reject(new Error("No authorization code received from Supabase."));
     });
 
-    const timeout = setTimeout(() => {
-      server.close();
+    timeout = setTimeout(() => {
+      closeServer();
       reject(new Error("Timed out waiting for GitHub sign in."));
     }, OAUTH_TIMEOUT_MS);
+    timeout.unref();
 
     server.on("error", (error) => {
       clearTimeout(timeout);
@@ -196,7 +214,9 @@ function waitForOAuthCode(port: number, authUrl: string): Promise<string> {
     });
 
     server.listen(port, "127.0.0.1");
+    server.unref();
   });
+  return { codePromise };
 }
 
 export function createSupabaseBackend(url: string, anonKey: string): SyncBackend {
@@ -260,20 +280,25 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
       });
       if (error || !data.url) throw new Error(`GitHub sign in failed: ${error?.message ?? "no auth URL"}`);
 
+      const flow = createOAuthFlow(OAUTH_CALLBACK_PORT, data.url);
       onAuthUrl?.(data.url);
       openInBrowser(data.url);
 
-      const code = await waitForOAuthCode(OAUTH_CALLBACK_PORT, data.url);
-      const { data: exchanged, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-      if (exchangeError || !exchanged.session) {
-        throw new Error(`GitHub sign in failed: ${exchangeError?.message ?? "no session"}`);
+      const code = await flow.codePromise;
+      try {
+        const { data: exchanged, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError || !exchanged.session) {
+          throw new Error(`GitHub sign in failed: ${exchangeError?.message ?? "no session"}`);
+        }
+        return {
+          userId: exchanged.user.id,
+          email: exchanged.user.email ?? "",
+          accessToken: exchanged.session.access_token,
+          refreshToken: exchanged.session.refresh_token,
+        };
+      } catch (error) {
+        throw error;
       }
-      return {
-        userId: exchanged.user.id,
-        email: exchanged.user.email ?? "",
-        accessToken: exchanged.session.access_token,
-        refreshToken: exchanged.session.refresh_token,
-      };
     },
 
     async verifySession(session) {
