@@ -48,7 +48,7 @@ test("dashboard renders local data and saves reviews", async () => {
     const styleResponse = await fetch(`${dashboard.url}${stylePath}`);
     assert.equal(scriptResponse.status, 200);
     assert.equal(styleResponse.status, 200);
-    assert.match(await scriptResponse.text(), /Learn from it/);
+    assert.match(await scriptResponse.text(), /Turn it into a rule/);
     const stylesheet = await styleResponse.text();
     assert.match(stylesheet, /tailwindcss/);
     assert.match(stylesheet, /\.grid/);

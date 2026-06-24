@@ -29,6 +29,10 @@ export function terminalLink(text: string, url: string): string {
   return `${esc}]8;;${url}\u0007${text}${esc}]8;;\u0007`;
 }
 
+export function greenText(text: string): string {
+  return stdout.isTTY ? `\x1b[32m${text}\x1b[0m` : text;
+}
+
 export function optionString(value: string | boolean | undefined): string | undefined {
   return typeof value === "string" ? value : undefined;
 }

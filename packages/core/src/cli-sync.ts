@@ -22,6 +22,7 @@ import {
   unwrap,
   validateClients,
   validateScope,
+  greenText,
   text,
 } from "./cli-utils.js";
 import { configureClients, configureInstructions, configurePermissions, detectClients, genericMcpConfiguration } from "./setup.js";
@@ -208,10 +209,9 @@ export async function loginCommand(options: Record<string, string | boolean>): P
     const fixedPassphrase = optionString(options.passphrase);
 
     for (;;) {
-      const passphrase = fixedPassphrase ?? await promptPassphrase(interactive);
-
       try {
         if (usePasswordLogin) {
+          const passphrase = fixedPassphrase ?? await promptPassphrase(interactive);
           const email = optionString(options.email) ?? (interactive
             ? unwrap(await text({ message: "Email", ...common }))
             : (() => { throw new Error("Usage: fixmind login --email <email> --password <password> --passphrase <passphrase>"); })());
@@ -223,10 +223,9 @@ export async function loginCommand(options: Record<string, string | boolean>): P
           let s = startSpinner("Opening your browser to sign in with GitHub...");
           let fallbackUrl: string | undefined;
           try {
-            result = await engine.loginWithGithub({
+            const githubSession = await engine.loginWithGithub({
               supabaseUrl,
               supabaseAnonKey,
-              passphrase,
               onAuthUrl: (url) => {
                 fallbackUrl = url;
                 s.stop("Browser opened.");
@@ -234,22 +233,47 @@ export async function loginCommand(options: Record<string, string | boolean>): P
                 s = startSpinner("Waiting for authentication...");
               },
             });
-            s.stop("Signed in with GitHub.");
+            s.stop("GitHub sign-in complete. Enter your sync passphrase.");
+
+            for (;;) {
+              const passphrase = fixedPassphrase ?? await promptPassphrase(interactive);
+              try {
+                result = await engine.completeGithubLogin({
+                  supabaseUrl,
+                  supabaseAnonKey,
+                  email: githubSession.email,
+                  userId: githubSession.userId,
+                  session: githubSession.session,
+                  passphrase,
+                });
+                break;
+              } catch (error) {
+                if (interactive && isIncorrectPassphraseError(error) && !fixedPassphrase) {
+                  log.message("That passphrase did not match this sync account. Try again.", common);
+                  continue;
+                }
+                throw error;
+              }
+            }
           } catch (error) {
             s.stop("GitHub sign in failed.");
             if (fallbackUrl) log.message(`If the browser didn't open: ${terminalLink("Click here to sign in", fallbackUrl)}`, common);
-            if (interactive && isIncorrectPassphraseError(error) && !fixedPassphrase) {
-              log.message("That passphrase did not match this sync account. Try again.", common);
-              continue;
-            }
             throw error;
           }
         } else {
-          result = await engine.loginWithGithub({
+          const passphrase = fixedPassphrase ?? (() => { throw new Error("--passphrase is required outside an interactive terminal."); })();
+          const githubSession = await engine.loginWithGithub({
             supabaseUrl,
             supabaseAnonKey,
-            passphrase,
             onAuthUrl: (url) => console.log(`Opening your browser to sign in with GitHub...\nIf it doesn't open, visit: ${url}`),
+          });
+          result = await engine.completeGithubLogin({
+            supabaseUrl,
+            supabaseAnonKey,
+            email: githubSession.email,
+            userId: githubSession.userId,
+            session: githubSession.session,
+            passphrase,
           });
         }
         break;
@@ -263,15 +287,11 @@ export async function loginCommand(options: Record<string, string | boolean>): P
     }
 
     const message = result.entitled
-      ? `Logged in as ${result.email}. Sync is active.`
-      : `Signed in as ${result.email}, but you don't have an active Pro or Team plan yet. ` +
-        `Subscribe at ${PRICING_URL} to start syncing - no need to log in again afterward, just run \`npx fixmind sync push\`.`;
+      ? greenText(`Logged in as ${result.email}. Sync is active.`)
+      : `Signed in as ${result.email}. An active Pro or Team plan is required to enable sync. ` +
+        `Subscribe at ${PRICING_URL} to start syncing, then run \`npx fixmind sync push\`.`; 
 
-    if (interactive) {
-      outro(message, common);
-    } else {
-      console.log(message);
-    }
+    console.log(message);
   } finally {
     store.close();
   }
