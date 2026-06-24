@@ -60,6 +60,13 @@ FIELD GUIDE - each field has a distinct job. Do not let them repeat each other:
     information beyond problem and mistake - if you find yourself repeating
     either of them, dig one level deeper (e.g. "the API resolves before the
     body streams" rather than "the data was empty").
+    For package, runtime, build, or deployment failures, explain the
+    ARCHITECTURAL BOUNDARY too: where each side runs, what the client bundle
+    can contain, why the dependency does not belong there, and the supported
+    interface between them. Do not stop at "the module could not be found" or
+    "add a local copy". Example: an Expo app runs in a Metro device bundle,
+    while a database package is server-only; native code must use the typed API
+    client rather than import database implementation code.
   - fixSummary: WHY the new code avoids the root cause - not just what code
     changed. A reader should understand why this fix actually works, so they
     could apply the same reasoning elsewhere.
