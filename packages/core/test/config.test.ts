@@ -40,3 +40,10 @@ test("MCP instructions include the selected capture mode", () => {
   assert.match(balanced, /Capture mode: balanced/);
   assert.notEqual(strict, balanced);
 });
+
+test("MCP instructions require architectural context for boundary failures", () => {
+  const instructions = buildMcpInstructions("strict");
+  assert.match(instructions, /ARCHITECTURAL BOUNDARY/);
+  assert.match(instructions, /Expo app runs in a Metro device bundle/);
+  assert.match(instructions, /typed API\s+client/);
+});

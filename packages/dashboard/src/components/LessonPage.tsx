@@ -3,6 +3,7 @@ import { Check, ChevronDown, Minus, X } from "lucide-react";
 import { formatDate, statusColor, statusLabel } from "../format";
 import { recallCoverage } from "../lib/recall";
 import { CodeBlock } from "./CodeBlock";
+import { MarkdownText } from "./MarkdownText";
 import type { DashboardLesson, Understanding } from "../types";
 
 type SelfCheck = "got" | "partial" | "missed";
@@ -313,14 +314,14 @@ export function LessonPage({
         {lesson.originalPrompt && (
           <>
             <h2 className={sectionHeading}>The prompt</h2>
-            <blockquote className="border-l-2 border-line pl-4 text-base leading-relaxed text-muted italic">
-              &ldquo;{lesson.originalPrompt}&rdquo;
-            </blockquote>
+            <MarkdownText className="border-l-2 border-line pl-4 text-base leading-relaxed text-muted italic">
+              {lesson.originalPrompt}
+            </MarkdownText>
           </>
         )}
 
         <h2 className={sectionHeading}>What broke</h2>
-        <p className="text-base leading-relaxed">{lesson.problem}</p>
+        <MarkdownText className="text-base leading-relaxed">{lesson.problem}</MarkdownText>
 
         <h2 className={sectionHeading}>Why it happened</h2>
         <RecallToggle
@@ -346,21 +347,15 @@ export function LessonPage({
             <div className="grid gap-5">
               <div>
                 <div className={fieldLabel}>What went wrong</div>
-                <p className="mt-1.5 text-base leading-relaxed">
-                  {lesson.mistake}
-                </p>
+                <MarkdownText className="mt-1.5 text-base leading-relaxed">{lesson.mistake}</MarkdownText>
               </div>
               <div>
                 <div className={fieldLabel}>Root cause</div>
-                <p className="mt-1.5 text-base leading-relaxed">
-                  {lesson.rootCause}
-                </p>
+                <MarkdownText className="mt-1.5 text-base leading-relaxed">{lesson.rootCause}</MarkdownText>
               </div>
               <div>
                 <div className={fieldLabel}>Why the fix works</div>
-                <p className="mt-1.5 text-base leading-relaxed">
-                  {lesson.fixSummary}
-                </p>
+                <MarkdownText className="mt-1.5 text-base leading-relaxed">{lesson.fixSummary}</MarkdownText>
               </div>
             </div>
           }
@@ -388,9 +383,7 @@ export function LessonPage({
             {lesson.codeExplanation && (
               <div className="mt-5">
                 <div className={fieldLabel}>Key difference</div>
-                <p className="mt-1.5 text-base leading-relaxed">
-                  {lesson.codeExplanation}
-                </p>
+                  <MarkdownText className="mt-1.5 text-base leading-relaxed">{lesson.codeExplanation}</MarkdownText>
               </div>
             )}
           </>
@@ -419,9 +412,7 @@ export function LessonPage({
               setSelfChecks((prev) => ({ ...prev, __scope: value }))
             }
             reveal={
-              <p className="text-base leading-relaxed">
-                {lesson.whenNotApplicable}
-              </p>
+              <MarkdownText className="text-base leading-relaxed">{lesson.whenNotApplicable}</MarkdownText>
             }
           />
         ) : (
@@ -474,7 +465,7 @@ export function LessonPage({
                   {String(index + 1).padStart(2, "0")}
                 </div>
                 <div>
-                  <p className="text-base font-medium">{question.question}</p>
+                  <MarkdownText className="text-base font-medium">{question.question}</MarkdownText>
                   {reviewMode && (
                     <textarea
                       className="mt-3 min-h-24 w-full border border-line bg-surface p-3 text-ink outline-none focus:border-accent"
@@ -510,9 +501,9 @@ export function LessonPage({
                     }`}
                   >
                     <div className="overflow-hidden">
-                      <p className="text-sm leading-relaxed text-muted">
+                      <MarkdownText className="text-sm leading-relaxed text-muted">
                         {question.expectedAnswer}
-                      </p>
+                      </MarkdownText>
                       {reviewMode && (
                         <ExplanationCoverageHint
                           answer={answers[question.id] ?? ""}

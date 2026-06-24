@@ -9,7 +9,7 @@ This page shows the shape of a Fixmind lesson. Every lesson saved by an AI agent
 | `title` | yes | Short title that describes the lesson in plain language. |
 | `problem` | yes | The visible symptom. What broke, or what the user saw. |
 | `mistake` | yes | The wrong assumption or approach that caused the problem. |
-| `rootCause` | yes | Why the mistake led to the symptom. This should add new information, not repeat `problem` or `mistake`. |
+| `rootCause` | yes | Why the mistake led to the symptom. This should add new information, not repeat `problem` or `mistake`. For package, runtime, build, or deployment failures, explain the architectural boundary: where each side runs, what belongs in the client bundle, and the supported interface between them. |
 | `fixSummary` | yes | Why the fix works. Do not just restate the code change. |
 | `takeaway` | yes | One sentence worth remembering later. |
 | `whenNotApplicable` | yes | When this lesson does not apply. This keeps the scope honest. |
@@ -39,6 +39,8 @@ It rejects lessons outright when they are just:
 - a pure move/rename/extract refactor with no behavior signal
 
 It saves with a warning when `rootCause` or `fixSummary` mostly repeats another field instead of adding the missing why.
+
+For example, a native app failing to resolve a database package is not only a module-resolution error. The lesson should explain that Expo/Metro builds code for the device while the database package is server-only, and that the typed API client is the supported client-to-server boundary. The local enum mirror is the fix; the runtime and bundle boundary are the reusable lesson.
 
 `strict` versus `balanced` only changes how aggressively the agent is asked to save lessons. It does not weaken this quality gate.
 
