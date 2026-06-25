@@ -1,13 +1,16 @@
 import type { Session } from "@supabase/supabase-js";
 import { PolarEmbedCheckout } from "@polar-sh/checkout/embed";
-import { Check, Lock } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Check, Clock, Lock } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { PlanCard, type Plan } from "@/components/pricing/PlanCard";
 import { WaitlistModal } from "@/components/pricing/WaitlistModal";
 import { supabase } from "@/lib/supabase";
 import { usePageMeta } from "@/router";
 
 const PRO_CHECKOUT_URL = import.meta.env.VITE_PRO_CHECKOUT_URL;
+const CHECKOUT_POLL_LIMIT = 10;
+const CHECKOUT_POLL_INTERVAL_MS = 2000;
 const PLANS: Plan[] = [
   {
     name: "Free",
@@ -74,15 +77,34 @@ const PLANS: Plan[] = [
 ];
 
 export default function Pricing() {
+  const location = useLocation();
   usePageMeta(
     "Fixmind — Pricing",
     "Fixmind is free and local-first forever. Pro adds encrypted sync across devices.",
   );
+  const checkoutId = new URLSearchParams(location.search).get("checkout_id");
   const [activePlan, setActivePlan] = useState<string | null | undefined>(
     undefined,
   );
+  const [checkoutPending, setCheckoutPending] = useState(false);
   const [waitlistPlan, setWaitlistPlan] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const refreshActivePlan = useCallback(async () => {
+    if (!supabase || !session) {
+      setActivePlan(null);
+      return null;
+    }
+
+    const { data } = await supabase
+      .from("entitlements")
+      .select("plan, status")
+      .maybeSingle();
+    const nextPlan =
+      data?.status === "active" ? (data.plan?.toLowerCase() ?? null) : null;
+    setActivePlan(nextPlan);
+    return nextPlan;
+  }, [session]);
+
   useEffect(() => {
     PolarEmbedCheckout.init();
   }, [session]);
@@ -104,27 +126,64 @@ export default function Pricing() {
     };
   }, []);
   useEffect(() => {
-    if (!supabase || !session) {
-      setActivePlan(null);
-      return;
-    }
     let mounted = true;
-    void supabase
-      .from("entitlements")
-      .select("plan, status")
-      .maybeSingle()
-      .then(({ data }) => {
-        if (mounted)
-          setActivePlan(
-            data?.status === "active"
-              ? (data.plan?.toLowerCase() ?? null)
-              : null,
-          );
-      });
+    void refreshActivePlan().then((plan) => {
+      if (mounted && plan === "pro") setCheckoutPending(false);
+    });
     return () => {
       mounted = false;
     };
-  }, [session]);
+  }, [refreshActivePlan]);
+
+  useEffect(() => {
+    if (!checkoutId || !session || activePlan === "pro") {
+      if (activePlan === "pro") setCheckoutPending(false);
+      return;
+    }
+
+    let cancelled = false;
+    setCheckoutPending(true);
+
+    async function pollEntitlement(attempt = 1): Promise<void> {
+      const plan = await refreshActivePlan();
+      if (cancelled || plan === "pro") {
+        if (!cancelled) setCheckoutPending(false);
+        return;
+      }
+      if (attempt >= CHECKOUT_POLL_LIMIT) {
+        setCheckoutPending(false);
+        return;
+      }
+      window.setTimeout(() => {
+        if (!cancelled) void pollEntitlement(attempt + 1);
+      }, CHECKOUT_POLL_INTERVAL_MS);
+    }
+
+    void pollEntitlement();
+    return () => {
+      cancelled = true;
+    };
+  }, [activePlan, checkoutId, refreshActivePlan, session]);
+
+  useEffect(() => {
+    if (checkoutPending || !checkoutId || activePlan !== "pro") return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("checkout_id");
+    window.history.replaceState(
+      {},
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }, [activePlan, checkoutId, checkoutPending]);
+
+  const checkoutStatus =
+    checkoutId && activePlan === "pro"
+      ? "active"
+      : checkoutId && checkoutPending
+        ? "pending"
+        : checkoutId
+          ? "delayed"
+          : null;
   const selectedPlan = activePlan === "pro" ? "Pro" : null;
 
   return (
@@ -151,6 +210,7 @@ export default function Pricing() {
               Free and Pro are available today. Team and Enterprise are waitlist
               tiers for later.
             </p>
+            {checkoutStatus && <CheckoutStatus status={checkoutStatus} />}
           </div>
         </section>
         <section className="mx-auto max-w-6xl px-6 pb-24 pt-4">
@@ -206,6 +266,35 @@ export default function Pricing() {
           onClose={() => setWaitlistPlan(null)}
         />
       )}
+    </div>
+  );
+}
+
+function CheckoutStatus({
+  status,
+}: {
+  status: "active" | "pending" | "delayed";
+}) {
+  const active = status === "active";
+  return (
+    <div className="mx-auto mt-6 flex max-w-2xl items-start gap-3 rounded-xl border border-accent/25 bg-surface px-4 py-3 text-left shadow-[0_0_45px_-32px_var(--color-accent-dim)]">
+      <div className="mt-0.5 text-accent">
+        {active ? <Check size={17} /> : <Clock size={17} />}
+      </div>
+      <div>
+        <p className="text-sm font-medium text-ink">
+          {active
+            ? "Pro is active on this account."
+            : status === "pending"
+              ? "Checkout complete. Activating Pro..."
+              : "Checkout complete. Pro is still syncing."}
+        </p>
+        <p className="mt-1 text-sm leading-relaxed text-muted">
+          {active
+            ? "You can use encrypted sync from the CLI now."
+            : "Polar confirms the checkout before the webhook updates your plan. This page will refresh your status automatically for a few seconds."}
+        </p>
+      </div>
     </div>
   );
 }
