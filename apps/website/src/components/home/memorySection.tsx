@@ -36,9 +36,9 @@ export default function MemorySection() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-line bg-page p-6 shadow-[0_0_80px_-40px_var(--color-accent-dim)]">
-          <div className="flex items-center justify-between gap-4 border-b border-line pb-4">
-            <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[.18em] text-accent">
+        <div className="min-w-0 rounded-2xl border border-line bg-page p-6 shadow-[0_0_80px_-40px_var(--color-accent-dim)]">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
+            <div className="flex min-w-0 items-center gap-2 font-mono text-[11px] uppercase tracking-[.18em] text-accent">
               <BrainCircuit className="size-4" />
               Memory snapshot
             </div>
@@ -48,8 +48,8 @@ export default function MemorySection() {
           </div>
 
           <div className="mt-6 grid gap-5">
-            <div className="flex items-end justify-between gap-6">
-              <div>
+            <div className="grid gap-5 sm:flex sm:items-end sm:justify-between sm:gap-6">
+              <div className="min-w-0">
                 <div className="font-serif text-5xl font-bold tracking-tight text-ink">
                   3
                 </div>
@@ -58,10 +58,10 @@ export default function MemorySection() {
                   matches an old pattern.
                 </p>
               </div>
-              <div className="w-full max-w-[250px] rounded-lg border border-accent/20 bg-accent/5 px-4 py-2.5 font-mono text-sm text-ink">
-                <div className="flex items-center justify-between gap-3">
+              <div className="w-full rounded-lg border border-accent/20 bg-accent/5 px-4 py-2.5 font-mono text-sm text-ink sm:max-w-[250px]">
+                <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="text-accent">$</span>
-                  <span className="truncate">use fixmind memory</span>
+                  <span className="min-w-0 truncate">use fixmind memory</span>
                   <CopyButton text="use fixmind memory" />
                 </div>
               </div>
