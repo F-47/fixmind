@@ -277,8 +277,14 @@ function CheckoutStatus({
 }) {
   const active = status === "active";
   return (
-    <div className="mx-auto mt-6 flex max-w-2xl items-start gap-3 rounded-xl border border-accent/25 bg-surface px-4 py-3 text-left shadow-[0_0_45px_-32px_var(--color-accent-dim)]">
-      <div className="mt-0.5 text-accent">
+    <div
+      className={`mx-auto mt-6 flex max-w-2xl items-start gap-3 rounded-xl border px-4 py-3 text-left shadow-[0_0_45px_-32px_var(--color-accent-dim)] ${
+        active
+          ? "border-good/45 bg-good/10"
+          : "border-accent/25 bg-surface"
+      }`}
+    >
+      <div className={`mt-0.5 ${active ? "text-good" : "text-accent"}`}>
         {active ? <Check size={17} /> : <Clock size={17} />}
       </div>
       <div>
