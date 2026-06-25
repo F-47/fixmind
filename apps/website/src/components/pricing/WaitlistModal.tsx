@@ -1,7 +1,7 @@
 import { Check, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-const ACCESS_KEY = "9ea2eed4-81f4-4dc3-b5d8-feac9d67b566";
+const ACCESS_KEY = "cef832b8-cd5d-4546-958a-0cbf46a57fdd";
 const FRAME_NAME = "waitlist-form-frame";
 
 export function WaitlistModal({
