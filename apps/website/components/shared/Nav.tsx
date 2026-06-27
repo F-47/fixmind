@@ -4,9 +4,9 @@ import { LogIn, User } from "lucide-react";
 import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/cn";
+import { useSessionQuery } from "@/services/queries";
 
 const SECTION_IDS = ["loop", "memory", "features", "tokens", "how"];
 
@@ -58,25 +58,6 @@ function useActiveSection(enabled: boolean, hash: string): string | null {
   }, [enabled]);
 
   return active;
-}
-
-function useIsLoggedIn(): boolean {
-  const [loggedIn, setLoggedIn] = useState(false);
-
-  useEffect(() => {
-    if (!supabase) return;
-    supabase.auth
-      .getSession()
-      .then(({ data }) => setLoggedIn(data.session !== null));
-    const { data: subscription } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setLoggedIn(session !== null);
-      },
-    );
-    return () => subscription.subscription.unsubscribe();
-  }, []);
-
-  return loggedIn;
 }
 
 function NavLink({
@@ -171,7 +152,7 @@ export function Nav() {
   );
   const active = useActiveSection(pathname === "/", hash);
   const [menuOpen, setMenuOpen] = useState(false);
-  const loggedIn = useIsLoggedIn();
+  const { data: session } = useSessionQuery();
 
   useEffect(() => {
     const onHashChange = () => setHash(window.location.hash);
@@ -247,8 +228,8 @@ export function Nav() {
 
             <Link
               href="/account"
-              aria-label={loggedIn ? "Account" : "Login"}
-              title={loggedIn ? "Account" : "Login"}
+              aria-label={session ? "Account" : "Login"}
+              title={session ? "Account" : "Login"}
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-md border transition-colors hover:border-accent/60 hover:text-accent",
                 pathname === "/account"
@@ -256,7 +237,7 @@ export function Nav() {
                   : "border-line text-ink",
               )}
             >
-              {loggedIn ? <User size={16} /> : <LogIn size={16} />}
+              {session ? <User size={16} /> : <LogIn size={16} />}
             </Link>
 
             <button

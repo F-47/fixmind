@@ -1,11 +1,11 @@
 "use client";
 
-import type { Session } from "@supabase/supabase-js";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase, supabaseConfigured } from "@/lib/supabase";
 import { AuthForm } from "@/components/account/AuthForm";
 import { AccountStatus } from "@/components/account/AccountStatus";
+import { useSessionQuery } from "@/services/queries";
+import { supabaseConfigured } from "@/lib/supabase";
 
 const POST_LOGIN_PATH_KEY = "fixmind:post-login-path";
 
@@ -19,31 +19,7 @@ function safeNextPath(searchParams: URLSearchParams): string | null {
 export default function Account() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
-
-  useEffect(() => {
-    const client = supabase;
-    if (!client) {
-      setSession(null);
-      return;
-    }
-
-    let mounted = true;
-    void (async () => {
-      const { data } = await client.auth.getSession();
-      if (mounted) setSession(data.session);
-    })();
-
-    const { data: subscription } = client.auth.onAuthStateChange(
-      (_event, nextSession) => {
-        setSession(nextSession);
-      },
-    );
-    return () => {
-      mounted = false;
-      subscription.subscription.unsubscribe();
-    };
-  }, []);
+  const { data: session, isLoading } = useSessionQuery();
 
   useEffect(() => {
     const next = safeNextPath(new URLSearchParams(searchParams?.toString() ?? ""));
@@ -75,11 +51,10 @@ export default function Account() {
               Account
             </p>
             <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
-              Sign in for optional sync.
+              Sign in
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-muted">
-              Fixmind is local-first by default. Sign in only if you want
-              encrypted sync or need to manage your plan.
+              Use this page for optional encrypted sync or plan management.
             </p>
           </div>
 
@@ -90,10 +65,10 @@ export default function Account() {
                   Not configured
                 </p>
                 <p className="mt-3 text-sm leading-relaxed text-muted">
-                  Account sign-in is not configured on this deployment yet.
+                  Account sign-in is unavailable on this deployment.
                 </p>
               </div>
-            ) : session === undefined ? (
+            ) : isLoading ? (
               <div className="mx-auto max-w-2xl rounded-2xl border border-line bg-surface p-8">
                 <div className="animate-pulse space-y-4">
                   <div className="h-4 w-32 rounded bg-surface-2" />
