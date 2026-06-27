@@ -44,7 +44,7 @@ export function siteMetadata(): Metadata {
     title: "Fixmind - Close the loop on AI bug fixes",
     description: SITE_DESCRIPTION,
     icons: {
-      icon: "/favicon.ico",
+      icon: "/favicon.png",
       apple: "/apple-touch-icon.png",
     },
     openGraph: {
