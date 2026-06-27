@@ -1,13 +1,12 @@
 "use client";
 
-import type { Session } from "@supabase/supabase-js";
 import { PolarEmbedCheckout } from "@polar-sh/checkout/embed";
 import { Check, Lock } from "lucide-react";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { PlanCard, type Plan } from "@/components/pricing/PlanCard";
 import { WaitlistModal } from "@/components/pricing/WaitlistModal";
-import { supabase } from "@/lib/supabase";
+import { useEntitlementQuery, useSessionQuery } from "@/services/queries";
 
 const PRO_CHECKOUT_URL = process.env.NEXT_PUBLIC_PRO_CHECKOUT_URL;
 const CHECKOUT_POLL_LIMIT = 10;
@@ -81,60 +80,22 @@ const PLANS: Plan[] = [
 export default function Pricing() {
   const searchParams = useSearchParams();
   const checkoutId = searchParams?.get("checkout_id") ?? null;
-  const [activePlan, setActivePlan] = useState<string | null | undefined>(
-    undefined,
-  );
+  const { data: session } = useSessionQuery();
+  const sessionUserId = session?.user.id ?? null;
+  const entitlementQuery = useEntitlementQuery(sessionUserId);
+  const { data: entitlement, refetch: refetchEntitlement } = entitlementQuery;
   const [checkoutPending, setCheckoutPending] = useState(false);
   const [waitlistPlan, setWaitlistPlan] = useState<string | null>(null);
-  const [session, setSession] = useState<Session | null | undefined>(undefined);
 
-  const refreshActivePlan = useCallback(async () => {
-    if (!supabase || !session) {
-      setActivePlan(null);
-      return null;
-    }
-
-    const { data } = await supabase
-      .from("entitlements")
-      .select("plan, status")
-      .maybeSingle();
-    const nextPlan =
-      data?.status === "active" ? (data.plan?.toLowerCase() ?? null) : null;
-    setActivePlan(nextPlan);
-    return nextPlan;
-  }, [session]);
+  const activePlan =
+    entitlement?.status === "active"
+      ? entitlement.plan?.toLowerCase() ?? null
+      : null;
+  const selectedPlan = activePlan === "pro" ? "Pro" : null;
 
   useEffect(() => {
     PolarEmbedCheckout.init();
-  }, [session]);
-
-  useEffect(() => {
-    if (!supabase) {
-      setSession(null);
-      return;
-    }
-    let mounted = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (mounted) setSession(data.session);
-    });
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) =>
-      setSession(nextSession),
-    );
-    return () => {
-      mounted = false;
-      data.subscription.unsubscribe();
-    };
   }, []);
-
-  useEffect(() => {
-    let mounted = true;
-    void refreshActivePlan().then((plan) => {
-      if (mounted && plan === "pro") setCheckoutPending(false);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, [refreshActivePlan]);
 
   useEffect(() => {
     if (!checkoutId || !session || activePlan === "pro") {
@@ -146,15 +107,22 @@ export default function Pricing() {
     setCheckoutPending(true);
 
     async function pollEntitlement(attempt = 1): Promise<void> {
-      const plan = await refreshActivePlan();
-      if (cancelled || plan === "pro") {
+      const result = await refetchEntitlement();
+      const nextPlan =
+        result.data?.status === "active"
+          ? result.data.plan?.toLowerCase() ?? null
+          : null;
+
+      if (cancelled || nextPlan === "pro") {
         if (!cancelled) setCheckoutPending(false);
         return;
       }
+
       if (attempt >= CHECKOUT_POLL_LIMIT) {
         setCheckoutPending(false);
         return;
       }
+
       window.setTimeout(() => {
         if (!cancelled) void pollEntitlement(attempt + 1);
       }, CHECKOUT_POLL_INTERVAL_MS);
@@ -164,7 +132,7 @@ export default function Pricing() {
     return () => {
       cancelled = true;
     };
-  }, [activePlan, checkoutId, refreshActivePlan, session]);
+  }, [activePlan, checkoutId, refetchEntitlement, sessionUserId]);
 
   useEffect(() => {
     if (checkoutPending || !checkoutId || activePlan !== "pro") return;
@@ -185,7 +153,6 @@ export default function Pricing() {
         : checkoutId
           ? "delayed"
           : null;
-  const selectedPlan = activePlan === "pro" ? "Pro" : null;
 
   return (
     <div>

@@ -1,60 +1,30 @@
 "use client";
 
 import type { Session } from "@supabase/supabase-js";
-import {
-  ArrowRight,
-  Globe,
-  LogOut,
-  ShieldCheck,
-  Sparkles,
-  TerminalSquare,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { ArrowRight, Globe, LogOut, ShieldCheck, Sparkles, TerminalSquare } from "lucide-react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/cn";
+import { supabase } from "@/lib/supabase";
 import { CommandCard } from "./CommandCard";
 import { InfoPill } from "@/components/ui/InfoPill";
-
-interface Entitlement {
-  plan: string;
-  status: string;
-}
+import {
+  useEntitlementQuery,
+  useLessonCountQuery,
+} from "@/services/queries";
 
 function capitalize(value: string): string {
   return value.length > 0 ? value[0].toUpperCase() + value.slice(1) : value;
 }
 
 export function AccountStatus({ session }: { session: Session }) {
-  const [entitlement, setEntitlement] = useState<
-    Entitlement | null | undefined
-  >(undefined);
-  const [lessonCount, setLessonCount] = useState<number | null | undefined>(
-    undefined,
-  );
-
-  useEffect(() => {
-    if (!supabase) return;
-    supabase
-      .from("entitlements")
-      .select("plan, status")
-      .maybeSingle()
-      .then(({ data }) => setEntitlement(data ?? null));
-  }, []);
-
-  useEffect(() => {
-    if (!supabase) return;
-    supabase
-      .from("lessons_sync")
-      .select("lesson_id", { count: "exact", head: true })
-      .eq("user_id", session.user.id)
-      .eq("deleted", false)
-      .then(({ count }) => setLessonCount(count ?? 0));
-  }, [session.user.id]);
+  const entitlementQuery = useEntitlementQuery(session.user.id);
+  const lessonCountQuery = useLessonCountQuery(session.user.id);
+  const entitlement = entitlementQuery.data ?? null;
+  const lessonCount = lessonCountQuery.data;
 
   const email = session.user.email ?? "";
   const state =
-    entitlement === undefined
+    entitlementQuery.isLoading
       ? "loading"
       : entitlement === null
         ? "free"
@@ -84,9 +54,7 @@ export function AccountStatus({ session }: { session: Session }) {
   const lessonCountLabel = syncEnabled
     ? lessonCount === undefined
       ? "Loading lessons..."
-      : lessonCount === null
-        ? "Lessons unavailable"
-        : `${lessonCount} synced lesson${lessonCount === 1 ? "" : "s"}`
+      : `${lessonCount} synced lesson${lessonCount === 1 ? "" : "s"}`
     : "Lessons stay on this device.";
 
   return (
@@ -116,7 +84,7 @@ export function AccountStatus({ session }: { session: Session }) {
           </div>
           <button
             type="button"
-            onClick={() => supabase?.auth.signOut()}
+            onClick={() => void supabase?.auth.signOut()}
             className="flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-ink"
           >
             <LogOut size={14} />
@@ -215,40 +183,38 @@ export function AccountStatus({ session }: { session: Session }) {
         </div>
 
         {syncEnabled ? (
-          <>
-            <div className="mt-4 rounded-xl border border-line bg-bg/35 p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
-                Best practice
-              </p>
-              <p className="mt-2 text-sm leading-relaxed text-muted">
-                Sign in once on each device. After that, opening the dashboard
-                usually refreshes lessons for you, and these commands cover the
-                manual cases:
-              </p>
-              <div className="mt-3 grid gap-3">
-                <CommandCard
-                  label="Push"
-                  command="npx fixmind sync push"
-                  description="Send local lessons from this device up to sync storage."
-                />
-                <CommandCard
-                  label="Status"
-                  command="npx fixmind sync status"
-                  description="Check whether this device is logged in and when it last synced."
-                />
-                <CommandCard
-                  label="Pull"
-                  command="npx fixmind sync pull"
-                  description="Fetch the latest lessons from sync storage."
-                />
-                <CommandCard
-                  label="Open"
-                  command="npx fixmind dashboard"
-                  description="Open the dashboard. It pulls the latest lessons when it starts, so it is the easiest refresh."
-                />
-              </div>
+          <div className="mt-4 rounded-xl border border-line bg-bg/35 p-4">
+            <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
+              Best practice
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Sign in once on each device. After that, opening the dashboard
+              usually refreshes lessons for you, and these commands cover the
+              manual cases:
+            </p>
+            <div className="mt-3 grid gap-3">
+              <CommandCard
+                label="Push"
+                command="npx fixmind sync push"
+                description="Send local lessons from this device up to sync storage."
+              />
+              <CommandCard
+                label="Status"
+                command="npx fixmind sync status"
+                description="Check whether this device is logged in and when it last synced."
+              />
+              <CommandCard
+                label="Pull"
+                command="npx fixmind sync pull"
+                description="Fetch the latest lessons from sync storage."
+              />
+              <CommandCard
+                label="Open"
+                command="npx fixmind dashboard"
+                description="Open the dashboard. It pulls the latest lessons when it starts, so it is the easiest refresh."
+              />
             </div>
-          </>
+          </div>
         ) : (
           <div className="mt-6 overflow-hidden rounded-xl border border-accent/20 bg-gradient-to-br from-accent/10 via-surface/80 to-surface p-5">
             <div className="flex items-start justify-between gap-4">
