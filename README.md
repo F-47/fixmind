@@ -5,8 +5,6 @@
 
 A local-first CLI and MCP server that turns every AI-assisted bug fix into a lesson you actually remember, then reuses the strongest lessons as memory in later tasks. No paid AI API, no account required — everything lives in a SQLite database on your machine. Encrypted sync across machines is available as an opt-in Pro feature.
 
-![fixmind demo: fixmind setup registering the MCP server, fixmind list showing a saved lesson, and fixmind review walking through a recall question](docs/demo.gif)
-
 ## Installation
 
 Recommended:
