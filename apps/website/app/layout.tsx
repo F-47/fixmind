@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { Providers } from "@/components/providers";
 import { Footer } from "@/components/shared/Footer";
 import { Nav } from "@/components/shared/Nav";
 import { ScrollToHash, ScrollToTop } from "@/lib/scroll";
@@ -17,12 +18,14 @@ export default function RootLayout({
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body>
-        <UmamiTracker />
-        <ScrollToTop />
-        <ScrollToHash />
-        <Nav />
-        <main id="content">{children}</main>
-        <Footer />
+        <Providers>
+          <UmamiTracker />
+          <ScrollToTop />
+          <ScrollToHash />
+          <Nav />
+          <main id="content">{children}</main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   );
