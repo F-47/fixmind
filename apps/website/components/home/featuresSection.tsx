@@ -55,7 +55,7 @@ export default function FeaturesSection() {
         >
           Works with Claude Code, Cursor, and Codex.{" "}
           <code className="text-ink">npx fixmind setup</code> wires itself into
-          whatever you already run — on this device, or scoped to a single
+          whatever you already run - on this device, or scoped to a single
           project.
         </FeatureCard>
         <FeatureCard
@@ -63,7 +63,7 @@ export default function FeaturesSection() {
           icon={<GitCompare size={18} />}
           title="Real diffs, not summaries"
         >
-          Captures the actual bad and good code from your git diff — not a vague
+          Captures the actual bad and good code from your git diff - not a vague
           paraphrase of what changed.
         </FeatureCard>
         <FeatureCard

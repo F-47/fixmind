@@ -48,8 +48,8 @@ function SessionTimeline() {
         </span>
       </div>
       <p className="mt-8 border-t border-line pt-4 text-sm leading-relaxed text-muted">
-        Everything in between &mdash; the turns spent reading code, writing
-        patches, running tests &mdash; calls{" "}
+        Everything in between - the turns spent reading code, writing patches,
+        running tests - calls{" "}
         <code className="text-ink">save_lesson</code> zero times. Later, the
         agent can call <code className="text-ink">memory</code> to pull a few
         reviewed lessons back into context when the next task looks familiar.
@@ -69,8 +69,8 @@ export default function TokensSection() {
           Mostly free, by design.
         </h2>
         <p className="mt-4 max-w-lg text-muted">
-          Connecting an MCP server isn&rsquo;t free context-wise. Here&rsquo;s
-          exactly where fixmind spends it &mdash; and where it doesn&rsquo;t.
+          Connecting an MCP server isn&apos;t free context-wise. Here&apos;s
+          exactly where fixmind spends it - and where it doesn&apos;t.
         </p>
         <div className="mt-14 grid gap-16 lg:grid-cols-[1fr_420px] lg:items-start">
           <div>
@@ -78,13 +78,11 @@ export default function TokensSection() {
               number="01"
               title="Sent once per session (~2,500 tokens, average)"
             >
-              The server&rsquo;s instructions and the{" "}
+              The server&apos;s instructions and the{" "}
               <code className="text-ink">save_lesson</code> schema go out when
               the client connects. Clients that support prompt caching reuse
               that across every later turn, dropping the cost to{" "}
-              <strong className="font-medium text-ink">
-                near zero ($0.001)
-              </strong>
+              <strong className="font-medium text-ink">near zero ($0.001)</strong>
               .
             </TokenStep>
             <TokenStep
@@ -92,8 +90,8 @@ export default function TokensSection() {
               title="Silent on every other turn (0 tokens)"
             >
               The tool is only called when the agent decides a fix actually
-              taught it something &mdash; never on a whim, never on formatting
-              or renames.
+              taught it something - never on a whim, never on formatting or
+              renames.
             </TokenStep>
             <TokenStep
               number="03"
@@ -101,10 +99,8 @@ export default function TokensSection() {
             >
               When a lesson is saved, the problem, root cause, fix summary, and
               code examples together are about as big as a short commit message
-              or review comment &mdash; costing{" "}
-              <strong className="font-medium text-ink">
-                a fraction of a cent
-              </strong>
+              or review comment - costing{" "}
+              <strong className="font-medium text-ink">a fraction of a cent</strong>
               .
             </TokenStep>
           </div>

@@ -87,6 +87,8 @@ export function PlanCard({
         ) : plan.cta === "install" ? (
           <Link
             href="/#install"
+            data-umami-event="pricing_install_click"
+            data-umami-event-plan={plan.name.toLowerCase()}
             className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
           >
             Get started - it's free
@@ -98,6 +100,8 @@ export function PlanCard({
         ) : plan.cta === "checkout" && !session ? (
           <Link
             href="/account?next=/pricing"
+            data-umami-event="pricing_signin_click"
+            data-umami-event-plan={plan.name.toLowerCase()}
             className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
           >
             Sign in to subscribe
@@ -107,6 +111,8 @@ export function PlanCard({
             href={plan.checkoutUrl}
             data-polar-checkout
             data-polar-checkout-theme="dark"
+            data-umami-event="pricing_checkout_click"
+            data-umami-event-plan={plan.name.toLowerCase()}
             className="block rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
           >
             Subscribe
@@ -119,6 +125,8 @@ export function PlanCard({
           <button
             type="button"
             onClick={() => onJoinWaitlist(plan.name)}
+            data-umami-event="pricing_waitlist_click"
+            data-umami-event-plan={plan.name.toLowerCase()}
             className="block w-full rounded-md border border-line px-3 py-2 text-center text-sm text-ink transition-colors hover:border-accent/60 hover:text-accent"
           >
             Join waitlist

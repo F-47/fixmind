@@ -12,6 +12,7 @@ import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import { CommandSnippet } from "@/components/ui/CommandSnippet";
 import { cn } from "@/lib/cn";
+import { trackUmamiEvent } from "@/lib/umami";
 import { highlightText, normalizeSearchQuery } from "./docs-data";
 import { resolveDocLink } from "./docs-data";
 
@@ -19,12 +20,14 @@ type DocContentProps = {
   content: string;
   onNavigate: (href: string) => void;
   highlightQuery: string;
+  currentDocId: string;
 };
 
 export function DocContent({
   content,
   onNavigate,
   highlightQuery,
+  currentDocId,
 }: DocContentProps) {
   const searchTerms = normalizeSearchQuery(highlightQuery);
 
@@ -95,6 +98,11 @@ export function DocContent({
                 href={`/docs/${docLink.docId}${docLink.hash}`}
                 onClick={(event) => {
                   event.preventDefault();
+                  trackUmamiEvent("docs_internal_link", {
+                    from: currentDocId,
+                    to: docLink.docId,
+                    section: docLink.hash ? docLink.hash.slice(1) : "top",
+                  });
                   onNavigate(`/docs/${docLink.docId}`);
                   if (docLink.hash) {
                     window.setTimeout(() => {

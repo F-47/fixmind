@@ -62,7 +62,10 @@ export default function MemorySection() {
                 <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="text-accent">$</span>
                   <span className="min-w-0 truncate">use fixmind memory</span>
-                  <CopyButton text="use fixmind memory" />
+                  <CopyButton
+                    text="use fixmind memory"
+                    eventName="copy_memory_command"
+                  />
                 </div>
               </div>
             </div>
