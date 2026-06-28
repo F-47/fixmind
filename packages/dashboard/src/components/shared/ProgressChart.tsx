@@ -1,5 +1,6 @@
-import type { ProgressData } from "../types";
-import { formatWeek } from "../format";
+import type { ProgressData } from "@/lib/types";
+import { formatWeek } from "@/lib/format";
+import { cn } from "./cn";
 
 interface ProgressChartProps {
   data: ProgressData;
@@ -15,9 +16,24 @@ export function ProgressChart({
   const total = data.lessonsPerWeek.reduce((sum, week) => sum + week.count, 0);
   if (total === 0) {
     return (
-      <p className="text-sm text-muted">
-        More lessons are needed to show your progress.
-      </p>
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-line bg-surface/40 px-6 py-10 text-center">
+        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface-2 text-muted">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="3" />
+            <path d="M3 9h18M9 21V9" />
+          </svg>
+        </div>
+        <p className="text-sm text-muted">
+          More lessons are needed to show your progress.
+        </p>
+      </div>
     );
   }
 
@@ -48,7 +64,10 @@ export function ProgressChart({
               onClick={() => onSelectWeek(week.weekStart)}
             >
               <div
-                className={`relative h-32 w-full overflow-hidden bg-line ${isSelected ? "ring-2 ring-accent ring-inset" : ""}`}
+                className={cn(
+                  "relative h-32 w-full overflow-hidden bg-line",
+                  isSelected && "ring-2 ring-accent ring-inset",
+                )}
               >
                 {week.notLearned > 0 && (
                   <div
@@ -73,7 +92,10 @@ export function ProgressChart({
                 )}
               </div>
               <span
-                className={`font-mono text-[9px] ${isSelected ? "font-bold text-accent" : "text-muted"}`}
+                className={cn(
+                  "font-mono text-[9px]",
+                  isSelected ? "font-bold text-accent" : "text-muted",
+                )}
               >
                 {formatWeek(week.weekStart)}
               </span>
@@ -83,11 +105,11 @@ export function ProgressChart({
       </div>
       <div className="mt-4 flex flex-wrap gap-4 font-mono text-[10px] uppercase tracking-[.15em] text-muted">
         <span className="flex items-center gap-1.5">
-          <span className="size-2 bg-positive" />
+          <span className="size-2 rounded-full bg-positive" />
           Learned
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="size-2 bg-warn/85" />
+          <span className="size-2 rounded-full bg-warn/85" />
           Not learned
         </span>
       </div>

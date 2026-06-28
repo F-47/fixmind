@@ -43,7 +43,7 @@ This is an npm workspaces monorepo.
 | [`packages/core`](packages/core) | The published `fixmind` package - the CLI and MCP server. |
 | [`packages/dashboard`](packages/dashboard) | `@fixmind/dashboard`, the React dashboard SPA bundled into `packages/core`'s build. |
 | [`apps/website`](apps/website) | `@fixmind/website`, the marketing site (Vite + React + Tailwind). |
-| [`apps/desktop`](apps/desktop) | Reserved for a future Tauri desktop shell wrapping the dashboard - not yet built. |
+| [`apps/desktop`](apps/desktop) | `@fixmind/desktop`, the native Tauri shell for local lessons, review, and Pro sync. |
 
 ## Working in this repo
 

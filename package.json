@@ -12,12 +12,14 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "build": "npm run build -w @fixmind/dashboard && npm run build -w fixmind && npm run build -w @fixmind/website",
+    "build": "npm run build -w @fixmind/dashboard && npm run build -w fixmind && npm run build -w @fixmind/website && npm run build -w @fixmind/desktop",
     "test": "npm run test -w fixmind",
     "dev:dashboard": "concurrently -n api,ui -c blue,magenta \"npm:dev:dashboard:api\" \"npm:dev:dashboard:ui\"",
     "dev:dashboard:api": "npm run build:server -w fixmind && node packages/core/dist/src/launcher.js dashboard --no-open",
     "dev:dashboard:ui": "npm run dev -w @fixmind/dashboard",
     "dev:website": "npm run dev -w @fixmind/website",
+    "dev:desktop": "npm run dev -w @fixmind/desktop",
+    "build:desktop": "npm run build -w @fixmind/desktop",
     "build:website": "npm run build -w @fixmind/website"
   },
   "devDependencies": {

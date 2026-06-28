@@ -1,7 +1,18 @@
 "use client";
 
 import type { Session } from "@supabase/supabase-js";
-import { ArrowRight, Globe, LogOut, ShieldCheck, Sparkles, TerminalSquare } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  CloudLightning,
+  CreditCard,
+  Globe,
+  LogOut,
+  Mail,
+  ShieldCheck,
+  Sparkles,
+  TerminalSquare,
+} from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { supabase } from "@/lib/supabase";
@@ -14,6 +25,43 @@ import {
 
 function capitalize(value: string): string {
   return value.length > 0 ? value[0].toUpperCase() + value.slice(1) : value;
+}
+
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  accent?: boolean;
+}
+
+function StatCard({ icon, label, value, accent }: StatCardProps) {
+  return (
+    <div
+      className={cn(
+        "flex items-start gap-3 rounded-xl border p-4 transition-colors",
+        accent
+          ? "border-accent/30 bg-accent/5"
+          : "border-line bg-surface-2 hover:border-accent/20",
+      )}
+    >
+      <div
+        className={cn(
+          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
+          accent
+            ? "border-accent/30 bg-accent/10 text-accent"
+            : "border-line bg-bg/40 text-muted",
+        )}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
+          {label}
+        </p>
+        <p className="mt-1 break-all text-sm text-ink">{value}</p>
+      </div>
+    </div>
+  );
 }
 
 export function AccountStatus({ session }: { session: Session }) {
@@ -92,6 +140,7 @@ export function AccountStatus({ session }: { session: Session }) {
           </button>
         </div>
 
+        {/* Stat cards with icons */}
         <div
           className={cn(
             "mt-6 grid gap-3",
@@ -100,37 +149,35 @@ export function AccountStatus({ session }: { session: Session }) {
               : "sm:grid-cols-2 md:grid-cols-3",
           )}
         >
-          <div className="rounded-xl border border-line bg-surface-2 p-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
-              Signed in as
-            </p>
-            <p className="mt-2 break-all text-sm text-ink">{email}</p>
-          </div>
-          <div className="rounded-xl border border-line bg-surface-2 p-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
-              Plan
-            </p>
-            <p className="mt-2 text-sm text-ink">
-              {state === "active"
+          <StatCard
+            icon={<Mail size={14} />}
+            label="Signed in as"
+            value={email}
+          />
+          <StatCard
+            icon={<CreditCard size={14} />}
+            label="Plan"
+            value={
+              state === "active"
                 ? `${planName} plan`
                 : state === "free"
                   ? "Free local-only use"
-                  : "No paid plan"}
-            </p>
-          </div>
-          <div className="rounded-xl border border-line bg-surface-2 p-4">
-            <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
-              {syncEnabled ? "Lessons" : "Local only"}
-            </p>
-            <p className="mt-2 text-sm text-ink">{lessonCountLabel}</p>
-          </div>
+                  : "No paid plan"
+            }
+            accent={state === "active"}
+          />
+          <StatCard
+            icon={<BookOpen size={14} />}
+            label={syncEnabled ? "Lessons" : "Local only"}
+            value={lessonCountLabel}
+          />
           {syncEnabled && (
-            <div className="rounded-xl border border-line bg-surface-2 p-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
-                Sync status
-              </p>
-              <p className="mt-2 text-sm text-ink">Encrypted sync is on.</p>
-            </div>
+            <StatCard
+              icon={<CloudLightning size={14} />}
+              label="Sync status"
+              value="Encrypted sync is on."
+              accent
+            />
           )}
         </div>
 
@@ -216,8 +263,14 @@ export function AccountStatus({ session }: { session: Session }) {
             </div>
           </div>
         ) : (
-          <div className="mt-6 overflow-hidden rounded-xl border border-accent/20 bg-gradient-to-br from-accent/10 via-surface/80 to-surface p-5">
-            <div className="flex items-start justify-between gap-4">
+          /* Upgrade CTA with shimmer */
+          <div className="relative mt-6 overflow-hidden rounded-xl border border-accent/20 bg-gradient-to-br from-accent/10 via-surface/80 to-surface p-5">
+            {/* Animated shimmer overlay */}
+            <div
+              aria-hidden
+              className="cta-shimmer pointer-events-none absolute inset-0 rounded-xl opacity-60"
+            />
+            <div className="relative flex items-start justify-between gap-4">
               <div>
                 <InfoPill tone="accent">
                   <span className="inline-flex items-center gap-1">
@@ -238,7 +291,7 @@ export function AccountStatus({ session }: { session: Session }) {
                 Pro
               </div>
             </div>
-            <div className="mt-4 grid gap-2 text-sm text-muted sm:grid-cols-3">
+            <div className="relative mt-4 grid gap-2 text-sm text-muted sm:grid-cols-3">
               <div className="rounded-lg border border-line bg-bg/35 px-3 py-2">
                 Encrypted sync
               </div>
@@ -249,7 +302,7 @@ export function AccountStatus({ session }: { session: Session }) {
                 One login, then keep working
               </div>
             </div>
-            <div className="mt-4">
+            <div className="relative mt-4">
               <Link
                 href="/pricing"
                 className="inline-flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-colors hover:border-accent/50 hover:bg-accent/15"

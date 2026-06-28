@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import hljs from "highlight.js/lib/core";
-import type { DiffLine } from "../lib/diff";
+import type { DiffLine } from "@/lib/diff";
 import typescript from "highlight.js/lib/languages/typescript";
 import javascript from "highlight.js/lib/languages/javascript";
 import python from "highlight.js/lib/languages/python";
@@ -11,7 +11,8 @@ import bash from "highlight.js/lib/languages/bash";
 import css from "highlight.js/lib/languages/css";
 import json from "highlight.js/lib/languages/json";
 import xml from "highlight.js/lib/languages/xml";
-import { diffLines } from "../lib/diff";
+import { diffLines } from "@/lib/diff";
+import { cn } from "./cn";
 
 hljs.registerLanguage("typescript", typescript);
 hljs.registerLanguage("javascript", javascript);
@@ -176,7 +177,10 @@ export function CodeBlock({
   return (
     <div className="overflow-hidden border border-line">
       <div
-        className={`border-b border-line px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[.2em] ${kind === "bad" ? "text-danger" : "text-positive"}`}
+        className={cn(
+          "border-b border-line px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[.2em]",
+          kind === "bad" ? "text-danger" : "text-positive",
+        )}
       >
         {label}
       </div>
