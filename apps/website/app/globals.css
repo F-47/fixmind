@@ -96,3 +96,21 @@
 button {
   cursor: pointer;
 }
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.cta-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(124, 92, 255, 0.18) 40%,
+    rgba(124, 92, 255, 0.28) 50%,
+    rgba(124, 92, 255, 0.18) 60%,
+    transparent 100%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 2.8s ease-in-out infinite;
+}

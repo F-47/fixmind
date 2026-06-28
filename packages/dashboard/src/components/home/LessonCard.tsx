@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { formatDate, statusColor, statusLabel } from "../format";
-import type { DashboardLesson } from "../types";
+import { formatDate, statusColor, statusLabel } from "@/lib/format";
+import { cn } from "@/components/shared/cn";
+import type { DashboardLesson } from "@/lib/types";
 import { Trash2 } from "lucide-react";
 
 interface Props {
@@ -43,7 +44,10 @@ export function LessonCard({ lesson, onOpen, onDelete }: Props) {
       <div className="mt-3 flex items-center justify-between">
         <div className="flex flex-wrap items-center font-mono text-[11px] text-muted gap-x-2 gap-y-1.5">
           <span
-            className={`flex shrink-0 items-center gap-1.5 font-mono text-[10px] uppercase tracking-[.15em] ${statusColor(lesson.understanding)}`}
+            className={cn(
+              "flex shrink-0 items-center gap-1.5 font-mono text-[10px] uppercase tracking-[.15em]",
+              statusColor(lesson.understanding),
+            )}
           >
             {statusLabel(lesson.understanding)}
           </span>
