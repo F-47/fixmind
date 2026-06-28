@@ -63,12 +63,14 @@ function useActiveSection(enabled: boolean, hash: string): string | null {
 function NavLink({
   to,
   isActive,
+  eventName,
   children,
   onClick,
   className,
 }: {
   to: string;
   isActive: boolean;
+  eventName?: string;
   children: ReactNode;
   onClick?: () => void;
   className?: string;
@@ -113,6 +115,7 @@ function NavLink({
     <Link
       href={to}
       onClick={handleClick}
+      data-umami-event={eventName}
       className={cn(
         "relative pb-0.5 transition-colors hover:text-ink",
         isActive && "text-ink",
@@ -132,17 +135,32 @@ function NavLink({
 }
 
 const PRIMARY_LINKS = [
-  { to: "/#loop", label: "The loop", section: "loop" },
-  { to: "/#memory", label: "Memory", section: "memory" },
-  { to: "/#features", label: "Features", section: "features" },
-  { to: "/#tokens", label: "Token cost", section: "tokens" },
-  { to: "/#how", label: "How it works", section: "how" },
+  { to: "/#loop", label: "The loop", section: "loop", event: "nav_loop" },
+  { to: "/#memory", label: "Memory", section: "memory", event: "nav_memory" },
+  {
+    to: "/#features",
+    label: "Features",
+    section: "features",
+    event: "nav_features",
+  },
+  { to: "/#tokens", label: "Token cost", section: "tokens", event: "nav_tokens" },
+  { to: "/#how", label: "How it works", section: "how", event: "nav_how" },
 ];
 
 const SECONDARY_LINKS = [
-  { to: "/docs", label: "Docs", section: null as string | null },
-  { to: "/pricing", label: "Pricing", section: null as string | null },
-  { to: "/contact", label: "Contact", section: null as string | null },
+  { to: "/docs", label: "Docs", section: null as string | null, event: "nav_docs" },
+  {
+    to: "/pricing",
+    label: "Pricing",
+    section: null as string | null,
+    event: "nav_pricing",
+  },
+  {
+    to: "/contact",
+    label: "Contact",
+    section: null as string | null,
+    event: "nav_contact",
+  },
 ];
 
 export function Nav() {
@@ -186,6 +204,17 @@ export function Nav() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-6">
           <Link
             href="/"
+            onClick={(event) => {
+              if (pathname !== "/") return;
+              event.preventDefault();
+              window.scrollTo({
+                top: 0,
+                behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+                  .matches
+                  ? "auto"
+                  : "smooth",
+              });
+            }}
             className="flex items-center gap-2 font-mono text-sm font-medium text-ink"
           >
             <Logo />
@@ -199,6 +228,7 @@ export function Nav() {
                   key={link.to}
                   to={link.to}
                   isActive={isLinkActive(link)}
+                  eventName={link.event}
                 >
                   {link.label}
                 </NavLink>
@@ -210,6 +240,7 @@ export function Nav() {
                   key={link.to}
                   to={link.to}
                   isActive={isLinkActive(link)}
+                  eventName={link.event}
                   className="pb-0"
                 >
                   {link.label}
@@ -228,6 +259,7 @@ export function Nav() {
 
             <Link
               href="/account"
+              data-umami-event={session ? "nav_account" : "nav_login"}
               aria-label={session ? "Account" : "Login"}
               title={session ? "Account" : "Login"}
               className={cn(
@@ -285,6 +317,7 @@ export function Nav() {
                   <Link
                     href={link.to}
                     onClick={() => setMenuOpen(false)}
+                    data-umami-event={link.event}
                     className={cn(
                       "flex items-center gap-2 border-b border-line/40 py-3.5 text-sm transition-colors last:border-0 hover:text-ink",
                       isLinkActive(link) ? "text-ink" : "text-muted",

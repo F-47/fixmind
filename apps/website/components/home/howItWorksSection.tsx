@@ -145,7 +145,7 @@ function DashboardPreview() {
         </div>
         <div className="mt-3 border-t border-line pt-3 font-mono text-[11px] text-muted">
           Topics you keep encountering:{" "}
-          <span className="text-accent">Next.js hydration ×3</span>
+          <span className="text-accent">Next.js hydration x3</span>
         </div>
       </div>
     </div>

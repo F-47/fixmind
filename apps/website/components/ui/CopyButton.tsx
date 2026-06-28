@@ -2,13 +2,21 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { trackUmamiEvent } from "@/lib/umami";
 
 interface CopyButtonProps {
   text: string;
   variant?: "inline" | "block";
+  eventName?: string;
+  eventData?: Record<string, string | number | boolean | null | undefined>;
 }
 
-export function CopyButton({ text, variant = "inline" }: CopyButtonProps) {
+export function CopyButton({
+  text,
+  variant = "inline",
+  eventName = "copy_command",
+  eventData,
+}: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -18,6 +26,10 @@ export function CopyButton({ text, variant = "inline" }: CopyButtonProps) {
       return;
     }
     setCopied(true);
+    trackUmamiEvent(eventName, {
+      command: text,
+      ...eventData,
+    });
     setTimeout(() => setCopied(false), 1800);
   }
 

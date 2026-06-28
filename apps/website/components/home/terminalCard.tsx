@@ -15,7 +15,7 @@ export default function TerminalCard() {
         <p className="text-muted">$ fixmind review</p>
         <p className="text-ink">
           <span className="text-accent">&gt;</span> What must be true about the
-          server render and the browser&rsquo;s first render?
+          server render and the browser&apos;s first render?
         </p>
         <p className="text-ink">
           Your answer:{" "}
@@ -25,7 +25,7 @@ export default function TerminalCard() {
         </p>
         <div className="mt-4 flex items-center gap-1.5 border-t border-line pt-4 text-good">
           <Check size={14} />
-          understood · next check in 3 days
+          understood - next check in 3 days
         </div>
       </div>
     </div>

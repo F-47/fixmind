@@ -7,6 +7,19 @@ const UMAMI_SCRIPT_ID = "fixmind-umami-script";
 const UMAMI_SRC = "https://cloud.umami.is/script.js";
 const UMAMI_WEBSITE_ID = "00ae5b9c-ed36-4af5-aabe-cbcc33b32097";
 
+type UmamiTrackData = Record<
+  string,
+  string | number | boolean | null | undefined
+>;
+
+declare global {
+  interface Window {
+    umami?: {
+      track: (eventName: string, data?: UmamiTrackData) => void;
+    };
+  }
+}
+
 function isTrackedRoute(pathname: string): boolean {
   return (
     pathname === "/" ||
@@ -43,4 +56,12 @@ export default function UmamiTracker() {
   }, [pathname]);
 
   return null;
+}
+
+export function trackUmamiEvent(
+  eventName: string,
+  data?: UmamiTrackData,
+): void {
+  if (typeof window === "undefined") return;
+  window.umami?.track(eventName, data);
 }

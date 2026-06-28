@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
+import { trackUmamiEvent } from "@/lib/umami";
 import { DOCS, extractDocOutline, searchDocs } from "@/components/docs/docs-data";
 
 const DocContent = lazy(() =>
@@ -93,6 +94,7 @@ export default function Docs({ initialDocId }: DocsPageProps) {
   const showOutline = outline.length > 0 && outline.length <= 8;
 
   const openSearch = () => {
+    trackUmamiEvent("docs_search_open", { doc: activeDoc.id });
     setSearchQuery("");
     setDebouncedQuery("");
     setIsSearchOpen(true);
@@ -104,6 +106,18 @@ export default function Docs({ initialDocId }: DocsPageProps) {
     setIsSearchOpen(false);
     setSearchQuery("");
     setDebouncedQuery("");
+  };
+
+  const goToSearchResult = (docId: string, sectionId: string) => {
+    const query = searchQuery.trim();
+    const searchSuffix = query ? `?q=${encodeURIComponent(query)}` : "";
+    trackUmamiEvent("docs_search_select", {
+      doc: docId,
+      section: sectionId,
+      query: query || undefined,
+    });
+    router.push(`/docs/${docId}${searchSuffix}#${sectionId}`);
+    closeSearch();
   };
 
   useEffect(() => {
@@ -148,12 +162,7 @@ export default function Docs({ initialDocId }: DocsPageProps) {
           const selected = searchResults[selectedIndex];
           if (selected) {
             event.preventDefault();
-            const query = searchQuery.trim();
-            const searchSuffix = query ? `?q=${encodeURIComponent(query)}` : "";
-            router.push(
-              `/docs/${selected.doc.id}${searchSuffix}#${selected.section.id}`,
-            );
-            closeSearch();
+            goToSearchResult(selected.doc.id, selected.section.id);
           }
         }
       }
@@ -187,6 +196,7 @@ export default function Docs({ initialDocId }: DocsPageProps) {
         <button
           type="button"
           onClick={openSearch}
+          data-umami-event="docs_search_button"
           className="flex w-full items-center justify-between gap-3 rounded-xl border border-line bg-surface px-3 py-3 text-left text-sm text-muted transition-colors hover:border-accent hover:text-ink"
         >
           <span className="flex items-center gap-2">
@@ -206,6 +216,8 @@ export default function Docs({ initialDocId }: DocsPageProps) {
               <div key={doc.id} className="rounded-lg">
                 <Link
                   href={`/docs/${doc.id}`}
+                  data-umami-event="docs_sidebar_doc"
+                  data-umami-doc-id={doc.id}
                   className={cn(
                     "flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
                     isActive
@@ -227,6 +239,7 @@ export default function Docs({ initialDocId }: DocsPageProps) {
             content={activeDoc.content}
             onNavigate={(href) => router.push(href)}
             highlightQuery={highlightedQuery}
+            currentDocId={activeDoc.id}
           />
         </Suspense>
       </article>
@@ -244,6 +257,9 @@ export default function Docs({ initialDocId }: DocsPageProps) {
                   <Link
                     key={item.id}
                     href={`/docs/${activeDoc.id}#${item.id}`}
+                    data-umami-event="docs_outline_jump"
+                    data-umami-doc-id={activeDoc.id}
+                    data-umami-section-id={item.id}
                     className={cn(
                       "block rounded-md px-2 py-1.5 text-sm transition-colors",
                       item.level === 3 ? "pl-4 text-[13px]" : "text-sm",
@@ -272,12 +288,7 @@ export default function Docs({ initialDocId }: DocsPageProps) {
           results={searchResults}
           selectedIndex={selectedIndex}
           onSelect={(result) => {
-            const query = searchQuery.trim();
-            const searchSuffix = query ? `?q=${encodeURIComponent(query)}` : "";
-            router.push(
-              `/docs/${result.doc.id}${searchSuffix}#${result.section.id}`,
-            );
-            closeSearch();
+            goToSearchResult(result.doc.id, result.section.id);
           }}
         />
       </Suspense>
