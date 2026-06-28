@@ -1,0 +1,26 @@
+{
+  "name": "@fixmind/desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "npm run frontend:build && node -e \"const {spawnSync}=require('node:child_process'); const result=spawnSync('cargo',['check','--manifest-path','src-tauri/Cargo.toml'],{stdio:'inherit',env:{...process.env,CARGO_BUILD_JOBS:'1',CARGO_INCREMENTAL:'0'}}); process.exit(result.status ?? 1);\"",
+    "package": "tauri build",
+    "frontend:dev": "vite --host 127.0.0.1 --port 1420",
+    "frontend:build": "tsc -p tsconfig.json --noEmit && vite build"
+  },
+  "dependencies": {
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.3",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^5.8.3",
+    "vite": "^8.0.16"
+  }
+}

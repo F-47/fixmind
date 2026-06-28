@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Fixmind",
+  "version": "0.1.0",
+  "identifier": "dev.fixmind.desktop",
+  "build": {
+    "beforeDevCommand": "npm run frontend:dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run frontend:build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "label": "splash",
+        "title": "Fixmind",
+        "width": 620,
+        "height": 420,
+        "decorations": true,
+        "resizable": false,
+        "center": true,
+        "theme": "Dark",
+        "backgroundColor": "#08090d"
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.ico",
+      "icons/icon.png"
+    ]
+  }
+}
