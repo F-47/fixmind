@@ -4,6 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.25]
+
+### Changed
+- Republished the existing `1.0.24` release under a new package version after npm rejected the old version number.
+
 ## [1.0.24]
 
 ### Changed
