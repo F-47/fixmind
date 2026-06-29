@@ -87,6 +87,33 @@ test("assessLessonQuality warns when a real fix with changed files has no code e
   assert.ok(warnings.some((message) => message.includes("Quality notice")), warnings.join("\n"));
 });
 
+test("assessLessonQuality returns field-level hints and autofill suggestions", () => {
+  const result = assessLessonQuality(lesson({
+    badCodeExample: undefined,
+    goodCodeExample: undefined,
+    filesChanged: ["app/page.tsx"],
+  }));
+
+  assert.deepEqual(result.errors, []);
+  assert.ok(result.warnings.length > 0, result.warnings.join("\n"));
+  assert.ok(
+    result.fieldHints.some(
+      (hint) =>
+        hint.field === "codeExamples" &&
+        /badCodeExample and goodCodeExample/i.test(hint.suggestion),
+    ),
+    JSON.stringify(result.fieldHints, null, 2),
+  );
+  assert.ok(
+    result.fieldHints.some(
+      (hint) =>
+        hint.field === "mistakePattern" &&
+        hint.autofill === "Hydration timing",
+    ),
+    JSON.stringify(result.fieldHints, null, 2),
+  );
+});
+
 test("assessLessonQuality has no warnings for a concept-only lesson with no files changed", () => {
   const { errors, warnings } = assessLessonQuality(lesson({
     badCodeExample: undefined,

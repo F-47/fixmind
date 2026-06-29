@@ -5,7 +5,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import test from "node:test";
 import { createLessonStore } from "../src/storage.js";
-import { getMemoryLessons } from "../src/memory.js";
+import { getMemoryLessons, getMemoryResults } from "../src/memory.js";
 
 function lessonInput(title: string, takeaway: string, problem: string, extra: Record<string, unknown> = {}) {
   return {
@@ -85,6 +85,40 @@ test("memory command prints the retrieved lessons", () => {
 
     assert.match(output, /Stale closure/);
     assert.match(output, /Capture the latest value/);
+    assert.match(output, /Why matched:/);
+  } finally {
+    store.close();
+    fs.rmSync(dataDirectory, { recursive: true, force: true });
+  }
+});
+
+test("memory prefers a title match over a weaker concept match and explains why", () => {
+  const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-memory-rank-"));
+  const dbPath = path.join(dataDirectory, "learning.db");
+  const store = createLessonStore(dbPath);
+  try {
+    const titleMatch = store.save(lessonInput(
+      "Stale closure",
+      "Capture the latest value in the effect.",
+      "The handler used an old value",
+      { concepts: ["react-hooks"] },
+    ));
+    store.updateReview(titleMatch.id, titleMatch.reviewQuestions, "understood");
+
+    const conceptMatch = store.save(lessonInput(
+      "Effect timing",
+      "Use the latest value after commit.",
+      "The handler used an old value",
+      { concepts: ["closure"] },
+    ));
+    store.updateReview(conceptMatch.id, conceptMatch.reviewQuestions, "understood");
+
+    const ranked = getMemoryResults(store, { query: "closure", limit: 5 });
+    assert.equal(ranked[0].lesson.id, titleMatch.id);
+    assert.match(ranked[0].match.summary, /title/i);
+    assert.match(ranked[0].match.summary, /"closure"/i);
+    assert.equal(ranked[0].match.matchedFields.includes("title"), true);
+    assert.equal(ranked[0].match.matchedTerms.includes("closure"), true);
   } finally {
     store.close();
     fs.rmSync(dataDirectory, { recursive: true, force: true });
