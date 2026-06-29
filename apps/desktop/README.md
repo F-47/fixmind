@@ -1,5 +1,10 @@
-Reserved for a future Tauri desktop shell wrapping `@fixmind/dashboard`.
+Fixmind Desktop is the native shell for the local-first product.
 
-Will point Tauri's `frontendDist` at `packages/dashboard/dist` (built independently — see `packages/dashboard/package.json`). Integration with `packages/core`'s storage/MCP logic is a separate design decision for when this work starts.
+The app starts by opening the local dashboard, then keeps the full lesson flow in one place:
 
-To wire this app into the workspace, add a `package.json` here — the root `workspaces` glob (`apps/*`) already covers it.
+- browse local lessons
+- review spaced prompts
+- sign in for Pro sync
+- export or reset local data
+
+The Rust side only handles startup and windowing. The dashboard UI stays in the shared web app so the desktop and web surfaces stay aligned.

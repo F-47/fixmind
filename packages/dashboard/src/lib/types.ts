@@ -61,6 +61,7 @@ export interface ProgressData {
 
 export interface DashboardData {
   lessons: DashboardLesson[];
+  due: DashboardLesson[];
   models: RankedItem[];
   topics: RankedItem[];
   patterns: RankedItem[];
