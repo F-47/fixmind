@@ -5,11 +5,11 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { z } from "zod";
 import { readConfig } from "./config.js";
-import { formatMemoryLessons, getMemoryLessons } from "./memory.js";
+import { formatMemoryResults, getMemoryResults } from "./memory.js";
 import { readGitContext } from "./git.js";
 import { databasePath } from "./paths.js";
 import { initializeDataDirectory, createLessonStore, type LessonStore } from "./storage.js";
-import { assessLessonQuality, validateLessonInput } from "./validation.js";
+import { assessLessonQuality, formatLessonQualityFeedback, validateLessonInput } from "./validation.js";
 
 function captureModeGuidance(captureMode: "strict" | "balanced"): string {
   return captureMode === "balanced"
@@ -198,14 +198,14 @@ export function createLearningLessonServer(
     },
     async (arguments_) => {
       try {
-        const lessons = getMemoryLessons(store, {
+        const lessons = getMemoryResults(store, {
           query: arguments_.query,
           limit: arguments_.limit,
         });
         return {
           content: [{
             type: "text" as const,
-            text: formatMemoryLessons(lessons),
+            text: formatMemoryResults(lessons),
           }],
         };
       } catch (error) {
@@ -282,7 +282,9 @@ export function createLearningLessonServer(
               `Next review: ${saved.nextReviewAt}`,
               `Database: ${databasePath()}`,
               ...(supersedeLines.length ? ["", ...supersedeLines] : []),
-              ...(quality.warnings.length ? ["", ...quality.warnings] : []),
+              ...(quality.warnings.length || quality.fieldHints.length
+                ? ["", ...formatLessonQualityFeedback(quality)]
+                : []),
             ].join("\n"),
           }],
         };

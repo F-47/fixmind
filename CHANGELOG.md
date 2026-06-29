@@ -4,6 +4,17 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.24]
+
+### Changed
+- The MCP `memory` tool now returns structured match reasons alongside each lesson, so the agent can see why a lesson ranked highly instead of treating retrieval as a black box.
+- Memory ranking now prefers stronger signals like title and pattern matches, and the CLI/dashboard output explains which fields matched.
+- The dashboard now shows a dedicated review inbox for due lessons, so the next action is visible immediately instead of being buried in the general lesson list.
+- The single lesson page now has an explicit back button to return to the dashboard, instead of relying on browser history.
+
+### Fixed
+- Memory match metadata now uses a closed `MemoryMatchField` union instead of `string[]`, which prevents typoed or invalid field names from slipping into relevance explanations.
+
 ## [1.0.23]
 
 ### Added

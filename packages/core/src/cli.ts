@@ -17,7 +17,7 @@ import {
   text,
 } from "@clack/prompts";
 import { lessonsToJson, lessonsToMarkdown } from "./export.js";
-import { formatMemoryLessons, getMemoryLessons } from "./memory.js";
+import { formatMemoryResults, getMemoryResults } from "./memory.js";
 import { readGitContext } from "./git.js";
 import {
   createLessonStore,
@@ -25,7 +25,7 @@ import {
   type LessonStore,
 } from "./storage.js";
 import type { Lesson, LessonInput, ReviewQuestion, Understanding } from "./types.js";
-import { assessLessonQuality, validateLessonInput } from "./validation.js";
+import { assessLessonQuality, formatLessonQualityFeedback, validateLessonInput } from "./validation.js";
 import { isAddressInUseError, parseArgs as parseCliArgs } from "./cli-utils.js";
 import {
   loginCommand as runLoginCommand,
@@ -321,13 +321,19 @@ async function saveLesson(
     sourceDiff: git.sourceDiff,
     tags: parseList(await get("tags", "Tags (comma-separated)")).map((name) => ({ name })),
   });
+  const quality = assessLessonQuality(input);
   const saved = store.save(input);
   const { autoPushAfterSave } = await import("./sync.js");
   await autoPushAfterSave(store);
+  const qualityLines = formatLessonQualityFeedback(quality);
   if (interactive) {
     outro(`Saved lesson ${saved.id}: ${saved.title}`, common);
+    if (qualityLines.length > 0) {
+      note(qualityLines.join("\n"), "Quality feedback", common);
+    }
   } else {
     console.log(`Saved lesson ${saved.id}: ${saved.title}`);
+    if (qualityLines.length > 0) console.log(qualityLines.join("\n"));
   }
 }
 
@@ -366,7 +372,8 @@ async function saveLessonFromSummary(
   const { autoPushAfterSave } = await import("./sync.js");
   await autoPushAfterSave(store);
   console.log(`Saved lesson ${saved.id}: ${saved.title}`);
-  for (const warning of quality.warnings) console.log(warning);
+  const qualityLines = formatLessonQualityFeedback(quality);
+  if (qualityLines.length > 0) console.log(qualityLines.join("\n"));
 }
 
 async function review(store: LessonStore): Promise<void> {
@@ -706,12 +713,12 @@ function showMemory(
   positionals: string[],
 ): void {
   const query = positionals.join(" ").trim();
-  const memory = getMemoryLessons(store, {
+  const memory = getMemoryResults(store, {
     query,
     limit: numberOption(options.limit, 5),
   });
   console.log(query ? `Memory for "${query}"` : "Memory");
-  console.log(formatMemoryLessons(memory));
+  console.log(formatMemoryResults(memory));
 }
 
 main().catch((error: unknown) => {

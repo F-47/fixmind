@@ -4,7 +4,8 @@ import { useDashboardData } from "@/hooks/useDashboardData";
 import { LessonPage } from "@/components/lesson/LessonPage";
 
 export function LessonRoutePage() {
-  const { data, error, loadDashboardData, submitReview, removeLesson } = useDashboardData();
+  const { data, error, loadDashboardData, submitReview, removeLesson } =
+    useDashboardData();
   const navigate = useNavigate();
   const { lessonId } = useParams();
   const [searchParams] = useSearchParams();
@@ -50,10 +51,13 @@ export function LessonRoutePage() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl py-8 sm:py-12">
+    <main className="mx-auto max-w-5xl py-8 sm:py-12 px-6 lg:px-8 xl:px-0">
       <LessonPage
         lesson={lesson}
         reviewMode={reviewMode}
+        onBack={() => {
+          navigate("/");
+        }}
         onStartReview={() => {
           navigate(`/lessons/${encodeURIComponent(lesson.id)}?review=1`);
         }}
