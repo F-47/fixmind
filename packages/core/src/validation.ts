@@ -36,6 +36,26 @@ const RECALL_ONLY_QUESTION_PATTERN = /\b(what did you change|what (?:was|did) th
 const PATCH_VERB_PATTERN = /^(added|removed|changed|replaced|updated|renamed|set|used|called|wrapped|switched|introduced|deleted|inserted|moved|extracted)\b/i;
 const WHY_INDICATOR_PATTERN = /\b(because|since|so that|which means|this ensures|no longer|instead of|rather than|avoids?|prevents?|ensures?|so it|so the|guarantees?|means that|to avoid|to prevent)\b/i;
 
+export type LessonQualityField =
+  | "problem"
+  | "mistake"
+  | "rootCause"
+  | "fixSummary"
+  | "takeaway"
+  | "whenNotApplicable"
+  | "concepts"
+  | "reviewQuestions"
+  | "codeExamples"
+  | "filesChanged"
+  | "mistakePattern";
+
+export interface LessonQualityHint {
+  field: LessonQualityField;
+  issue: string;
+  suggestion: string;
+  autofill?: string;
+}
+
 function normalizeForComparison(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
@@ -74,6 +94,8 @@ export interface LessonQualityResult {
   errors: string[];
   /** Soft issues - the lesson is saved, but the caller is told how to improve it. */
   warnings: string[];
+  /** Concrete field-level hints that can be shown as suggestions or autofill prompts. */
+  fieldHints: LessonQualityHint[];
 }
 
 /**
@@ -85,6 +107,15 @@ export interface LessonQualityResult {
 export function assessLessonQuality(input: LessonInput): LessonQualityResult {
   const errors: string[] = [];
   const warnings: string[] = [];
+  const fieldHints: LessonQualityHint[] = [];
+  const seenHints = new Set<string>();
+
+  const addHint = (hint: LessonQualityHint): void => {
+    const key = `${hint.field}|${hint.issue}|${hint.suggestion}|${hint.autofill ?? ""}`;
+    if (seenHints.has(key)) return;
+    seenHints.add(key);
+    fieldHints.push(hint);
+  };
 
   const hasBadExample = Boolean(input.badCodeExample);
   const hasGoodSide = Boolean(input.goodCodeExample || input.codeExample);
@@ -104,6 +135,11 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
         "broken-vs-corrected code. Mechanical changes should not be saved as lessons. If a real bug was fixed, " +
         "describe the behavior difference in mistake/fixSummary and include badCodeExample/goodCodeExample.",
     );
+    addHint({
+      field: "codeExamples",
+      issue: "This looks like a mechanical edit with no broken-vs-corrected comparison.",
+      suggestion: "Show the behavior difference with badCodeExample and goodCodeExample so the lesson captures the actual bug.",
+    });
   }
 
   if (UI_ONLY_PATTERN.test(narrative) && !hasBehaviorSignal) {
@@ -113,6 +149,11 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
         "actually fixed a behavior (an element became unclickable, content overflowed and broke layout, etc.), " +
         "describe that BEHAVIOR in problem/mistake/fixSummary, not just the visual change.",
     );
+    addHint({
+      field: "problem",
+      issue: "The lesson reads like a styling tweak without a clear user-facing bug.",
+      suggestion: "Name the broken behavior first, then explain how the visual change caused it.",
+    });
   }
 
   for (const [field, value] of [
@@ -126,6 +167,11 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
           `wrong or what changed - name the function, condition, or value involved - instead of a generic ` +
           `phrase like "fixed the bug" or "the code was wrong".`,
       );
+      addHint({
+        field,
+        issue: "This field is too generic to teach anything reusable.",
+        suggestion: "Name the exact condition, function, or value that caused the failure.",
+      });
     }
   }
 
@@ -144,6 +190,11 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
       "Quality notice: rootCause is almost entirely reworded from mistake. Make sure it explains the " +
         "MECHANISM behind the mistake (why it caused the symptom), not just a rephrasing of the same sentence.",
     );
+    addHint({
+      field: "rootCause",
+      issue: "rootCause is too close to mistake.",
+      suggestion: "Describe the underlying mechanism: what runtime assumption failed, and why that produced the symptom.",
+    });
   }
 
   if (normalizeForComparison(input.fixSummary) === normalizeForComparison(input.mistake)) {
@@ -157,6 +208,11 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
         "without saying why that change fixes the root cause. Add the reason, e.g. \"... because ...\" or " +
         "\"... so that ...\".",
     );
+    addHint({
+      field: "fixSummary",
+      issue: "This reads like a patch note instead of a mechanism.",
+      suggestion: "Add the reason the change works, not only the edit itself.",
+    });
   }
 
   if (
@@ -168,6 +224,12 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
         "At least one review question must be a TRANSFER question: apply the lesson to a different situation, " +
         "spot the same mistake in different code, or predict an outcome under different conditions.",
     );
+    addHint({
+      field: "reviewQuestions",
+      issue: "The questions only ask for recall.",
+      suggestion: "Rewrite one question to transfer the rule to a different code path or predict what happens under changed conditions.",
+      autofill: "A teammate uses the same pattern in a different component. What happens, and how should they adapt it?",
+    });
   }
 
   if (hasBadExample !== hasGoodSide) {
@@ -176,13 +238,33 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
         hasBadExample ? "goodCodeExample" : "badCodeExample"
       } so the dashboard can show a meaningful broken-vs-corrected comparison.`,
     );
+    addHint({
+      field: "codeExamples",
+      issue: "Only one side of the code comparison is present.",
+      suggestion: `Add ${hasBadExample ? "goodCodeExample" : "badCodeExample"} so the lesson shows both the broken and corrected versions.`,
+    });
   } else if (!hasCodeExamples && (input.filesChanged ?? []).length > 0) {
     warnings.push(
       "Quality notice: No code examples were captured. Add badCodeExample and goodCodeExample to make this lesson useful for future review.",
     );
+    addHint({
+      field: "codeExamples",
+      issue: "Changed files were captured, but no code comparison was.",
+      suggestion: "Add badCodeExample and goodCodeExample to make the fix reviewable later.",
+    });
   }
 
-  return { errors, warnings };
+  const inferredPattern = inferMistakePattern(input);
+  if (!input.mistakePattern && inferredPattern) {
+    addHint({
+      field: "mistakePattern",
+      issue: "A reusable mistake pattern looks inferable from the lesson text.",
+      suggestion: "Consider adding a short reusable label so similar lessons are easier to spot later.",
+      autofill: inferredPattern,
+    });
+  }
+
+  return { errors, warnings, fieldHints };
 }
 
 const LITERAL_ESCAPE_PATTERN = /\\[nrt]/g;
@@ -237,6 +319,35 @@ function parseTags(value: unknown): Tag[] {
     }
     throw new Error(`Invalid lesson: tags[${index}] must be a string or { name, url? } object.`);
   });
+}
+
+function inferMistakePattern(input: LessonInput): string | undefined {
+  const text = `${input.title} ${input.problem} ${input.mistake} ${input.rootCause} ${input.fixSummary}`.toLowerCase();
+  if (/(hydration|localstorage|server-side rendering|browser-only)/i.test(text)) return "Hydration timing";
+  if (/(slice|pagination|page size|off-by-one)/i.test(text)) return "Off-by-one";
+  if (/(null|undefined|optional|maybe undefined|avatar)/i.test(text)) return "Null guard";
+  if (/(stale closure|latest value|effect|dependency array)/i.test(text)) return "Stale closure";
+  if (/(overlay|z-index|stacking context|pointer events|unclickable)/i.test(text)) return "Stacking context";
+  if (/(async|race condition|timing|await|promise)/i.test(text)) return "Async timing";
+  return undefined;
+}
+
+export function formatLessonQualityFeedback(result: LessonQualityResult): string[] {
+  const lines: string[] = [];
+  if (result.warnings.length > 0) {
+    lines.push("Quality notices:");
+    for (const warning of result.warnings) lines.push(`- ${warning}`);
+  }
+  if (result.fieldHints.length > 0) {
+    if (lines.length > 0) lines.push("");
+    lines.push("Suggestions:");
+    for (const hint of result.fieldHints) {
+      lines.push(
+        `- ${hint.field}: ${hint.issue} ${hint.suggestion}${hint.autofill ? ` Autofill: ${hint.autofill}` : ""}`,
+      );
+    }
+  }
+  return lines;
 }
 
 export function validateLessonInput(value: unknown): LessonInput {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import type { DashboardLesson, Understanding } from "@/lib/types";
 import { MarkdownText } from "@/components/shared/MarkdownText";
 import { LessonCodeSection } from "@/components/lesson/LessonCodeSection";
@@ -16,6 +17,7 @@ import {
 interface Props {
   lesson: DashboardLesson | null;
   reviewMode: boolean;
+  onBack(): void;
   onStartReview(): void;
   onSave(
     answers: Record<string, string>,
@@ -27,6 +29,7 @@ interface Props {
 export function LessonPage({
   lesson,
   reviewMode,
+  onBack,
   onStartReview,
   onSave,
   onDelete,
@@ -52,7 +55,8 @@ export function LessonPage({
           Lesson not found
         </h1>
         <p className="mt-3 max-w-xl text-base leading-relaxed text-muted">
-          The lesson may have been deleted, or the link no longer points to a valid id.
+          The lesson may have been deleted, or the link no longer points to a
+          valid id.
         </p>
       </section>
     );
@@ -73,6 +77,14 @@ export function LessonPage({
   return (
     <section className="text-ink">
       <article>
+        <button
+          type="button"
+          className="mb-6 inline-flex items-center gap-2 py-2 font-mono text-[11px] uppercase tracking-[.18em] text-muted transition hover:border-accent/40 hover:text-ink"
+          onClick={onBack}
+        >
+          <ArrowLeft className="size-3.5" />
+          Back to dashboard
+        </button>
         <LessonHeader lesson={lesson} />
 
         {lesson.originalPrompt && (
@@ -85,7 +97,9 @@ export function LessonPage({
         )}
 
         <h2 className={lessonSectionHeading}>What broke</h2>
-        <MarkdownText className="text-base leading-relaxed">{lesson.problem}</MarkdownText>
+        <MarkdownText className="text-base leading-relaxed">
+          {lesson.problem}
+        </MarkdownText>
 
         <LessonRecallBlock
           title="Why it happened"
@@ -142,7 +156,9 @@ export function LessonPage({
         <LessonRecallBlock
           title="When this doesn't apply"
           prompt="Before reading on: in what situation would this lesson's advice be wrong or unnecessary?"
-          referenceText={lesson.whenNotApplicable ?? "Not captured for this lesson."}
+          referenceText={
+            lesson.whenNotApplicable ?? "Not captured for this lesson."
+          }
           reviewMode={reviewMode}
           answer={answers.__scope ?? ""}
           onAnswerChange={(value) =>
@@ -162,7 +178,9 @@ export function LessonPage({
                 {lesson.whenNotApplicable}
               </MarkdownText>
             ) : (
-              <p className="text-base leading-relaxed">Not captured for this lesson.</p>
+              <p className="text-base leading-relaxed">
+                Not captured for this lesson.
+              </p>
             )
           }
         />

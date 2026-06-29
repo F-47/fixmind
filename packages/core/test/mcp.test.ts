@@ -256,6 +256,11 @@ test("MCP appends quality warning when a real fix has no code examples", async (
     assert.equal(result.isError, undefined);
     const text = (result.content as Array<{ text: string }>)[0].text;
     assert.ok(text.includes("Quality notice"), `Expected quality warning in: ${text}`);
+    assert.ok(text.includes("Suggestions"), `Expected structured suggestions in: ${text}`);
+    assert.ok(
+      text.includes("badCodeExample") || text.includes("goodCodeExample"),
+      `Expected code example guidance in: ${text}`,
+    );
   } finally {
     await client.close();
     fs.rmSync(dataDirectory, { recursive: true, force: true });
