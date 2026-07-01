@@ -4,11 +4,11 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+## [1.0.26]
+
 ### Added
 - `fixmind diagnose` / `fixmind diagnostics`, a read-only command that explains likely local blockers when a lesson did not save, including Git diff state, setup markers, and Claude save permissions.
 - `fixmind insights`, a read-only command that surfaces the last 30 days of mistake patterns, fragile concepts, and recurring files/tools.
-
-## [1.0.26]
 
 ### Changed
 - Added best-effort Git autofill for `fixmind save-manual` and the MCP `save_lesson` path, including template seeding plus diff-based `filesChanged`, `mistakePattern`, `concepts`, and `codeExample` inference when available.
