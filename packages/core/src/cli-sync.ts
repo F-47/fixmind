@@ -87,19 +87,45 @@ export async function setup(options: Record<string, string | boolean>): Promise<
   const results = configureClients(setupOptions);
   const instructions = configureInstructions(setupOptions);
   const permissions = configurePermissions(setupOptions);
-  console.log(`Local data initialized at ${paths.directory}.`);
-  console.log(scope === "project" ? `Scope: this project only (${projectDirectory}).` : "Scope: this device (every project).");
+  logSetupResults(paths.directory, scope, captureMode, results, instructions, permissions, projectDirectory);
+
+  if (!logSetupFollowUp(options, interactive)) return;
+  await handleSetupNextAction(options);
+}
+
+function setupSummaryLine(scope: SetupScope, projectDirectory: string): string {
+  return scope === "project"
+    ? `Scope: this project only (${projectDirectory}).`
+    : "Scope: this device (every project).";
+}
+
+function logSetupResults(
+  pathsDirectory: string,
+  scope: SetupScope,
+  captureMode: "strict" | "balanced",
+  results: Array<{ client: string; status: string; detail: string }>,
+  instructions: Array<{ client: string; status: string; filePath: string }>,
+  permissions: Array<{ client: string; status: string; filePath: string }>,
+  projectDirectory: string,
+): void {
+  console.log(`Local data initialized at ${pathsDirectory}.`);
+  console.log(setupSummaryLine(scope, projectDirectory));
   console.log(`Capture mode: ${captureMode}.`);
   for (const result of results) console.log(`${result.client}: ${result.status} - ${result.detail}`);
   for (const result of instructions) console.log(`${result.client} instructions: ${result.status} - ${result.filePath}`);
   for (const result of permissions) console.log(`${result.client} permissions: ${result.status} - ${result.filePath}`);
   console.log("Restart configured AI clients so they discover the MCP server.");
+}
 
-  if (dryRun || options["no-dashboard"] || !interactive) {
+function logSetupFollowUp(options: Record<string, string | boolean>, interactive: boolean): boolean {
+  if (Boolean(options["dry-run"]) || options["no-dashboard"] || !interactive) {
     console.log("Run `npx fixmind dashboard` to open the local dashboard, or `npx fixmind login` to enable sync.");
-    return;
+    return false;
   }
+  return true;
+}
 
+async function handleSetupNextAction(options: Record<string, string | boolean>): Promise<void> {
   const nextAction = await select({
     message: "What would you like to do next?",
     options: [
@@ -111,29 +137,24 @@ export async function setup(options: Record<string, string | boolean>): Promise<
     ...common,
   });
 
-  if (isCancel(nextAction) || nextAction === "done") {
-    return;
-  }
-
+  if (isCancel(nextAction) || nextAction === "done") return;
   if (nextAction === "login") {
     await launchLoginCommand();
     return;
   }
 
-  if (nextAction === "dashboard") {
-    const { startDashboard } = await import("./dashboard.js");
-    try {
-      const handle = await startDashboard({ port: optionalPort(options.port), open: true });
-      console.log(`Fixmind dashboard: ${handle.url}`);
-      console.log("Press Ctrl+C to stop.");
-    } catch (error) {
-      if (isAddressInUseError(error)) {
-        const port = optionalPort(options.port) ?? 4317;
-        console.log(`Dashboard is already running on 127.0.0.1:${port}; skipping a second launch.`);
-      } else {
-        throw error;
-      }
+  const { startDashboard } = await import("./dashboard.js");
+  try {
+    const handle = await startDashboard({ port: optionalPort(options.port), open: true });
+    console.log(`Fixmind dashboard: ${handle.url}`);
+    console.log("Press Ctrl+C to stop.");
+  } catch (error) {
+    if (isAddressInUseError(error)) {
+      const port = optionalPort(options.port) ?? 4317;
+      console.log(`Dashboard is already running on 127.0.0.1:${port}; skipping a second launch.`);
+      return;
     }
+    throw error;
   }
 }
 
@@ -199,92 +220,11 @@ export async function loginCommand(options: Record<string, string | boolean>): P
   const interactive = stdin.isTTY && stdout.isTTY;
   try {
     const engine = createSyncEngine(store);
-    const supabaseUrl = optionString(options.url) ?? process.env.FIXMIND_SUPABASE_URL ?? DEFAULT_SUPABASE_URL;
-    const supabaseAnonKey = optionString(options.key) ?? process.env.FIXMIND_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_ANON_KEY;
+    const { supabaseUrl, supabaseAnonKey } = resolveSupabaseCredentials(options);
 
     if (interactive) intro("Fixmind login", common);
 
-    const usePasswordLogin = Boolean(optionString(options.email) || options["password-login"]);
-    let result: { email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } };
-    const fixedPassphrase = optionString(options.passphrase);
-
-    for (;;) {
-      try {
-        if (usePasswordLogin) {
-          const passphrase = fixedPassphrase ?? await promptPassphrase(interactive);
-          const email = optionString(options.email) ?? (interactive
-            ? unwrap(await text({ message: "Email", ...common }))
-            : (() => { throw new Error("Usage: fixmind login --email <email> --password <password> --passphrase <passphrase>"); })());
-          const userPassword = optionString(options.password) ?? (interactive
-            ? unwrap(await password({ message: "Password", ...common }))
-            : (() => { throw new Error("--password is required outside an interactive terminal."); })());
-          result = await engine.login({ supabaseUrl, supabaseAnonKey, email, password: userPassword, passphrase });
-        } else if (interactive) {
-          let s = startSpinner("Opening your browser to sign in with GitHub...");
-          let fallbackUrl: string | undefined;
-          try {
-            const githubSession = await engine.loginWithGithub({
-              supabaseUrl,
-              supabaseAnonKey,
-              onAuthUrl: (url) => {
-                fallbackUrl = url;
-                s.stop("Browser opened.");
-                log.message(`Didn't open? ${terminalLink("Click here to sign in", url)}`, common);
-                s = startSpinner("Waiting for authentication...");
-              },
-            });
-            s.stop("GitHub sign-in complete. Enter your sync passphrase.");
-
-            for (;;) {
-              const passphrase = fixedPassphrase ?? await promptPassphrase(interactive);
-              try {
-                result = await engine.completeGithubLogin({
-                  supabaseUrl,
-                  supabaseAnonKey,
-                  email: githubSession.email,
-                  userId: githubSession.userId,
-                  session: githubSession.session,
-                  passphrase,
-                });
-                break;
-              } catch (error) {
-                if (interactive && isIncorrectPassphraseError(error) && !fixedPassphrase) {
-                  log.message("That passphrase did not match this sync account. Try again.", common);
-                  continue;
-                }
-                throw error;
-              }
-            }
-          } catch (error) {
-            s.stop("GitHub sign in failed.");
-            if (fallbackUrl) log.message(`If the browser didn't open: ${terminalLink("Click here to sign in", fallbackUrl)}`, common);
-            throw error;
-          }
-        } else {
-          const passphrase = fixedPassphrase ?? (() => { throw new Error("--passphrase is required outside an interactive terminal."); })();
-          const githubSession = await engine.loginWithGithub({
-            supabaseUrl,
-            supabaseAnonKey,
-            onAuthUrl: (url) => console.log(`Opening your browser to sign in with GitHub...\nIf it doesn't open, visit: ${url}`),
-          });
-          result = await engine.completeGithubLogin({
-            supabaseUrl,
-            supabaseAnonKey,
-            email: githubSession.email,
-            userId: githubSession.userId,
-            session: githubSession.session,
-            passphrase,
-          });
-        }
-        break;
-      } catch (error) {
-        if (interactive && isIncorrectPassphraseError(error) && !fixedPassphrase) {
-          log.message("That passphrase did not match this sync account. Try again.", common);
-          continue;
-        }
-        throw error;
-      }
-    }
+    const result = await performLogin(engine, options, interactive, supabaseUrl, supabaseAnonKey);
 
     const message = result.entitled
       ? greenText(`Logged in as ${result.email}. Sync is active.`)
@@ -319,6 +259,114 @@ function isIncorrectPassphraseError(error: unknown): boolean {
   return /Incorrect passphrase for this sync account/i.test(message);
 }
 
+function resolveSupabaseCredentials(options: Record<string, string | boolean>): {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+} {
+  return {
+    supabaseUrl: optionString(options.url) ?? process.env.FIXMIND_SUPABASE_URL ?? DEFAULT_SUPABASE_URL,
+    supabaseAnonKey: optionString(options.key) ?? process.env.FIXMIND_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_ANON_KEY,
+  };
+}
+
+async function performLogin(
+  engine: ReturnType<typeof createSyncEngine>,
+  options: Record<string, string | boolean>,
+  interactive: boolean,
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+): Promise<{ email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } }> {
+  const usePasswordLogin = Boolean(optionString(options.email) || options["password-login"]);
+  const fixedPassphrase = optionString(options.passphrase);
+  if (usePasswordLogin) {
+    return loginWithPassword(engine, options, interactive, supabaseUrl, supabaseAnonKey, fixedPassphrase);
+  }
+  return interactive
+    ? loginWithGithubInteractive(engine, supabaseUrl, supabaseAnonKey, fixedPassphrase)
+    : loginWithGithubNonInteractive(engine, supabaseUrl, supabaseAnonKey, fixedPassphrase);
+}
+
+async function loginWithPassword(
+  engine: ReturnType<typeof createSyncEngine>,
+  options: Record<string, string | boolean>,
+  interactive: boolean,
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  fixedPassphrase: string | undefined,
+): Promise<{ email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } }> {
+  return retryIncorrectPassphrase(interactive, fixedPassphrase, async (passphrase) => {
+    const email = optionString(options.email) ?? (interactive
+      ? unwrap(await text({ message: "Email", ...common }))
+      : (() => { throw new Error("Usage: fixmind login --email <email> --password <password> --passphrase <passphrase>"); })());
+    const userPassword = optionString(options.password) ?? (interactive
+      ? unwrap(await password({ message: "Password", ...common }))
+      : (() => { throw new Error("--password is required outside an interactive terminal."); })());
+    return engine.login({ supabaseUrl, supabaseAnonKey, email, password: userPassword, passphrase });
+  });
+}
+
+async function loginWithGithubInteractive(
+  engine: ReturnType<typeof createSyncEngine>,
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  fixedPassphrase: string | undefined,
+): Promise<{ email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } }> {
+  let spinnerHandle = startSpinner("Opening your browser to sign in with GitHub...");
+  let fallbackUrl: string | undefined;
+  try {
+    const githubSession = await engine.loginWithGithub({
+      supabaseUrl,
+      supabaseAnonKey,
+      onAuthUrl: (url) => {
+        fallbackUrl = url;
+        spinnerHandle.stop("Browser opened.");
+        log.message(`Didn't open? ${terminalLink("Click here to sign in", url)}`, common);
+        spinnerHandle = startSpinner("Waiting for authentication...");
+      },
+    });
+    spinnerHandle.stop("GitHub sign-in complete. Enter your sync passphrase.");
+    return completeGithubLogin(engine, supabaseUrl, supabaseAnonKey, githubSession, fixedPassphrase, true);
+  } catch (error) {
+    spinnerHandle.stop("GitHub sign in failed.");
+    if (fallbackUrl) {
+      log.message(`If the browser didn't open: ${terminalLink("Click here to sign in", fallbackUrl)}`, common);
+    }
+    throw error;
+  }
+}
+
+async function loginWithGithubNonInteractive(
+  engine: ReturnType<typeof createSyncEngine>,
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  fixedPassphrase: string | undefined,
+): Promise<{ email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } }> {
+  const githubSession = await engine.loginWithGithub({
+    supabaseUrl,
+    supabaseAnonKey,
+    onAuthUrl: (url) => console.log(`Opening your browser to sign in with GitHub...\nIf it doesn't open, visit: ${url}`),
+  });
+  return completeGithubLogin(engine, supabaseUrl, supabaseAnonKey, githubSession, fixedPassphrase, false);
+}
+
+async function completeGithubLogin(
+  engine: ReturnType<typeof createSyncEngine>,
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  githubSession: { email: string; userId: string; session: { accessToken: string; refreshToken: string } },
+  fixedPassphrase: string | undefined,
+  interactive: boolean,
+): Promise<{ email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } }> {
+  return retryIncorrectPassphrase(interactive, fixedPassphrase, async (passphrase) => engine.completeGithubLogin({
+    supabaseUrl,
+    supabaseAnonKey,
+    email: githubSession.email,
+    userId: githubSession.userId,
+    session: githubSession.session,
+    passphrase,
+  }));
+}
+
 export async function logoutCommand(): Promise<void> {
   initializeDataDirectory();
   const store = createLessonStore();
@@ -342,34 +390,67 @@ export async function syncCommand(sub: string | undefined): Promise<void> {
     const engine = createSyncEngine(store);
 
     if (sub === "status") {
-      const status = await engine.status();
-      if (!status.loggedIn) {
-        console.log(status.needsReauth ? "Sync session expired. Run `npx fixmind login` again." : "Not logged in. Run `npx fixmind login`.");
-        return;
-      }
-      if (!status.syncEnabled) {
-        console.log(`Signed in as ${status.email}. Sync is not active on this account.`);
-      } else {
-        console.log(`Logged in as ${status.email}.`);
-        console.log("Encrypted sync is on.");
-      }
-      console.log(`Last push: ${status.lastPushedAt ?? "never"}`);
-      console.log(`Last pull: ${status.lastPulledAt ?? "never"}`);
+      await printSyncStatus(engine);
       return;
     }
 
     if (sub === "push") {
-      const result = await engine.push();
-      console.log(`Pushed ${result.pushed} lesson(s).`);
+      await pushSync(engine);
       return;
     }
 
     if (sub === "pull") {
-      const result = await engine.pull();
-      console.log(`Pulled ${result.pulled} change(s), applied ${result.applied} update(s) locally.`);
+      await pullSync(engine);
       return;
     }
   } finally {
     store.close();
+  }
+}
+
+async function printSyncStatus(
+  engine: ReturnType<typeof createSyncEngine>,
+): Promise<void> {
+  const status = await engine.status();
+  if (!status.loggedIn) {
+    console.log(status.needsReauth ? "Sync session expired. Run `npx fixmind login` again." : "Not logged in. Run `npx fixmind login`.");
+    return;
+  }
+  if (!status.syncEnabled) {
+    console.log(`Signed in as ${status.email}. Sync is not active on this account.`);
+  } else {
+    console.log(`Logged in as ${status.email}.`);
+    console.log("Encrypted sync is on.");
+  }
+  console.log(`Last push: ${status.lastPushedAt ?? "never"}`);
+  console.log(`Last pull: ${status.lastPulledAt ?? "never"}`);
+}
+
+async function pushSync(engine: ReturnType<typeof createSyncEngine>): Promise<void> {
+  const result = await engine.push();
+  console.log(`Pushed ${result.pushed} lesson(s).`);
+}
+
+async function pullSync(engine: ReturnType<typeof createSyncEngine>): Promise<void> {
+  const result = await engine.pull();
+  console.log(`Pulled ${result.pulled} change(s), applied ${result.applied} update(s) locally.`);
+}
+
+async function retryIncorrectPassphrase<T>(
+  interactive: boolean,
+  fixedPassphrase: string | undefined,
+  action: (passphrase: string) => Promise<T>,
+): Promise<T> {
+  for (;;) {
+    const passphrase = fixedPassphrase ?? await promptPassphrase(interactive);
+    try {
+      return await action(passphrase);
+    } catch (error) {
+      if (interactive && isIncorrectPassphraseError(error) && !fixedPassphrase) {
+        log.message("That passphrase did not match this sync account. Try again.", common);
+        continue;
+      }
+      throw error;
+    }
   }
 }

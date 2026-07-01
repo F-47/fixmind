@@ -5,7 +5,9 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { z } from "zod";
 import { readConfig } from "./config.js";
+import { buildGitAutofill } from "./git-autofill.js";
 import { formatMemoryResults, getMemoryResults } from "./memory.js";
+import { formatLessonTemplatePrompts } from "./lesson-templates.js";
 import { readGitContext } from "./git.js";
 import { databasePath } from "./paths.js";
 import { initializeDataDirectory, createLessonStore, type LessonStore } from "./storage.js";
@@ -37,6 +39,9 @@ BEFORE calling save_lesson, run this checklist:
      different fix entirely?
 
 If any answer is NO, do NOT call save_lesson.
+
+LESSON SHAPES - when the bug matches a familiar pattern, use the matching shape as a scaffold:
+${formatLessonTemplatePrompts()}
 
 DO NOT save a lesson for:
   - Moving code to a different file (pure relocation, no logic change)
@@ -152,7 +157,7 @@ export const lessonInputSchema = z.object({
   takeaway: z.string().trim().min(1).describe("REQUIRED. One plain sentence the developer should memorize. Example: 'Always revoke object URLs when a component unmounts.'"),
   mistakePattern: z.string().trim().min(1).optional().describe("STRONGLY RECOMMENDED. A 2–4 word reusable category. Examples: Missing cleanup, Stale closure, Off-by-one, Wrong event lifetime."),
   whenNotApplicable: z.string().trim().min(1).describe("REQUIRED. When would this fix/advice NOT apply - a different framework version, a context where the same code is actually correct, or a case needing a different fix. Forces the lesson to state its scope, not just the one fix."),
-  concepts: z.array(z.string().trim().min(1)).min(1),
+  concepts: z.array(z.string().trim().min(1)).optional(),
   filesChanged: z.array(z.string().trim().min(1)).default([]),
   codeExample: z.string().optional(),
   badCodeExample: z.string().optional().describe("STRONGLY RECOMMENDED when code is involved. A minimal snippet showing the mistake. Omit only for concept-only lessons with no code change."),
@@ -238,10 +243,14 @@ export function createLearningLessonServer(
         const candidate = { ...arguments_ };
         candidate.tool ||= server.server.getClientVersion()?.name ?? "unknown-ai-tool";
         const projectPath = candidate.projectPath ?? process.cwd();
-        if (!candidate.sourceDiff || candidate.filesChanged.length === 0) {
+        if (!candidate.sourceDiff || candidate.filesChanged.length === 0 || !candidate.mistakePattern || !candidate.codeExample || !candidate.concepts || candidate.concepts.length === 0) {
           const git = readGitContext(projectPath);
+          const autofill = buildGitAutofill(git);
           candidate.sourceDiff ||= git.sourceDiff;
-          if (candidate.filesChanged.length === 0) candidate.filesChanged = git.filesChanged;
+          if (candidate.filesChanged.length === 0) candidate.filesChanged = autofill.filesChanged;
+          if (!candidate.concepts || candidate.concepts.length === 0) candidate.concepts = autofill.concepts;
+          candidate.mistakePattern ||= autofill.mistakePattern;
+          candidate.codeExample ||= autofill.codeExample;
         }
 
         const input = validateLessonInput({ ...candidate, projectPath });

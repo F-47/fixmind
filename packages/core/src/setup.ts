@@ -136,7 +136,7 @@ function configureCursor(
   server: ServerCommand,
   dryRun: boolean,
 ): SetupResult {
-  const directory = path.join(scope === "project" ? projectDirectory : homeDirectory, ".cursor");
+  const directory = path.join(resolveScopeDirectory(homeDirectory, projectDirectory, scope), ".cursor");
   const filePath = path.join(directory, "mcp.json");
   let config: Record<string, unknown> = {};
   if (fs.existsSync(filePath)) {
@@ -234,14 +234,15 @@ function instructionFilePath(
   projectDirectory: string,
   scope: SetupScope,
 ): string {
+  const directory = resolveScopeDirectory(homeDirectory, projectDirectory, scope);
   if (scope === "project") {
-    if (client === "claude") return path.join(projectDirectory, "CLAUDE.md");
-    if (client === "codex") return path.join(projectDirectory, "AGENTS.md");
-    return path.join(projectDirectory, ".cursor", "rules", "fixmind.mdc");
+    if (client === "claude") return path.join(directory, "CLAUDE.md");
+    if (client === "codex") return path.join(directory, "AGENTS.md");
+    return path.join(directory, ".cursor", "rules", "fixmind.mdc");
   }
-  if (client === "claude") return path.join(homeDirectory, ".claude", "CLAUDE.md");
-  if (client === "codex") return path.join(homeDirectory, "AGENTS.md");
-  return path.join(homeDirectory, ".cursor", "rules", "fixmind.mdc");
+  if (client === "claude") return path.join(directory, ".claude", "CLAUDE.md");
+  if (client === "codex") return path.join(directory, "AGENTS.md");
+  return path.join(directory, ".cursor", "rules", "fixmind.mdc");
 }
 
 function injectInstruction(
@@ -298,7 +299,7 @@ function configureClaudePermissions(
   scope: SetupScope,
   dryRun: boolean,
 ): PermissionResult {
-  const directory = path.join(scope === "project" ? projectDirectory : homeDirectory, ".claude");
+  const directory = path.join(resolveScopeDirectory(homeDirectory, projectDirectory, scope), ".claude");
   const filePath = path.join(directory, "settings.json");
   let config: Record<string, unknown> = {};
   if (fs.existsSync(filePath)) {
@@ -361,4 +362,12 @@ function isMissingCommandError(error: unknown): boolean {
   const stderr = (error as { stderr?: unknown }).stderr;
   const stderrText = Buffer.isBuffer(stderr) ? stderr.toString("utf8") : typeof stderr === "string" ? stderr : "";
   return /is not recognized as an internal or external command/i.test(stderrText);
+}
+
+function resolveScopeDirectory(
+  homeDirectory: string,
+  projectDirectory: string,
+  scope: SetupScope,
+): string {
+  return scope === "project" ? projectDirectory : homeDirectory;
 }

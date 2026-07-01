@@ -17,6 +17,10 @@ import {
   text,
 } from "@clack/prompts";
 import { lessonsToJson, lessonsToMarkdown } from "./export.js";
+import { buildDiagnosticsReport } from "./diagnostics.js";
+import { buildLearningInsights, formatLearningInsightsReport } from "./learning-insights.js";
+import { buildGitAutofill } from "./git-autofill.js";
+import { getLessonTemplate, lessonTemplateOptions, type LessonTemplate } from "./lesson-templates.js";
 import { formatMemoryResults, getMemoryResults } from "./memory.js";
 import { readGitContext } from "./git.js";
 import {
@@ -210,8 +214,15 @@ async function main(): Promise<void> {
       case "stats":
         showStats(store);
         break;
+      case "insights":
+        showInsights(store);
+        break;
       case "status":
         showStatus(store);
+        break;
+      case "diagnose":
+      case "diagnostics":
+        showDiagnostics();
         break;
       case "delete": {
         const id = args.positionals[0];
@@ -259,12 +270,11 @@ async function saveLesson(
     note("Save the reusable lesson, not just the one-off bug report.", "Focus", common);
   }
 
-  const get = async (key: string, label: string, fallback = ""): Promise<string> => {
-    const supplied = optionString(options[key]);
-    if (supplied !== undefined) return supplied;
-    if (!interactive) return fallback;
-    return unwrap(await text({ message: label, defaultValue: fallback || undefined, ...common }));
-  };
+  const template = await pickLessonTemplate(interactive);
+  if (interactive && template) {
+    note(template.description, template.label, common);
+  }
+  const gitAutofill = buildGitAutofill(git);
 
   if (git.stat) {
     if (interactive) {
@@ -273,53 +283,12 @@ async function saveLesson(
       console.log(`Detected working tree changes:\n${git.stat}\n`);
     }
   }
-  const reviewQuestion = await get("review-question", "Review question");
-  const input = validateLessonInput({
-    tool: optionString(options.tool) ?? "manual",
-    projectPath: process.cwd(),
-    title: await get("title", "Title"),
-    originalPrompt: await get("original-prompt", "Original prompt"),
-    problem: await get("problem", "Problem"),
-    mistake: await get("mistake", "Mistake"),
-    rootCause: await get("root-cause", "Root cause"),
-    fixSummary: await get("fix-summary", "Fix summary"),
-    takeaway: await get("takeaway", "One-sentence takeaway"),
-    mistakePattern: await get("mistake-pattern", "Short mistake pattern"),
-    whenNotApplicable: await get(
-      "when-not-applicable",
-      "When this advice doesn't apply",
-    ),
-    concepts: parseList(await get("concepts", "Concepts (comma-separated)")),
-    filesChanged: parseList(
-      await get(
-        "files-changed",
-        "Files changed (comma-separated)",
-        git.filesChanged.join(","),
-      ),
-    ),
-    codeExample: await get("code-example", "Small code example"),
-    badCodeExample: await get(
-      "bad-code-example",
-      "Minimal wrong code example",
-    ),
-    goodCodeExample: await get(
-      "good-code-example",
-      "Minimal corrected code example",
-    ),
-    codeExplanation: await get(
-      "code-explanation",
-      "Why the corrected example works",
-    ),
-    practiceTask: await get("practice-task", "Small practice task"),
-    reviewQuestions: [
-      {
-        question: reviewQuestion,
-        expectedAnswer: await get("expected-answer", "Expected answer"),
-      },
-    ],
-    understanding: optionString(options.understanding) ?? "unknown",
-    sourceDiff: git.sourceDiff,
-    tags: parseList(await get("tags", "Tags (comma-separated)")).map((name) => ({ name })),
+  const input = await buildLessonInput({
+    git,
+    interactive,
+    options,
+    template,
+    autofill: gitAutofill,
   });
   const quality = assessLessonQuality(input);
   const saved = store.save(input);
@@ -335,6 +304,128 @@ async function saveLesson(
     console.log(`Saved lesson ${saved.id}: ${saved.title}`);
     if (qualityLines.length > 0) console.log(qualityLines.join("\n"));
   }
+}
+
+interface LessonDraftContext {
+  git: ReturnType<typeof readGitContext>;
+  interactive: boolean;
+  options: Record<string, string | boolean>;
+  template?: LessonTemplate;
+  autofill: ReturnType<typeof buildGitAutofill>;
+}
+
+async function buildLessonInput(context: LessonDraftContext): Promise<LessonInput> {
+  const { git, interactive, options, template, autofill: gitAutofill } = context;
+  const defaults = template?.defaults;
+  const reader = createLessonFieldReader(interactive, options);
+  const conceptDefaults = combineConceptDefaults(defaults?.concepts ?? [], gitAutofill.concepts);
+
+  const reviewQuestion = await reader.required(
+    "review-question",
+    "Review question",
+    template?.reviewQuestion.question ?? "",
+  );
+
+  return validateLessonInput({
+    tool: optionString(options.tool) ?? "manual",
+    projectPath: process.cwd(),
+    title: await reader.required("title", "Title", defaults?.title ?? ""),
+    originalPrompt: await reader.required("original-prompt", "Original prompt", defaults?.originalPrompt ?? ""),
+    problem: await reader.required("problem", "Problem", defaults?.problem ?? ""),
+    mistake: await reader.required("mistake", "Mistake", defaults?.mistake ?? ""),
+    rootCause: await reader.required("root-cause", "Root cause", defaults?.rootCause ?? ""),
+    fixSummary: await reader.required("fix-summary", "Fix summary", defaults?.fixSummary ?? ""),
+    takeaway: await reader.required("takeaway", "One-sentence takeaway", defaults?.takeaway ?? ""),
+    mistakePattern: await reader.required(
+      "mistake-pattern",
+      "Short mistake pattern",
+      defaults?.mistakePattern ?? gitAutofill.mistakePattern ?? "",
+    ),
+    whenNotApplicable: await reader.required(
+      "when-not-applicable",
+      "When this advice doesn't apply",
+      defaults?.whenNotApplicable ?? "",
+    ),
+    concepts: parseList(
+      await reader.required("concepts", "Concepts (comma-separated)", conceptDefaults.join(", ")),
+    ),
+    filesChanged: parseList(
+      await reader.required(
+        "files-changed",
+        "Files changed (comma-separated)",
+        gitAutofill.filesChanged.join(", "),
+      ),
+    ),
+    codeExample: await reader.required("code-example", "Small code example", gitAutofill.codeExample ?? ""),
+    badCodeExample: await reader.required(
+      "bad-code-example",
+      "Minimal wrong code example",
+    ),
+    goodCodeExample: await reader.required(
+      "good-code-example",
+      "Minimal corrected code example",
+    ),
+    codeExplanation: await reader.required(
+      "code-explanation",
+      "Why the corrected example works",
+    ),
+    practiceTask: await reader.required("practice-task", "Small practice task"),
+    reviewQuestions: [{
+      question: reviewQuestion,
+      expectedAnswer: await reader.required("expected-answer", "Expected answer", template?.reviewQuestion.expectedAnswer ?? ""),
+    }],
+    understanding: optionString(options.understanding) ?? "unknown",
+    sourceDiff: git.sourceDiff,
+    tags: parseList(await reader.required("tags", "Tags (comma-separated)")).map((name) => ({ name })),
+  });
+}
+
+function createLessonFieldReader(
+  interactive: boolean,
+  options: Record<string, string | boolean>,
+): {
+  required: (key: string, label: string, fallback?: string) => Promise<string>;
+  optional: (key: string, label: string, current: string) => Promise<string | undefined>;
+} {
+  return {
+    required: async (key: string, label: string, fallback = ""): Promise<string> => {
+      const supplied = optionString(options[key]);
+      if (supplied !== undefined) return supplied;
+      if (!interactive) return fallback;
+      return unwrap(await text({ message: label, defaultValue: fallback || undefined, ...common }));
+    },
+    optional: async (key: string, label: string, current: string): Promise<string | undefined> => {
+      const supplied = optionString(options[key]);
+      if (supplied !== undefined) return supplied;
+      if (!interactive) return undefined;
+      return unwrap(await text({ message: label, defaultValue: current, ...common }));
+    },
+  };
+}
+
+function combineConceptDefaults(
+  templateConcepts: string[],
+  inferredConcepts: string[],
+): string[] {
+  const combined: string[] = [];
+  for (const concept of [...templateConcepts, ...inferredConcepts]) {
+    if (!combined.includes(concept)) combined.push(concept);
+    if (combined.length >= 3) break;
+  }
+  return combined;
+}
+
+async function pickLessonTemplate(interactive: boolean): Promise<LessonTemplate | undefined> {
+  if (!interactive) return undefined;
+
+  const selected = unwrap(await select({
+    message: "Start from a lesson template?",
+    options: lessonTemplateOptions(),
+    initialValue: "",
+    ...common,
+  }));
+  if (!selected) return undefined;
+  return getLessonTemplate(selected);
 }
 
 async function saveLessonFromSummary(
@@ -461,11 +552,20 @@ function showStats(store: LessonStore): void {
   );
 }
 
+function showInsights(store: LessonStore): void {
+  const insights = buildLearningInsights(store.list(Number.MAX_SAFE_INTEGER));
+  console.log(formatLearningInsightsReport(insights).join("\n"));
+}
+
 function showStatus(store: LessonStore): void {
   const due = store.due();
   console.log(due.length === 0
     ? "Fixmind: no lessons due for review."
     : `Fixmind: ${due.length} lesson(s) due for review. Run \`fixmind review\`.`);
+}
+
+function showDiagnostics(): void {
+  console.log(buildDiagnosticsReport().join("\n"));
 }
 
 function findLesson(store: LessonStore, idOrPrefix: string): Lesson {
@@ -528,93 +628,108 @@ async function editLesson(
     note("Press Enter to keep the current value.", "Tip", common);
   }
 
-  const get = async (key: string, label: string, current: string): Promise<string | undefined> => {
-    const supplied = optionString(options[key]);
-    if (supplied !== undefined) return supplied;
-    if (!interactive) return undefined;
-    return unwrap(await text({ message: label, defaultValue: current, ...common }));
-  };
+  const updated = store.update(lesson.id, await buildLessonUpdate({
+    lesson,
+    interactive,
+    options,
+  }));
+  if (interactive) {
+    outro(`Updated lesson ${updated.id}: ${updated.title}`, common);
+  } else {
+    console.log(`Updated lesson ${updated.id}: ${updated.title}`);
+  }
+}
+
+interface LessonEditContext {
+  lesson: Lesson;
+  interactive: boolean;
+  options: Record<string, string | boolean>;
+}
+
+async function buildLessonUpdate(context: LessonEditContext): Promise<Partial<LessonInput>> {
+  const { lesson, interactive, options } = context;
+  const reader = createLessonFieldReader(interactive, options);
 
   const partial: Partial<LessonInput> = {};
 
-  const title = await get("title", "Title", lesson.title);
+  const title = await reader.optional("title", "Title", lesson.title);
   if (title !== undefined) partial.title = title;
 
-  const problem = await get("problem", "Problem", lesson.problem);
+  const problem = await reader.optional("problem", "Problem", lesson.problem);
   if (problem !== undefined) partial.problem = problem;
 
-  const mistake = await get("mistake", "Mistake", lesson.mistake);
+  const mistake = await reader.optional("mistake", "Mistake", lesson.mistake);
   if (mistake !== undefined) partial.mistake = mistake;
 
-  const rootCause = await get("root-cause", "Root cause", lesson.rootCause);
+  const rootCause = await reader.optional("root-cause", "Root cause", lesson.rootCause);
   if (rootCause !== undefined) partial.rootCause = rootCause;
 
-  const fixSummary = await get("fix-summary", "Fix summary", lesson.fixSummary);
+  const fixSummary = await reader.optional("fix-summary", "Fix summary", lesson.fixSummary);
   if (fixSummary !== undefined) partial.fixSummary = fixSummary;
 
-  const takeaway = await get("takeaway", "One-sentence takeaway", lesson.takeaway ?? "");
+  const takeaway = await reader.optional("takeaway", "One-sentence takeaway", lesson.takeaway ?? "");
   if (takeaway !== undefined) partial.takeaway = takeaway;
 
-  const mistakePattern = await get(
+  const mistakePattern = await reader.optional(
     "mistake-pattern",
     "Short mistake pattern",
     lesson.mistakePattern ?? "",
   );
   if (mistakePattern !== undefined) partial.mistakePattern = mistakePattern;
 
-  const whenNotApplicable = await get(
+  const whenNotApplicable = await reader.optional(
     "when-not-applicable",
     "When this advice doesn't apply",
     lesson.whenNotApplicable ?? "",
   );
   if (whenNotApplicable !== undefined) partial.whenNotApplicable = whenNotApplicable;
 
-  const codeExample = await get("code-example", "Small code example", lesson.codeExample ?? "");
+  const codeExample = await reader.optional("code-example", "Small code example", lesson.codeExample ?? "");
   if (codeExample !== undefined) partial.codeExample = codeExample;
 
-  const badCodeExample = await get(
+  const badCodeExample = await reader.optional(
     "bad-code-example",
     "Minimal wrong code example",
     lesson.badCodeExample ?? "",
   );
   if (badCodeExample !== undefined) partial.badCodeExample = badCodeExample;
 
-  const goodCodeExample = await get(
+  const goodCodeExample = await reader.optional(
     "good-code-example",
     "Minimal corrected code example",
     lesson.goodCodeExample ?? "",
   );
   if (goodCodeExample !== undefined) partial.goodCodeExample = goodCodeExample;
 
-  const codeExplanation = await get(
+  const codeExplanation = await reader.optional(
     "code-explanation",
     "Why the corrected example works",
     lesson.codeExplanation ?? "",
   );
   if (codeExplanation !== undefined) partial.codeExplanation = codeExplanation;
 
-  const practiceTask = await get(
+  const practiceTask = await reader.optional(
     "practice-task",
     "Small practice task",
     lesson.practiceTask ?? "",
   );
   if (practiceTask !== undefined) partial.practiceTask = practiceTask;
 
-  const concepts = await get(
+  const concepts = await reader.optional(
     "concepts",
     "Concepts (comma-separated)",
     lesson.concepts.join(", "),
   );
   if (concepts !== undefined) partial.concepts = parseList(concepts);
 
-  const filesChanged = await get(
+  const filesChanged = await reader.optional(
     "files-changed",
     "Files changed (comma-separated)",
     lesson.filesChanged.join(", "),
   );
   if (filesChanged !== undefined) partial.filesChanged = parseList(filesChanged);
 
-  const tags = await get(
+  const tags = await reader.optional(
     "tags",
     "Tags (comma-separated)",
     lesson.tags.map((tag) => tag.name).join(", "),
@@ -624,12 +739,7 @@ async function editLesson(
   const understanding = optionString(options.understanding);
   if (understanding !== undefined) partial.understanding = understanding as Understanding;
 
-  const updated = store.update(lesson.id, partial);
-  if (interactive) {
-    outro(`Updated lesson ${updated.id}: ${updated.title}`, common);
-  } else {
-    console.log(`Updated lesson ${updated.id}: ${updated.title}`);
-  }
+  return partial;
 }
 
 function supersedeLesson(
@@ -702,9 +812,60 @@ async function readStdin(): Promise<string> {
 }
 
 function printHelp(): void {
-  console.log(
-    `fixmind\n\nCommands:\n  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--capture-mode strict|balanced] [--dry-run] [--no-dashboard]\n  fixmind settings [--capture-mode strict|balanced]\n  fixmind memory [query] [--limit 5]\n  fixmind dashboard [--port 4317] [--no-open]\n  fixmind mcp\n  fixmind login [--url <supabase-url> --key <anon-key> --passphrase ...]  (opens browser for GitHub sign in)\n  fixmind login --password-login --email ... --password ... --passphrase ...  (email/password instead)\n  fixmind logout\n  fixmind sync push\n  fixmind sync pull\n  fixmind sync status\n  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]\n  fixmind save-from-summary [--file lesson.json] < lesson.json\n  fixmind list [--limit 20] [--include-superseded]\n  fixmind search <query> [--include-superseded]\n  fixmind review\n  fixmind stats\n  fixmind status\n  fixmind edit <id> [--title ... --problem ... ...]\n  fixmind delete <id> [--yes | -y]\n  fixmind supersede <oldId> <newId> [--reason "..."]\n  fixmind export [--format json|md] [--output <file>] [--id <id>]\n\nOptions:\n  -v, --version  Show the installed CLI version.\n  -h, --help     Show this help text.\n\nSave options:\n  --title --original-prompt --problem --mistake --root-cause --fix-summary\n  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed\n  --code-example --bad-code-example --good-code-example --code-explanation\n  --practice-task --review-question --expected-answer --tool --understanding --tags\n\nEdit accepts the same field options as save (without --review-question,\n--expected-answer, --original-prompt, or --tool). <id> may be the full\nlesson id or any unique prefix shown by \`fixmind list\`.\n\nDelete requires --yes (or -y) when run outside an interactive terminal.\n\nSupersede marks <oldId> as superseded by <newId> (linked, never deleted).\nSuperseded lessons are hidden from \`list\`/\`search\` and review by default;\npass --include-superseded to see them. <oldId>/<newId> accept id prefixes.\n\nAliases:\n  fixmind save-manual -> fixmind save\n  fixmind save-ai-summary -> fixmind save-from-summary`,
-  );
+  console.log([
+    "fixmind",
+    "",
+    "Commands:",
+    "  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--capture-mode strict|balanced] [--dry-run] [--no-dashboard]",
+    "  fixmind settings [--capture-mode strict|balanced]",
+    "  fixmind memory [query] [--limit 5]",
+    "  fixmind dashboard [--port 4317] [--no-open]",
+    "  fixmind mcp",
+    "  fixmind diagnose",
+    "  fixmind diagnostics",
+    "  fixmind insights",
+    "  fixmind login [--url <supabase-url> --key <anon-key> --passphrase ...]  (opens browser for GitHub sign in)",
+    "  fixmind login --password-login --email ... --password ... --passphrase ...  (email/password instead)",
+    "  fixmind logout",
+    "  fixmind sync push",
+    "  fixmind sync pull",
+    "  fixmind sync status",
+    "  fixmind save [--title ... --problem ... --mistake ... --root-cause ...]  (interactive template picker; Git autofill from the current diff)",
+    "  fixmind save-from-summary [--file lesson.json] < lesson.json",
+    "  fixmind list [--limit 20] [--include-superseded]",
+    "  fixmind search <query> [--include-superseded]",
+    "  fixmind review",
+    "  fixmind stats",
+    "  fixmind status",
+    "  fixmind edit <id> [--title ... --problem ... ...]",
+    "  fixmind delete <id> [--yes | -y]",
+    "  fixmind supersede <oldId> <newId> [--reason \"...\"]",
+    "  fixmind export [--format json|md] [--output <file>] [--id <id>]",
+    "",
+    "Options:",
+    "  -v, --version  Show the installed CLI version.",
+    "  -h, --help     Show this help text.",
+    "",
+    "Save options:",
+    "  --title --original-prompt --problem --mistake --root-cause --fix-summary",
+    "  --takeaway --mistake-pattern --when-not-applicable --concepts --files-changed",
+    "  --code-example --bad-code-example --good-code-example --code-explanation",
+    "  --practice-task --review-question --expected-answer --tool --understanding --tags",
+    "",
+    "Edit accepts the same field options as save (without --review-question,",
+    "--expected-answer, --original-prompt, or --tool). <id> may be the full",
+    "lesson id or any unique prefix shown by `fixmind list`.",
+    "",
+    "Delete requires --yes (or -y) when run outside an interactive terminal.",
+    "",
+    "Supersede marks <oldId> as superseded by <newId> (linked, never deleted).",
+    "Superseded lessons are hidden from `list`/`search` and review by default;",
+    "pass --include-superseded to see them. <oldId>/<newId> accept id prefixes.",
+    "",
+    "Aliases:",
+    "  fixmind save-manual -> fixmind save",
+    "  fixmind save-ai-summary -> fixmind save-from-summary",
+  ].join("\n"));
 }
 
 function showMemory(

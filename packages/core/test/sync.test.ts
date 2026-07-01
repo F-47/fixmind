@@ -108,7 +108,7 @@ function withMachine<T>(run: (store: LessonStore) => Promise<T>): () => Promise<
   };
 }
 
-test("login succeeds but reports unentitled without an active Pro/Team plan", async () => {
+test("login succeeds but reports unentitled when no entitlement exists", async () => {
   const backend = new FakeBackend();
   const credentials = {
     supabaseUrl: "https://example.supabase.co",
@@ -125,8 +125,19 @@ test("login succeeds but reports unentitled without an active Pro/Team plan", as
     assert.equal((await engine.status()).loggedIn, true);
     await assert.rejects(engine.push(), /requires an active Pro or Team plan/);
   })();
+});
 
-  backend.grantEntitlement(credentials.email, { plan: "pro", status: "canceled" });
+test("login succeeds but reports unentitled when the entitlement is canceled", async () => {
+  const backend = new FakeBackend();
+  backend.grantEntitlement("dev@example.com", { plan: "pro", status: "canceled" });
+  const credentials = {
+    supabaseUrl: "https://example.supabase.co",
+    supabaseAnonKey: "anon-key",
+    email: "dev@example.com",
+    password: "hunter2",
+    passphrase: "shared passphrase",
+  };
+
   await withMachine(async (store) => {
     const engine = createSyncEngine(store, backend);
     const result = await engine.login(credentials);

@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 
 export interface GitContext {
+  isRepo: boolean;
   filesChanged: string[];
   sourceDiff?: string;
   stat?: string;
@@ -14,7 +15,7 @@ export function readGitContext(cwd = process.cwd()): GitContext {
       timeout: 2_000,
     });
   } catch {
-    return { filesChanged: [] };
+    return { isRepo: false, filesChanged: [] };
   }
 
   try {
@@ -23,6 +24,7 @@ export function readGitContext(cwd = process.cwd()): GitContext {
       .map((line) => line.trim())
       .filter(Boolean);
     return {
+      isRepo: true,
       filesChanged: files,
       stat: runGit(["diff", "--stat"], cwd).trim() || undefined,
       sourceDiff:
@@ -30,7 +32,7 @@ export function readGitContext(cwd = process.cwd()): GitContext {
         undefined,
     };
   } catch {
-    return { filesChanged: [] };
+    return { isRepo: true, filesChanged: [] };
   }
 }
 

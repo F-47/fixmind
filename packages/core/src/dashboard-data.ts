@@ -1,4 +1,5 @@
 import type { Lesson, ConceptStat, Understanding } from "./types.js";
+import { buildLearningInsights, type LearningInsights } from "./learning-insights.js";
 
 export interface DashboardLesson extends Lesson {
   displayTakeaway: string;
@@ -35,6 +36,7 @@ export interface DashboardData {
   models: ConceptStat[];
   topics: ConceptStat[];
   patterns: PatternStat[];
+  insights: LearningInsights;
   progress: ProgressData;
   summary: {
     total: number;
@@ -50,6 +52,7 @@ export function buildDashboardData(
   visibleLessons: Lesson[],
   dueLessons: Lesson[],
   topics: ConceptStat[],
+  now = new Date(),
 ): DashboardData {
   const all = allLessons.map(toDashboardLesson);
   const visibleIds = new Set(visibleLessons.map((lesson) => lesson.id));
@@ -60,6 +63,7 @@ export function buildDashboardData(
     models: groupModels(all),
     topics,
     patterns: groupPatterns(all),
+    insights: buildLearningInsights(allLessons, now),
     progress: buildProgressData(allLessons),
     summary: {
       total: all.length,
