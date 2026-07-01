@@ -60,6 +60,68 @@ test("groups patterns and keeps summary totals independent of search results", (
   assert.equal(data.progress.understandingByWeek.length, 12);
 });
 
+test("buildDashboardData includes monthly learning insights from recent lessons", () => {
+  const now = new Date("2026-07-01T12:00:00.000Z");
+  const lessons = [
+    lesson({
+      id: "recent-1",
+      createdAt: "2026-06-29T12:00:00.000Z",
+      updatedAt: "2026-06-30T12:00:00.000Z",
+      mistakePattern: "Hydration timing",
+      concepts: ["Hydration"],
+      filesChanged: ["app/theme.tsx"],
+      tool: "codex",
+      understanding: "partial",
+      reviewCount: 2,
+    }),
+    lesson({
+      id: "recent-2",
+      createdAt: "2026-06-20T12:00:00.000Z",
+      updatedAt: "2026-06-30T12:00:00.000Z",
+      mistakePattern: "Hydration timing",
+      concepts: ["Hydration"],
+      filesChanged: ["app/theme.tsx"],
+      tool: "claude",
+      understanding: "copied_blindly",
+      reviewCount: 1,
+    }),
+    lesson({
+      id: "recent-3",
+      createdAt: "2026-06-22T12:00:00.000Z",
+      updatedAt: "2026-06-22T12:00:00.000Z",
+      mistakePattern: "Async timing",
+      concepts: ["Async control flow"],
+      filesChanged: ["src/api.ts"],
+      tool: "codex",
+      understanding: "understood",
+      reviewCount: 0,
+    }),
+    lesson({
+      id: "old-1",
+      createdAt: "2026-04-01T12:00:00.000Z",
+      updatedAt: "2026-04-01T12:00:00.000Z",
+      mistakePattern: "Stale closure",
+      concepts: ["React hooks"],
+      filesChanged: ["src/legacy.ts"],
+      tool: "codex",
+      understanding: "partial",
+      reviewCount: 3,
+    }),
+  ];
+
+  const data = buildDashboardData(lessons, lessons, lessons.slice(0, 2), [{ name: "Hydration timing", count: 2 }], now);
+
+  assert.equal(data.insights.periodDays, 30);
+  assert.equal(data.insights.recentLessons, 3);
+  assert.deepEqual(data.insights.topMistakePatterns.slice(0, 2), [
+    { name: "Hydration timing", count: 2 },
+    { name: "Async timing", count: 1 },
+  ]);
+  assert.deepEqual(data.insights.forgottenConcepts, [{ name: "Hydration", count: 2 }]);
+  assert.deepEqual(data.insights.recurringFiles[0], { name: "app/theme.tsx", count: 2 });
+  assert.deepEqual(data.insights.recurringTools[0], { name: "codex", count: 2 });
+});
+
 test("buildProgressData buckets lessons into weeks and fills empty weeks with zero", () => {
   const now = new Date("2026-06-08T12:00:00.000Z"); // a Monday
   const lessons = [

@@ -15,7 +15,7 @@ Your data lives in `~/.fixmind/learning.db` and `~/.fixmind/config.json`.
 
 You can change the folder with `FIXMIND_DATA_DIR` before running any `fixmind` command, including `fixmind setup`.
 
-Nothing is uploaded anywhere unless you run `fixmind export` or use the dashboard's Backup & export panel. That is the only way to write a copy of your data outside that folder.
+Nothing is uploaded anywhere unless you enable sync or run `fixmind export` or use the dashboard's Backup & export panel. Sync pushes encrypted lessons to your account; export is the only way to write a copy of your data outside that folder when you stay local-only.
 
 ## What is `config.json` for?
 

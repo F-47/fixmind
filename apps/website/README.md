@@ -39,7 +39,6 @@ Outputs a static export to `out/`. The public routes are prerendered where possi
 | File | Purpose |
 |---|---|
 | `app/` | Next.js App Router route files, root layout, and global CSS. |
-| `app/` | Next.js App Router route files, root layout, and global CSS. |
 | `components/shared/` | Shared components and constants used across pages. |
 | `components/home/` | Landing page composition. |
 | `components/pricing/` | Pricing page composition and cards. |

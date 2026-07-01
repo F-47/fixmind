@@ -45,6 +45,14 @@ export interface DashboardLesson {
 }
 
 export interface RankedItem { name: string; count: number }
+export interface LearningInsights {
+  periodDays: number;
+  recentLessons: number;
+  topMistakePatterns: RankedItem[];
+  forgottenConcepts: RankedItem[];
+  recurringFiles: RankedItem[];
+  recurringTools: RankedItem[];
+}
 
 export interface WeeklyCount { weekStart: string; count: number }
 export interface UnderstandingBreakdown {
@@ -65,6 +73,7 @@ export interface DashboardData {
   models: RankedItem[];
   topics: RankedItem[];
   patterns: RankedItem[];
+  insights: LearningInsights;
   progress: ProgressData;
   summary: { total: number; due: number; learning: number; understood: number; memoryReady: number };
 }

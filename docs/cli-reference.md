@@ -98,15 +98,30 @@ Matches title, problem, root cause, fix summary, takeaway, mistake pattern, conc
 
 Prints two tables: how often each concept shows up, and how often each mistake pattern shows up. No flags.
 
+### `fixmind insights`
+
+Summarizes the last 30 days of recent saves and reviews: top mistake patterns, concepts that are still marked as learning after review, and recurring files/tools. No flags.
+
 ### `fixmind status`
 
 One line: how many lessons are due for review right now, or that none are. Useful for shells or prompts that want a quick due-count check. No flags.
+
+### `fixmind diagnose` (alias: `fixmind diagnostics`)
+
+Explains the most likely local reasons a lesson did not save. It checks whether the current directory is inside a Git repo, whether the working tree has changes to mine, whether Fixmind instructions are present in the current user or project scope, and whether Claude Code appears to allow the `mcp__fixmind__save_lesson` permission entry.
+
+```bash
+fixmind diagnose
+fixmind diagnostics
+```
 
 ## Capturing lessons
 
 ### `fixmind save-manual` (alias: `fixmind save`)
 
 Interactive prompts for every field, for logging a lesson yourself without going through an agent. Every field also has a flag, so you can script it non-interactively too:
+
+In interactive mode, `fixmind save-manual` starts with a template picker for common bug shapes: architecture boundary mistakes, stale state, async timing, off-by-one, and null-guard cases. When Git is available, Fixmind also seeds `files-changed`, `mistake-pattern`, `concepts`, and `code-example` from the current diff when it can infer them. Pick **Blank** if you want to start from scratch.
 
 ```bash
 fixmind save-manual \
@@ -127,7 +142,7 @@ fixmind save-manual \
 | `--title`, `--problem`, `--mistake`, `--root-cause`, `--fix-summary`, `--takeaway`, `--when-not-applicable`, `--concepts` | Required fields - see [Lesson Schema](lesson-schema.md). |
 | `--original-prompt` | What you originally asked for. |
 | `--mistake-pattern` | Short reusable category, e.g. "Stale closure". |
-| `--concepts`, `--files-changed`, `--tags` | Comma-separated lists. `--files-changed` defaults to the current git diff if omitted. |
+| `--concepts`, `--files-changed`, `--tags` | Comma-separated lists. When Git is available, `--files-changed` is seeded from the current diff if omitted, and the interactive prompts may prefill `mistake-pattern`, `concepts`, and `code-example` from the same diff. |
 | `--code-example`, `--bad-code-example`, `--good-code-example`, `--code-explanation` | Code comparison. |
 | `--practice-task` | A small exercise to apply the concept. |
 | `--review-question`, `--expected-answer` | One recall question (required). |

@@ -17,7 +17,7 @@ This page shows the shape of a Fixmind lesson. Every lesson saved by an AI agent
 | `reviewQuestions` | yes (>=1) | Transfer questions that ask how to apply the idea elsewhere. Do not use simple recall questions. |
 | `originalPrompt` | no | The original user request. |
 | `mistakePattern` | no | A short reusable category, such as `"Stale closure"`. |
-| `filesChanged` | no | Defaults to the files in the current git diff, if git is available. |
+| `filesChanged` | no | Defaults to the files in the current git diff, if git is available. Fixmind also uses that diff to seed `mistakePattern`, `concepts`, and `codeExample` when it can infer them. |
 | `codeExample`, `badCodeExample`, `goodCodeExample` | no | Short code snippets. The bad and good examples should be a pair. |
 | `codeExplanation` | no | The important difference between the broken and corrected code. |
 | `practiceTask` | no | A small exercise that applies the idea without copying the fix. |

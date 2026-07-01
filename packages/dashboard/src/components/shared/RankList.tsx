@@ -1,17 +1,25 @@
 import type { RankedItem } from "@/lib/types";
 
-export function RankList({ items }: { items: RankedItem[] }) {
+interface Props {
+  items: RankedItem[];
+  emptyMessage?: string;
+  limit?: number;
+}
+
+export function RankList({
+  items,
+  emptyMessage = "More lessons are needed to show a pattern.",
+  limit = 6,
+}: Props) {
   if (!items.length) {
     return (
-      <p className="text-sm text-muted">
-        More lessons are needed to show a pattern.
-      </p>
+      <p className="text-sm text-muted">{emptyMessage}</p>
     );
   }
 
   return (
     <div className="grid gap-2.5">
-      {items.slice(0, 6).map((item, i) => {
+      {items.slice(0, limit).map((item, i) => {
         return (
           <div
             className="flex items-baseline justify-between gap-3 text-sm"

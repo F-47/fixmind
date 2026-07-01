@@ -61,10 +61,14 @@ fixmind list                  # View recent lessons
 fixmind list --limit 5        # Show the last 5 lessons
 fixmind search "hydration"    # Find lessons by keyword or concept
 fixmind stats                 # View recurring mistake patterns
+fixmind insights              # View recent learning signals from the last 30 days
+fixmind diagnose              # Explain why a lesson probably didn't save
 
 # Review & Learn
 fixmind review                # Answer recall questions for due lessons
 ```
+
+`fixmind save-manual` starts with a template picker for common bug shapes: architecture boundary mistakes, stale state, async timing, off-by-one, and null-guard cases. When Git is available, Fixmind also seeds the lesson from the current diff when it can infer the changed files, mistake pattern, concepts, and a compact code example. Pick blank when you want to write a lesson from scratch.
 
 ## Local Dashboard
 

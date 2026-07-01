@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -6,6 +7,17 @@ import test from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { createLessonStore } from "../src/storage.js";
+import { buildMcpInstructions } from "../src/mcp.js";
+
+function runGit(cwd: string, args: string[]): void {
+  execFileSync("git", args, { cwd, stdio: "ignore" });
+}
+
+function initGitRepo(repoDir: string): void {
+  runGit(repoDir, ["init"]);
+  runGit(repoDir, ["config", "user.email", "fixmind@example.com"]);
+  runGit(repoDir, ["config", "user.name", "Fixmind Test"]);
+}
 
 function memoryLesson(title: string, takeaway: string) {
   return {
@@ -93,6 +105,14 @@ test("MCP exposes one save tool and persists a lesson", async () => {
   }
 });
 
+test("MCP instructions include lesson shapes for common bug types", () => {
+  const instructions = buildMcpInstructions("strict");
+  assert.match(instructions, /LESSON SHAPES/);
+  assert.match(instructions, /Architecture boundary/);
+  assert.match(instructions, /Stale state/);
+  assert.match(instructions, /Async timing/);
+});
+
 test("MCP memory returns reviewed active lessons and skips superseded ones", async () => {
   const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-memory-"));
   const dbPath = path.join(dataDirectory, "learning.db");
@@ -173,6 +193,86 @@ test("MCP infers tool name from MCP client info when omitted", async () => {
       const saved = store.list();
       assert.equal(saved.length, 1);
       assert.equal(saved[0].tool, "fixmind-test");
+    } finally {
+      store.close();
+    }
+  } finally {
+    await client.close();
+    fs.rmSync(dataDirectory, { recursive: true, force: true });
+  }
+});
+
+test("MCP autofills concepts and code context from the current git diff", async () => {
+  const dataDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-mcp-git-autofill-"));
+  const repoDir = path.join(dataDirectory, "repo");
+  fs.mkdirSync(repoDir);
+  initGitRepo(repoDir);
+  fs.mkdirSync(path.join(repoDir, "app"), { recursive: true });
+  fs.writeFileSync(
+    path.join(repoDir, "app", "theme.tsx"),
+    [
+      "export function ThemeToggle() {",
+      "  const theme = 'light';",
+      "  return <div>{theme}</div>;",
+      "}",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+  runGit(repoDir, ["add", "app/theme.tsx"]);
+  runGit(repoDir, ["commit", "-m", "initial theme"]);
+  fs.writeFileSync(
+    path.join(repoDir, "app", "theme.tsx"),
+    [
+      "export function ThemeToggle() {",
+      "  const theme = localStorage.getItem('theme');",
+      "  return <div>{theme}</div>;",
+      "}",
+      "",
+    ].join("\n"),
+    "utf8",
+  );
+
+  const transport = new StdioClientTransport({
+    command: process.execPath,
+    args: [path.resolve("dist/src/cli.js"), "mcp"],
+    env: { ...process.env, FIXMIND_DATA_DIR: dataDirectory } as Record<string, string>,
+    stderr: "pipe",
+  });
+  const client = new Client({ name: "fixmind-test", version: "1.0.0" });
+
+  try {
+    await client.connect(transport);
+    const result = await client.callTool({
+      name: "save_lesson",
+      arguments: {
+        tool: "claude",
+        projectPath: repoDir,
+        title: "Keep browser-only state out of SSR",
+        originalPrompt: "Fix the hydration warning",
+        problem: "The rendered markup changed between server and browser",
+        mistake: "Read localStorage during server rendering",
+        rootCause: "The server cannot access browser-only storage while rendering",
+        fixSummary: "Read localStorage after hydration so the server and browser render the same initial markup",
+        takeaway: "Read browser-only state after mount, not during the first render.",
+        whenNotApplicable: "Does not apply to code that only runs in the browser.",
+        reviewQuestions: [{
+          question: "What should you do when a server render needs browser-only state?",
+          expectedAnswer: "Render a stable initial state first, then read browser-only state after hydration.",
+        }],
+        understanding: "unknown",
+      },
+    });
+    assert.equal(result.isError, undefined, result.isError ? (result.content as Array<{ text: string }>)[0].text : undefined);
+
+    const store = createLessonStore(path.join(dataDirectory, "learning.db"));
+    try {
+      const saved = store.list();
+      assert.equal(saved.length, 1);
+      assert.deepEqual(saved[0].filesChanged, ["app/theme.tsx"]);
+      assert.equal(saved[0].mistakePattern, "Hydration timing");
+      assert.deepEqual(saved[0].concepts, ["Hydration", "SSR"]);
+      assert.match(saved[0].codeExample ?? "", /localStorage/);
     } finally {
       store.close();
     }
