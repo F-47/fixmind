@@ -59,12 +59,10 @@ async function handleRequest(
   try {
     const url = new URL(request.url ?? "/", `http://${HOST}`);
     if (request.method === "GET" && url.pathname === "/api/dashboard") {
-      const query = url.searchParams.get("q")?.trim() ?? "";
       const all = store.list(Number.MAX_SAFE_INTEGER);
-      const visible = query ? store.search(query) : all.slice(0, 100);
       sendJson(response, 200, buildDashboardData(
         all,
-        visible,
+        all,
         store.due(),
         store.conceptStats().slice(0, 10),
       ));

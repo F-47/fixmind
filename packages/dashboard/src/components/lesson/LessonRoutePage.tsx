@@ -16,7 +16,7 @@ export function LessonRoutePage() {
 
   useEffect(() => {
     if (!data) {
-      void loadDashboardData("");
+      void loadDashboardData();
     }
   }, [data, loadDashboardData]);
 

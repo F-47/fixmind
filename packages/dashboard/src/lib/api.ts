@@ -17,8 +17,8 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit, fall
   return response.json() as Promise<T>;
 }
 
-export async function loadDashboard(query = ""): Promise<DashboardData> {
-  return requestJson<DashboardData>(`/api/dashboard?q=${encodeURIComponent(query)}`, undefined, "Could not load lessons.");
+export async function loadDashboard(): Promise<DashboardData> {
+  return requestJson<DashboardData>("/api/dashboard", undefined, "Could not load lessons.");
 }
 
 export async function saveReview(lessonId: string, answers: Record<string, string>, understanding: Understanding): Promise<void> {

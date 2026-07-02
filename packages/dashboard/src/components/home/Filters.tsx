@@ -26,7 +26,11 @@ export function Filters({
   return (
     <>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-        <nav className="flex flex-wrap gap-5">
+        <div className="space-y-1.5">
+          <div className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
+            Learning state
+          </div>
+          <nav className="flex flex-wrap gap-5">
           {filters.map(([value, label]) => (
             <button
               className={cn(
@@ -37,13 +41,18 @@ export function Filters({
               )}
               onClick={() => onFilter(value)}
               key={value}
-            >
-              {label}
-            </button>
-            ))}
-        </nav>
+              >
+                {label}
+              </button>
+          ))}
+          </nav>
+        </div>
         <div className="h-4 w-px bg-line max-sm:hidden" />
-        <nav className="flex flex-wrap gap-5">
+        <div className="space-y-1.5">
+          <div className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
+            Clients
+          </div>
+          <nav className="flex flex-wrap gap-5">
           {modelFilters.map(([value, label]) => (
             <button
               className={cn(
@@ -54,11 +63,12 @@ export function Filters({
               )}
               onClick={() => onModelFilter(value)}
               key={value}
-            >
-              {label}
-            </button>
+              >
+                {label}
+              </button>
           ))}
-        </nav>
+          </nav>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-line bg-page/25 p-3 transition-colors focus-within:border-accent/50">
@@ -79,7 +89,7 @@ export function Filters({
             className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted"
             value={query}
             onChange={(event) => onQuery(event.target.value)}
-            placeholder="Topics, patterns, files, tools..."
+            placeholder="Search titles, files, concepts, tools, tags..."
           />
         </div>
       </div>
