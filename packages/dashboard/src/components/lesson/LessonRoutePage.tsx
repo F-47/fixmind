@@ -1,7 +1,9 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { LessonPage } from "@/components/lesson/LessonPage";
+import { ProactiveMemoryPanel } from "@/components/lesson/ProactiveMemoryPanel";
+import { findProactiveMemoryMatches } from "@/lib/proactive-memory";
 
 export function LessonRoutePage() {
   const { data, error, loadDashboardData, submitReview, removeLesson } =
@@ -9,6 +11,7 @@ export function LessonRoutePage() {
   const navigate = useNavigate();
   const { lessonId } = useParams();
   const [searchParams] = useSearchParams();
+  const [memoryDismissed, setMemoryDismissed] = useState(false);
   const reviewMode = searchParams.get("review") === "1";
 
   useEffect(() => {
@@ -21,6 +24,17 @@ export function LessonRoutePage() {
     () => data?.lessons.find((item) => item.id === lessonId) ?? null,
     [data, lessonId],
   );
+  const proactiveMatches = useMemo(
+    () =>
+      lesson && data
+        ? findProactiveMemoryMatches(lesson, data.lessons)
+        : [],
+    [data, lesson],
+  );
+
+  useEffect(() => {
+    setMemoryDismissed(false);
+  }, [lesson?.id]);
 
   if (!data) {
     return (
@@ -52,6 +66,15 @@ export function LessonRoutePage() {
 
   return (
     <main className="mx-auto max-w-5xl py-8 sm:py-12 px-6 lg:px-8 xl:px-0">
+      {!memoryDismissed && proactiveMatches.length > 0 && (
+        <ProactiveMemoryPanel
+          matches={proactiveMatches}
+          onDismiss={() => setMemoryDismissed(true)}
+          onOpenLesson={(targetLessonId) => {
+            navigate(`/lessons/${encodeURIComponent(targetLessonId)}`);
+          }}
+        />
+      )}
       <LessonPage
         lesson={lesson}
         reviewMode={reviewMode}
