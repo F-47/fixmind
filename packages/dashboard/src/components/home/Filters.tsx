@@ -5,22 +5,16 @@ type FilterOption = [string, string];
 interface Props {
   filters: FilterOption[];
   filter: string;
-  modelFilters: FilterOption[];
-  modelFilter: string;
   query: string;
   onFilter(value: string): void;
-  onModelFilter(value: string): void;
   onQuery(value: string): void;
 }
 
 export function Filters({
   filters,
   filter,
-  modelFilters,
-  modelFilter,
   query,
   onFilter,
-  onModelFilter,
   onQuery,
 }: Props) {
   return (
@@ -31,42 +25,20 @@ export function Filters({
             Learning state
           </div>
           <nav className="flex flex-wrap gap-5">
-          {filters.map(([value, label]) => (
-            <button
-              className={cn(
-                "cursor-pointer border-b-2 pb-0.5 font-mono text-[11px] uppercase tracking-[.15em] transition",
-                filter === value
-                  ? "border-accent text-ink"
-                  : "border-transparent text-muted hover:text-ink",
-              )}
-              onClick={() => onFilter(value)}
-              key={value}
+            {filters.map(([value, label]) => (
+              <button
+                key={value}
+                className={cn(
+                  "cursor-pointer border-b-2 pb-0.5 font-mono text-[11px] uppercase tracking-[.15em] transition",
+                  filter === value
+                    ? "border-accent text-ink"
+                    : "border-transparent text-muted hover:text-ink",
+                )}
+                onClick={() => onFilter(value)}
               >
                 {label}
               </button>
-          ))}
-          </nav>
-        </div>
-        <div className="h-4 w-px bg-line max-sm:hidden" />
-        <div className="space-y-1.5">
-          <div className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-            Clients
-          </div>
-          <nav className="flex flex-wrap gap-5">
-          {modelFilters.map(([value, label]) => (
-            <button
-              className={cn(
-                "cursor-pointer border-b-2 pb-0.5 font-mono text-[11px] uppercase tracking-[.15em] transition",
-                modelFilter === value
-                  ? "border-accent text-ink"
-                  : "border-transparent text-muted hover:text-ink",
-              )}
-              onClick={() => onModelFilter(value)}
-              key={value}
-              >
-                {label}
-              </button>
-          ))}
+            ))}
           </nav>
         </div>
       </div>

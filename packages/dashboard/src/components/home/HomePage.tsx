@@ -65,14 +65,10 @@ export function HomePage() {
       ),
     [lessonCorpus, filters, selectedWeek],
   );
-  const clientFilters = [
-    ["all", "All clients"],
+  const modelFilters = [
+    ["all", "All models"],
     ...((data?.models ?? []).map(({ name }): [string, string] => [name, formatToolName(name)])),
   ] as Array<[string, string]>;
-  const clientOptions = useMemo(
-    () => [...new Set(lessonCorpus.map((lesson) => lesson.tool))].sort((a, b) => a.localeCompare(b)),
-    [lessonCorpus],
-  );
   const conceptOptions = useMemo(
     () =>
       [...new Set(lessonCorpus.flatMap((lesson) => lesson.concepts))]
@@ -115,14 +111,14 @@ export function HomePage() {
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
       <Hero totalLessons={data.summary.total} />
 
-        <ReviewInbox
-          lessons={data.due}
-          onOpen={(lesson, review) =>
-            navigate(`/lessons/${encodeURIComponent(lesson.id)}${review ? "?review=1" : ""}`)
-          }
-          maxVisible={3}
-          compact
-        />
+      <ReviewInbox
+        lessons={data.due}
+        onOpen={(lesson, review) =>
+          navigate(`/lessons/${encodeURIComponent(lesson.id)}${review ? "?review=1" : ""}`)
+        }
+        maxVisible={3}
+        compact
+      />
 
       <section className="space-y-4 border-b border-line pb-10">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -157,10 +153,10 @@ export function HomePage() {
           <div className="mb-5 space-y-4 rounded-3xl">
             <div className="space-y-2">
               <div className="flex w-full flex-wrap items-center justify-between gap-3">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              Your lessons{" "}
-              <span className="text-lg text-muted">({filteredLessons.length})</span>
-            </h2>
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  Your lessons{" "}
+                  <span className="text-lg text-muted">({filteredLessons.length})</span>
+                </h2>
                 <div className="flex items-center gap-x-1.5">
                   {canSync && (
                     <button
@@ -213,49 +209,44 @@ export function HomePage() {
                   )}
                 </div>
               </div>
-            <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-              Filter by learning state.
-            </p>
-          </div>
-
-          {hasLessons && (
-            <Filters
-              filters={[
-                ["all", "All"],
-                ["learning", "Not learned"],
-                ["understood", "Learned"],
-              ]}
-              filter={filters.learningState}
-              modelFilters={clientFilters}
-              modelFilter={filters.client}
-              query={filters.query}
-              onFilter={(value) =>
-                setFilters((prev) => ({
-                  ...prev,
-                  learningState: value as LessonFilterState["learningState"],
-                }))
-              }
-              onModelFilter={(value) =>
-                setFilters((prev) => ({ ...prev, client: value }))
-              }
-              onQuery={(value) =>
-                setFilters((prev) => ({ ...prev, query: value }))
-              }
-            />
-          )}
-
-          {hasLessons && (
-            <div className="mt-4">
-              <AdvancedFilters
-                state={filters}
-                setState={setFilters}
-                clientOptions={clientOptions}
-                conceptOptions={conceptOptions}
-                patternOptions={patternOptions}
-                fileOptions={fileOptions}
-              />
+              <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
+                Filter by learning state.
+              </p>
             </div>
-          )}
+
+            {hasLessons && (
+              <Filters
+                filters={[
+                  ["all", "All"],
+                  ["learning", "Not learned"],
+                  ["understood", "Learned"],
+                ]}
+                filter={filters.learningState}
+                query={filters.query}
+                onFilter={(value) =>
+                  setFilters((prev) => ({
+                    ...prev,
+                    learningState: value as LessonFilterState["learningState"],
+                  }))
+                }
+                onQuery={(value) =>
+                  setFilters((prev) => ({ ...prev, query: value }))
+                }
+              />
+            )}
+
+            {hasLessons && (
+              <div className="mt-4">
+                <AdvancedFilters
+                  state={filters}
+                  setState={setFilters}
+                  modelOptions={modelFilters}
+                  conceptOptions={conceptOptions}
+                  patternOptions={patternOptions}
+                  fileOptions={fileOptions}
+                />
+              </div>
+            )}
           </div>
 
           {error && (
