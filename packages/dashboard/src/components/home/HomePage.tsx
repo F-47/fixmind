@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react";
+import { FilterX, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -106,6 +106,16 @@ export function HomePage() {
   const pageLessons = filteredLessons.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const canSync = Boolean(syncMeta?.loggedIn && syncMeta.syncEnabled);
   const syncButtonLabel = syncJustCompleted ? "Synced" : "Sync";
+  const hasActiveFilters =
+    filters.query ||
+    filters.learningState !== "all" ||
+    filters.understanding !== "all" ||
+    filters.status !== "all" ||
+    filters.client !== "all" ||
+    filters.concept ||
+    filters.pattern ||
+    filters.file ||
+    filters.date !== "all";
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
@@ -210,29 +220,36 @@ export function HomePage() {
                 </div>
               </div>
               <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-                Filter by learning state.
+                Search stays visible. Use advanced filters for learning state, models, and metadata.
               </p>
             </div>
 
             {hasLessons && (
               <Filters
-                filters={[
-                  ["all", "All"],
-                  ["learning", "Not learned"],
-                  ["understood", "Learned"],
-                ]}
-                filter={filters.learningState}
                 query={filters.query}
-                onFilter={(value) =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    learningState: value as LessonFilterState["learningState"],
-                  }))
-                }
                 onQuery={(value) =>
                   setFilters((prev) => ({ ...prev, query: value }))
                 }
               />
+            )}
+
+            {hasLessons && (
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full border px-3 py-2 font-mono text-[10px] uppercase tracking-[.18em] transition",
+                    hasActiveFilters
+                      ? "border-line bg-page text-muted hover:border-accent/40 hover:text-ink"
+                      : "cursor-not-allowed border-line bg-page/60 text-muted opacity-60",
+                  )}
+                  onClick={() => setFilters(DEFAULT_LESSON_FILTERS)}
+                  disabled={!hasActiveFilters}
+                >
+                  <FilterX className="size-3.5" />
+                  Clear filters
+                </button>
+              </div>
             )}
 
             {hasLessons && (
