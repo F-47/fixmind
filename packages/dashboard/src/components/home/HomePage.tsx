@@ -8,7 +8,7 @@ import { AdvancedFilters } from "@/components/home/AdvancedFilters";
 import { Hero } from "@/components/home/Hero";
 import { LessonList } from "@/components/home/LessonList";
 import { ReviewInbox } from "@/components/home/ReviewInbox";
-import { formatToolName, formatWeek } from "@/lib/format";
+import { formatToolName, formatWeek, weekStartOf } from "@/lib/format";
 import {
   DEFAULT_LESSON_FILTERS,
   filterLessons,
@@ -28,6 +28,7 @@ export function HomePage() {
   const [page, setPage] = useState(1);
   const [syncJustCompleted, setSyncJustCompleted] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const resetDialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -61,7 +62,7 @@ export function HomePage() {
   const filteredLessons = useMemo(
     () =>
       filterLessons(lessonCorpus, filters).filter(
-        (item) => selectedWeek === null || item.createdAt.startsWith(selectedWeek),
+        (item) => selectedWeek === null || weekStartOf(item.createdAt) === selectedWeek,
       ),
     [lessonCorpus, filters, selectedWeek],
   );
@@ -102,6 +103,7 @@ export function HomePage() {
   }
 
   const hasLessons = data.summary.total > 0;
+  const hasDueLessons = data.due.length > 0;
   const totalPages = Math.max(1, Math.ceil(filteredLessons.length / PAGE_SIZE));
   const pageLessons = filteredLessons.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const canSync = Boolean(syncMeta?.loggedIn && syncMeta.syncEnabled);
@@ -115,20 +117,27 @@ export function HomePage() {
     filters.pattern ||
     filters.file ||
     filters.date !== "all";
-  const hasAnyFilters = Boolean(filters.query || hasAdvancedFilters);
+  const hasAnyFilters = Boolean(filters.query || hasAdvancedFilters || selectedWeek);
+  const resetAllFilters = () => {
+    setFilters(DEFAULT_LESSON_FILTERS);
+    setSelectedWeek(null);
+    setAdvancedFiltersOpen(false);
+  };
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
       <Hero totalLessons={data.summary.total} />
 
-      <ReviewInbox
-        lessons={data.due}
-        onOpen={(lesson, review) =>
-          navigate(`/lessons/${encodeURIComponent(lesson.id)}${review ? "?review=1" : ""}`)
-        }
-        maxVisible={3}
-        compact
-      />
+      {hasDueLessons && (
+        <ReviewInbox
+          lessons={data.due}
+          onOpen={(lesson, review) =>
+            navigate(`/lessons/${encodeURIComponent(lesson.id)}${review ? "?review=1" : ""}`)
+          }
+          maxVisible={3}
+          compact
+        />
+      )}
 
       <section className="space-y-4 border-b border-line pb-10">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -161,13 +170,26 @@ export function HomePage() {
       <div className="grid grid-cols-[minmax(0,1fr)_300px] gap-10 max-[900px]:grid-cols-1 max-[900px]:gap-10">
         <div className="min-w-0">
           <div className="mb-5 space-y-4 rounded-3xl">
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="flex w-full flex-wrap items-center justify-between gap-3">
                 <h2 className="text-2xl font-semibold tracking-tight">
                   Your lessons{" "}
                   <span className="text-lg text-muted">({filteredLessons.length})</span>
                 </h2>
                 <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
+                  {hasAnyFilters && (
+                    <button
+                      type="button"
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] transition-colors",
+                        "border-line bg-surface-2 text-muted hover:border-accent/40 hover:text-ink",
+                      )}
+                      onClick={resetAllFilters}
+                    >
+                      <FilterX size={12} />
+                      Clear filters
+                    </button>
+                  )}
                   {canSync && (
                     <button
                       type="button"
@@ -203,39 +225,25 @@ export function HomePage() {
                     </button>
                   )}
                   {!canSync && (
-                    <button
-                      type="button"
-                      disabled
-                      onClick={undefined}
-                      className="inline-flex items-center gap-2 rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-muted opacity-70"
+                    <div
+                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-muted opacity-70"
                       title="Requires an active Pro or Team plan"
                     >
                       <RefreshCw size={12} />
-                      Sync
-                      <span className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[9px] tracking-[.22em] text-accent">
+                      <span>Sync</span>
+                      <a
+                        href="https://fixmind.dev/pricing"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[9px] tracking-[.22em] text-accent transition hover:border-accent/50 hover:bg-accent/15"
+                        aria-label="View Pro pricing"
+                      >
                         Pro
-                      </span>
-                    </button>
+                      </a>
+                    </div>
                   )}
-                  <button
-                    type="button"
-                    className={cn(
-                      "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] transition-colors",
-                      hasAnyFilters
-                        ? "border-line bg-surface-2 text-muted hover:border-accent/40 hover:text-ink"
-                        : "cursor-not-allowed border-line bg-surface-2 text-muted opacity-70",
-                    )}
-                    onClick={() => setFilters(DEFAULT_LESSON_FILTERS)}
-                    disabled={!hasAnyFilters}
-                  >
-                    <FilterX size={12} />
-                    Clear filters
-                  </button>
                 </div>
               </div>
-              <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-                Search stays visible. Use advanced filters for learning state, models, and metadata.
-              </p>
             </div>
 
             {hasLessons && (
@@ -256,6 +264,8 @@ export function HomePage() {
                   conceptOptions={conceptOptions}
                   patternOptions={patternOptions}
                   fileOptions={fileOptions}
+                  open={advancedFiltersOpen}
+                  onToggleOpen={setAdvancedFiltersOpen}
                 />
               </div>
             )}

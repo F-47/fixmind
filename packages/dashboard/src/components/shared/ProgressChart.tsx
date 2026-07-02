@@ -17,10 +17,10 @@ export function ProgressChart({
   if (total === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-line bg-surface/40 px-6 py-10 text-center">
-        <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-line bg-surface-2 text-muted">
+        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-surface-2 text-muted">
           <svg
-            width="18"
-            height="18"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -30,7 +30,10 @@ export function ProgressChart({
             <path d="M3 9h18M9 21V9" />
           </svg>
         </div>
-        <p className="text-sm text-muted">
+        <p className="text-sm font-medium text-ink">
+          No progress yet
+        </p>
+        <p className="mt-1 text-sm leading-relaxed text-muted">
           More lessons are needed to show your progress.
         </p>
       </div>

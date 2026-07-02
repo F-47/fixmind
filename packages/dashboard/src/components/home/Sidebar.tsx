@@ -1,5 +1,5 @@
 import { type RefObject } from "react";
-import { Download, Trash } from "lucide-react";
+import { AlertTriangle, Download } from "lucide-react";
 import { exportUrl } from "@/lib/api";
 import { formatToolName } from "@/lib/format";
 import type { DashboardData } from "@/lib/types";
@@ -77,37 +77,52 @@ export function Sidebar({
               className="inline-flex items-center gap-1.5 cursor-pointer border-0 bg-transparent p-0 text-danger hover:underline"
               onClick={() => setConfirmingReset(true)}
             >
-              <Trash className="size-3.5" />
-              Reset all data
+              <AlertTriangle className="size-3.5" />
+              Delete all data
             </button>
           </div>
 
           <dialog
             ref={resetDialogRef}
-            className="dialog-glass fixed top-1/2 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 p-6"
+            className="dialog-glass fixed top-1/2 left-1/2 z-50 w-[min(440px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 overflow-hidden p-0"
             onClose={() => setConfirmingReset(false)}
             onClick={(event) => {
               if (event.target === resetDialogRef.current)
                 setConfirmingReset(false);
             }}
           >
-            <p className="text-base leading-relaxed">
-              Delete all {data.summary.total} lesson(s)? Export a backup first if
-              you want to keep them &mdash; this can&rsquo;t be undone.
-            </p>
-            <div className="mt-6 flex justify-end gap-5 font-mono text-[11px] uppercase tracking-[.2em]">
-              <button
-                className="cursor-pointer border-0 bg-transparent p-0 text-muted hover:text-ink transition-colors"
-                onClick={() => setConfirmingReset(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="cursor-pointer border-0 bg-transparent p-0 font-bold text-danger hover:underline"
-                onClick={() => void resetAll()}
-              >
-                Reset
-              </button>
+            <div className="border border-danger/20 bg-danger/5 p-6">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-full border border-danger/20 bg-danger/10 text-danger">
+                  <AlertTriangle className="size-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="font-mono text-[10px] uppercase tracking-[.24em] text-danger">
+                    Danger zone
+                  </div>
+                  <h3 className="mt-1 text-xl font-semibold tracking-tight text-ink">
+                    Delete all {data.summary.total} lesson(s)?
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">
+                    Export a backup first if you want to keep them. This action
+                    permanently removes every lesson and cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-4 font-mono text-[11px] uppercase tracking-[.2em]">
+                <button
+                  className="cursor-pointer border-0 bg-transparent p-0 text-muted transition-colors hover:text-ink"
+                  onClick={() => setConfirmingReset(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="cursor-pointer rounded-full border border-danger/30 bg-danger px-4 py-2 font-bold text-page transition hover:bg-danger/90"
+                  onClick={() => void resetAll()}
+                >
+                  Delete all
+                </button>
+              </div>
             </div>
           </dialog>
         </section>

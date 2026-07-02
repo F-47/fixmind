@@ -1,5 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
+import { cn } from "@/components/shared/cn";
 import type {
   DateFilter,
   LessonFilterState,
@@ -14,6 +15,8 @@ interface Props {
   conceptOptions: string[];
   patternOptions: string[];
   fileOptions: string[];
+  open: boolean;
+  onToggleOpen(open: boolean): void;
 }
 
 export function AdvancedFilters({
@@ -23,6 +26,8 @@ export function AdvancedFilters({
   conceptOptions,
   patternOptions,
   fileOptions,
+  open,
+  onToggleOpen,
 }: Props) {
   const hasActiveFilters = Boolean(
     state.understanding !== "all" ||
@@ -37,8 +42,9 @@ export function AdvancedFilters({
 
   return (
     <details
-      open={hasActiveFilters}
+      open={open}
       className="rounded-2xl border border-line bg-page/30 px-4 py-3 transition-colors open:border-accent/30"
+      onToggle={(event) => onToggleOpen(event.currentTarget.open)}
     >
       <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-mono text-[10px] uppercase tracking-[.22em] text-muted">
         <span className="inline-flex items-center gap-2">
@@ -54,7 +60,12 @@ export function AdvancedFilters({
         )}
       </summary>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div
+        className={cn(
+          "mt-4 grid gap-3 md:grid-cols-2",
+          "xl:grid-cols-5",
+        )}
+      >
         <FilterSelect
           label="Model"
           value={state.client}
@@ -140,9 +151,6 @@ export function AdvancedFilters({
         />
       </div>
 
-      <p className="mt-4 font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-        Search matches titles, bodies, files, concepts, tools, tags, and paths.
-      </p>
       <datalist id="concept-options">
         {conceptOptions.map((option) => (
           <option key={option} value={option} />
@@ -180,7 +188,7 @@ function FieldInput({
   onChange(value: string): void;
 }) {
   return (
-    <label className="grid gap-1.5">
+    <label className="group grid gap-1.5">
       <span className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
         {label}
       </span>
@@ -209,15 +217,21 @@ function FilterSelect({
   onChange(value: string): void;
   options: Array<[string, string]>;
 }) {
+  const selectedLabel = options.find(([optionValue]) => optionValue === value)?.[1] ?? value;
+
   return (
-    <label className="grid gap-1.5">
+    <label className="group grid gap-1.5">
       <span className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
         {label}
       </span>
       <div className="relative">
         <select
-          className="w-full appearance-none rounded-xl border border-line bg-page/70 px-3 py-2.5 pr-10 text-sm text-ink outline-none transition focus:border-accent/50"
           value={value}
+          aria-label={label}
+          className={cn(
+            "w-full appearance-none rounded-xl border border-line bg-page/80 px-3.5 py-2.5 pr-10 text-sm font-medium text-ink outline-none transition-all",
+            "shadow-[0_1px_0_rgba(255,255,255,0.03)] hover:border-accent/30 hover:bg-page focus:border-accent/60 focus:bg-page focus:shadow-[0_0_0_3px_rgba(0,0,0,0.06)]",
+          )}
           onChange={(event) => onChange(event.target.value)}
         >
           {options.map(([optionValue, optionLabel]) => (
@@ -226,8 +240,17 @@ function FilterSelect({
             </option>
           ))}
         </select>
-        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted" />
+        <ChevronDown
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted transition-transform duration-150",
+            value !== "all" && "text-ink/70",
+          )}
+        />
       </div>
+      <span className="text-[11px] leading-relaxed text-muted">
+        Selected: {selectedLabel}
+      </span>
     </label>
   );
 }
