@@ -106,8 +106,7 @@ export function HomePage() {
   const pageLessons = filteredLessons.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const canSync = Boolean(syncMeta?.loggedIn && syncMeta.syncEnabled);
   const syncButtonLabel = syncJustCompleted ? "Synced" : "Sync";
-  const hasActiveFilters =
-    filters.query ||
+  const hasAdvancedFilters =
     filters.learningState !== "all" ||
     filters.understanding !== "all" ||
     filters.status !== "all" ||
@@ -116,6 +115,7 @@ export function HomePage() {
     filters.pattern ||
     filters.file ||
     filters.date !== "all";
+  const hasAnyFilters = Boolean(filters.query || hasAdvancedFilters);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
@@ -167,7 +167,7 @@ export function HomePage() {
                   Your lessons{" "}
                   <span className="text-lg text-muted">({filteredLessons.length})</span>
                 </h2>
-                <div className="flex items-center gap-x-1.5">
+                <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
                   {canSync && (
                     <button
                       type="button"
@@ -217,6 +217,20 @@ export function HomePage() {
                       </span>
                     </button>
                   )}
+                  <button
+                    type="button"
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] transition-colors",
+                      hasAnyFilters
+                        ? "border-line bg-surface-2 text-muted hover:border-accent/40 hover:text-ink"
+                        : "cursor-not-allowed border-line bg-surface-2 text-muted opacity-70",
+                    )}
+                    onClick={() => setFilters(DEFAULT_LESSON_FILTERS)}
+                    disabled={!hasAnyFilters}
+                  >
+                    <FilterX size={12} />
+                    Clear filters
+                  </button>
                 </div>
               </div>
               <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
@@ -231,25 +245,6 @@ export function HomePage() {
                   setFilters((prev) => ({ ...prev, query: value }))
                 }
               />
-            )}
-
-            {hasLessons && (
-              <div className="flex items-center justify-end">
-                <button
-                  type="button"
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-full border px-3 py-2 font-mono text-[10px] uppercase tracking-[.18em] transition",
-                    hasActiveFilters
-                      ? "border-line bg-page text-muted hover:border-accent/40 hover:text-ink"
-                      : "cursor-not-allowed border-line bg-page/60 text-muted opacity-60",
-                  )}
-                  onClick={() => setFilters(DEFAULT_LESSON_FILTERS)}
-                  disabled={!hasActiveFilters}
-                >
-                  <FilterX className="size-3.5" />
-                  Clear filters
-                </button>
-              </div>
             )}
 
             {hasLessons && (
