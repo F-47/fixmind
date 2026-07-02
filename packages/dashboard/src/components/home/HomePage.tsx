@@ -6,6 +6,7 @@ import { cn } from "@/components/shared/cn";
 import { Filters } from "@/components/home/Filters";
 import { Hero } from "@/components/home/Hero";
 import { LessonList } from "@/components/home/LessonList";
+import { ReviewInbox } from "@/components/home/ReviewInbox";
 import { formatToolName, formatWeek } from "@/lib/format";
 import { Progress } from "@/components/home/Progress";
 import { Sidebar } from "@/components/home/Sidebar";
@@ -79,6 +80,15 @@ export function HomePage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
       <Hero totalLessons={data.summary.total} />
+
+      <ReviewInbox
+        lessons={data.due}
+        onOpen={(lesson, review) =>
+          navigate(`/lessons/${encodeURIComponent(lesson.id)}${review ? "?review=1" : ""}`)
+        }
+        maxVisible={3}
+        compact
+      />
 
       <section className="space-y-4 border-b border-line pb-10">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -220,10 +230,6 @@ export function HomePage() {
 
         <Sidebar
           data={data}
-          dueLessons={data.due}
-          onOpenLesson={(lessonId, review) =>
-            navigate(`/lessons/${encodeURIComponent(lessonId)}${review ? "?review=1" : ""}`)
-          }
           resetDialogRef={resetDialogRef}
           setConfirmingReset={setConfirmingReset}
           resetAll={async () => {

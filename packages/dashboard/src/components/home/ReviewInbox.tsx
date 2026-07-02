@@ -52,72 +52,92 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
 
       {sortedLessons.length > 0 ? (
         <>
-          <div className={cn("mt-5 grid", compact ? "gap-3" : "gap-4")}>
+          <div className={cn("mt-5 grid", compact ? "gap-2.5" : "gap-4")}>
             {visibleLessons.map((lesson) => {
               const dueInfo = dueSummary(lesson.nextReviewAt);
               return (
                 <article
                   className={cn(
                     "rounded-2xl border border-line bg-page/70 transition-shadow hover:shadow-[0_20px_60px_-42px_rgba(0,0,0,0.5)]",
-                    compact ? "p-3.5" : "p-4",
+                    compact ? "p-3" : "p-4",
                   )}
                   key={lesson.id}
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3
+                  {compact ? (
+                    <div className="flex items-center gap-3">
+                      <span
                         className={cn(
-                          "font-serif font-semibold tracking-tight",
-                          compact ? "text-lg" : "text-xl",
+                          "inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[.18em]",
+                          dueInfo.tone,
                         )}
                       >
-                        {lesson.title}
-                      </h3>
-                      <p
-                        className={cn(
-                          "mt-1.5 max-w-2xl leading-relaxed text-muted",
-                          compact ? "text-[13px]" : "text-sm",
-                        )}
+                        {dueInfo.label}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-serif text-[15px] font-semibold tracking-tight">
+                          {lesson.title}
+                        </div>
+                        <div className="truncate font-mono text-[10px] uppercase tracking-[.16em] text-muted">
+                          {lesson.displayPattern}
+                        </div>
+                      </div>
+                      <button
+                        className="inline-flex shrink-0 cursor-pointer items-center gap-2 border-0 bg-accent px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-page transition hover:translate-y-[-1px]"
+                        onClick={() => onOpen(lesson, true)}
                       >
-                        {lesson.displayTakeaway}
-                      </p>
+                        Review
+                        <ArrowRight className="size-3.5" />
+                      </button>
                     </div>
-                    <span
-                      className={cn(
-                        "inline-flex shrink-0 items-center rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[.18em]",
-                        dueInfo.tone,
-                      )}
-                    >
-                      {dueInfo.label}
-                    </span>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="font-serif text-xl font-semibold tracking-tight">
+                            {lesson.title}
+                          </h3>
+                          <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-muted">
+                            {lesson.displayTakeaway}
+                          </p>
+                        </div>
+                        <span
+                          className={cn(
+                            "inline-flex shrink-0 items-center rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-[.18em]",
+                            dueInfo.tone,
+                          )}
+                        >
+                          {dueInfo.label}
+                        </span>
+                      </div>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-2 font-mono text-[10px] uppercase tracking-[.18em] text-muted">
-                    <span>{formatToolName(lesson.tool)}</span>
-                    <span className="h-4 w-px bg-line" />
-                    <span>{lesson.displayPattern}</span>
-                    <span className="h-4 w-px bg-line" />
-                    <span>Next: {formatDate(lesson.nextReviewAt)}</span>
-                    <span className="h-4 w-px bg-line" />
-                    <span>{lesson.reviewCount} review(s)</span>
-                  </div>
+                      <div className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-2 font-mono text-[10px] uppercase tracking-[.18em] text-muted">
+                        <span>{formatToolName(lesson.tool)}</span>
+                        <span className="h-4 w-px bg-line" />
+                        <span>{lesson.displayPattern}</span>
+                        <span className="h-4 w-px bg-line" />
+                        <span>Next: {formatDate(lesson.nextReviewAt)}</span>
+                        <span className="h-4 w-px bg-line" />
+                        <span>{lesson.reviewCount} review(s)</span>
+                      </div>
 
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    <button
-                      className="inline-flex cursor-pointer items-center gap-2 border-0 bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[.2em] text-page transition hover:translate-y-[-1px]"
-                      onClick={() => onOpen(lesson, true)}
-                    >
-                      Review now
-                      <ArrowRight className="size-3.5" />
-                    </button>
-                    <button
-                      className="inline-flex cursor-pointer items-center gap-2 border border-line bg-transparent px-4 py-2.5 font-mono text-[11px] uppercase tracking-[.2em] text-muted transition hover:border-accent/40 hover:text-ink"
-                      onClick={() => onOpen(lesson, false)}
-                    >
-                      <ExternalLink className="size-3.5" />
-                      Open lesson
-                    </button>
-                  </div>
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <button
+                          className="inline-flex cursor-pointer items-center gap-2 border-0 bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[.2em] text-page transition hover:translate-y-[-1px]"
+                          onClick={() => onOpen(lesson, true)}
+                        >
+                          Review now
+                          <ArrowRight className="size-3.5" />
+                        </button>
+                        <button
+                          className="inline-flex cursor-pointer items-center gap-2 border border-line bg-transparent px-4 py-2.5 font-mono text-[11px] uppercase tracking-[.2em] text-muted transition hover:border-accent/40 hover:text-ink"
+                          onClick={() => onOpen(lesson, false)}
+                        >
+                          <ExternalLink className="size-3.5" />
+                          Open lesson
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </article>
               );
             })}
