@@ -1,10 +1,15 @@
-import { useEffect } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { DashboardNavbar } from "@/components/shared/DashboardNavbar";
 import { MarginArt } from "@/components/shared/MarginArt";
 import { HomePage } from "@/components/home/HomePage";
-import { LessonRoutePage } from "@/components/lesson/LessonRoutePage";
 import { DashboardDataProvider, useDashboardData } from "@/hooks/useDashboardData";
+
+const LessonRoutePage = lazy(() =>
+  import("@/components/lesson/LessonRoutePage").then((module) => ({
+    default: module.LessonRoutePage,
+  })),
+);
 
 function ScrollToTop() {
   const location = useLocation();
@@ -32,11 +37,13 @@ function AppRoutes() {
   return (
     <>
       <ScrollToTop />
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/lessons/:lessonId" element={<LessonRoutePage />} />
-        <Route path="*" element={<Navigate replace to="/" />} />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/lessons/:lessonId" element={<LessonRoutePage />} />
+          <Route path="*" element={<Navigate replace to="/" />} />
+        </Routes>
+      </Suspense>
 
       {saved && (
         <div className="fixed right-6 bottom-6 rounded-xl border border-positive/30 bg-surface px-4 py-3 font-mono text-[12px] uppercase tracking-[.1em] text-positive shadow-lg animate-fade-up">
@@ -44,6 +51,14 @@ function AppRoutes() {
         </div>
       )}
     </>
+  );
+}
+
+function RouteFallback() {
+  return (
+    <main className="grid min-h-[60vh] place-items-center px-4 py-10 text-lg text-muted sm:px-6 lg:px-8">
+      Loading...
+    </main>
   );
 }
 
