@@ -32,8 +32,7 @@ export function AdvancedFilters({
       state.pattern ||
       state.file ||
       state.date !== "all" ||
-      state.learningState !== "all" ||
-      state.query.trim(),
+      state.learningState !== "all",
   );
 
   return (
