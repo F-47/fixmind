@@ -1,6 +1,5 @@
-import { ChevronDown, FilterX } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
-import { cn } from "@/components/shared/cn";
 import type {
   DateFilter,
   LessonFilterState,
@@ -142,37 +141,9 @@ export function AdvancedFilters({
         />
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-          Search matches titles, bodies, files, concepts, tools, tags, and paths.
-        </p>
-        <button
-          type="button"
-          className={cn(
-            "inline-flex items-center gap-2 rounded-full border px-3 py-2 font-mono text-[10px] uppercase tracking-[.18em] transition",
-            hasActiveFilters
-              ? "border-line bg-page text-muted hover:border-accent/40 hover:text-ink"
-              : "cursor-not-allowed border-line bg-page/60 text-muted opacity-60",
-          )}
-          onClick={() =>
-            setState((prev) => ({
-              ...prev,
-              learningState: "all",
-              understanding: "all",
-              status: "all",
-              client: "all",
-              concept: "",
-              pattern: "",
-              file: "",
-              date: "all",
-            }))
-          }
-          disabled={!hasActiveFilters}
-        >
-          <FilterX className="size-3.5" />
-          Clear filters
-        </button>
-      </div>
+      <p className="mt-4 font-mono text-[10px] uppercase tracking-[.2em] text-muted">
+        Search matches titles, bodies, files, concepts, tools, tags, and paths.
+      </p>
       <datalist id="concept-options">
         {conceptOptions.map((option) => (
           <option key={option} value={option} />
@@ -244,17 +215,20 @@ function FilterSelect({
       <span className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
         {label}
       </span>
-      <select
-        className="rounded-xl border border-line bg-page/70 px-3 py-2.5 text-sm text-ink outline-none transition focus:border-accent/50"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {options.map(([optionValue, optionLabel]) => (
-          <option key={optionValue} value={optionValue}>
-            {optionLabel}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          className="w-full appearance-none rounded-xl border border-line bg-page/70 px-3 py-2.5 pr-10 text-sm text-ink outline-none transition focus:border-accent/50"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          {options.map(([optionValue, optionLabel]) => (
+            <option key={optionValue} value={optionValue}>
+              {optionLabel}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-3.5 -translate-y-1/2 text-muted" />
+      </div>
     </label>
   );
 }
