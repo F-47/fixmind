@@ -1,13 +1,19 @@
 import { RefreshCw } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { cn } from "@/components/shared/cn";
 import { Filters } from "@/components/home/Filters";
+import { AdvancedFilters } from "@/components/home/AdvancedFilters";
 import { Hero } from "@/components/home/Hero";
 import { LessonList } from "@/components/home/LessonList";
 import { ReviewInbox } from "@/components/home/ReviewInbox";
 import { formatToolName, formatWeek } from "@/lib/format";
+import {
+  DEFAULT_LESSON_FILTERS,
+  filterLessons,
+  type LessonFilterState,
+} from "@/lib/lesson-filters";
 import { Progress } from "@/components/home/Progress";
 import { Sidebar } from "@/components/home/Sidebar";
 
@@ -17,9 +23,7 @@ export function HomePage() {
   const navigate = useNavigate();
   const { data, error, refreshing, syncMeta, loadDashboardData, refreshDashboard, removeLesson, resetAll } =
     useDashboardData();
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "learning" | "understood">("all");
-  const [modelFilter, setModelFilter] = useState<"all" | `tool:${string}`>("all");
+  const [filters, setFilters] = useState<LessonFilterState>(DEFAULT_LESSON_FILTERS);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [syncJustCompleted, setSyncJustCompleted] = useState(false);
@@ -35,15 +39,63 @@ export function HomePage() {
   }, [confirmingReset]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadDashboardData(query);
-    }, 180);
-    return () => window.clearTimeout(timer);
-  }, [loadDashboardData, query]);
+    void loadDashboardData();
+  }, [loadDashboardData]);
 
   useEffect(() => {
     setPage(1);
-  }, [filter, modelFilter, selectedWeek, query]);
+  }, [
+    filters.client,
+    filters.concept,
+    filters.date,
+    filters.learningState,
+    filters.pattern,
+    filters.query,
+    filters.status,
+    filters.understanding,
+    filters.file,
+    selectedWeek,
+  ]);
+
+  const lessonCorpus = data?.lessons ?? [];
+  const filteredLessons = useMemo(
+    () =>
+      filterLessons(lessonCorpus, filters).filter(
+        (item) => selectedWeek === null || item.createdAt.startsWith(selectedWeek),
+      ),
+    [lessonCorpus, filters, selectedWeek],
+  );
+  const clientFilters = [
+    ["all", "All clients"],
+    ...((data?.models ?? []).map(({ name }): [string, string] => [name, formatToolName(name)])),
+  ] as Array<[string, string]>;
+  const clientOptions = useMemo(
+    () => [...new Set(lessonCorpus.map((lesson) => lesson.tool))].sort((a, b) => a.localeCompare(b)),
+    [lessonCorpus],
+  );
+  const conceptOptions = useMemo(
+    () =>
+      [...new Set(lessonCorpus.flatMap((lesson) => lesson.concepts))]
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [lessonCorpus],
+  );
+  const patternOptions = useMemo(
+    () =>
+      [...new Set(lessonCorpus.map((lesson) => lesson.mistakePattern?.trim() || lesson.displayPattern))]
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [lessonCorpus],
+  );
+  const fileOptions = useMemo(
+    () =>
+      [...new Set(lessonCorpus.flatMap((lesson) => lesson.filesChanged))]
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b)),
+    [lessonCorpus],
+  );
 
   if (!data) {
     return (
@@ -54,41 +106,23 @@ export function HomePage() {
   }
 
   const hasLessons = data.summary.total > 0;
-  const visible = data.lessons.filter(
-    (item) =>
-      filter === "all" ||
-      (filter === "learning" && item.understanding !== "understood") ||
-      (filter === "understood" && item.understanding === "understood"),
-  );
-  const filteredLessons = visible.filter(
-    (item) =>
-      (modelFilter === "all" || item.tool === modelFilter.slice(5)) &&
-      (selectedWeek === null || item.createdAt.startsWith(selectedWeek)),
-  );
   const totalPages = Math.max(1, Math.ceil(filteredLessons.length / PAGE_SIZE));
   const pageLessons = filteredLessons.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const canSync = Boolean(syncMeta?.loggedIn && syncMeta.syncEnabled);
   const syncButtonLabel = syncJustCompleted ? "Synced" : "Sync";
-  const modelFilters = [
-    ["all", "All models"],
-    ...data.models.map(({ name }): [string, string] => [
-      `tool:${name}`,
-      formatToolName(name),
-    ]),
-  ] as Array<[string, string]>;
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
       <Hero totalLessons={data.summary.total} />
 
-      <ReviewInbox
-        lessons={data.due}
-        onOpen={(lesson, review) =>
-          navigate(`/lessons/${encodeURIComponent(lesson.id)}${review ? "?review=1" : ""}`)
-        }
-        maxVisible={3}
-        compact
-      />
+        <ReviewInbox
+          lessons={data.due}
+          onOpen={(lesson, review) =>
+            navigate(`/lessons/${encodeURIComponent(lesson.id)}${review ? "?review=1" : ""}`)
+          }
+          maxVisible={3}
+          compact
+        />
 
       <section className="space-y-4 border-b border-line pb-10">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -123,10 +157,10 @@ export function HomePage() {
           <div className="mb-5 space-y-4 rounded-3xl">
             <div className="space-y-2">
               <div className="flex w-full flex-wrap items-center justify-between gap-3">
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  Your lessons{" "}
-                  <span className="text-lg text-muted">({filteredLessons.length})</span>
-                </h2>
+            <h2 className="text-2xl font-semibold tracking-tight">
+              Your lessons{" "}
+              <span className="text-lg text-muted">({filteredLessons.length})</span>
+            </h2>
                 <div className="flex items-center gap-x-1.5">
                   {canSync && (
                     <button
@@ -179,30 +213,48 @@ export function HomePage() {
                   )}
                 </div>
               </div>
-              <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-                Filter by learning state.
-              </p>
-            </div>
+            <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
+              Filter by learning state.
+            </p>
+          </div>
 
-            {hasLessons && (
+          {hasLessons && (
             <Filters
               filters={[
                 ["all", "All"],
                 ["learning", "Not learned"],
                 ["understood", "Learned"],
               ]}
-              filter={filter}
-              modelFilters={modelFilters}
-              modelFilter={modelFilter}
-              query={query}
+              filter={filters.learningState}
+              modelFilters={clientFilters}
+              modelFilter={filters.client}
+              query={filters.query}
               onFilter={(value) =>
-                setFilter(value as "all" | "learning" | "understood")
+                setFilters((prev) => ({
+                  ...prev,
+                  learningState: value as LessonFilterState["learningState"],
+                }))
               }
               onModelFilter={(value) =>
-                setModelFilter(value as "all" | `tool:${string}`)
+                setFilters((prev) => ({ ...prev, client: value }))
               }
-              onQuery={setQuery}
+              onQuery={(value) =>
+                setFilters((prev) => ({ ...prev, query: value }))
+              }
             />
+          )}
+
+          {hasLessons && (
+            <div className="mt-4">
+              <AdvancedFilters
+                state={filters}
+                setState={setFilters}
+                clientOptions={clientOptions}
+                conceptOptions={conceptOptions}
+                patternOptions={patternOptions}
+                fileOptions={fileOptions}
+              />
+            </div>
           )}
           </div>
 
@@ -214,7 +266,7 @@ export function HomePage() {
 
           <LessonList
             pageLessons={pageLessons}
-            query={query}
+            query={filters.query}
             page={page}
             totalPages={totalPages}
             onPrev={() => setPage((current) => current - 1)}

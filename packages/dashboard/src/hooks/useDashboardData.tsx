@@ -33,7 +33,7 @@ interface DashboardDataContextValue {
   refreshing: boolean;
   saved: boolean;
   syncMeta: SyncMeta | null;
-  loadDashboardData(query: string): Promise<void>;
+  loadDashboardData(): Promise<void>;
   refreshDashboard(): Promise<boolean>;
   submitReview(
     lessonId: string,
@@ -52,14 +52,12 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
   const [refreshing, setRefreshing] = useState(false);
   const [saved, setSaved] = useState(false);
   const [syncMeta, setSyncMeta] = useState<SyncMeta | null>(null);
-  const currentQueryRef = useRef("");
   const savedTimerRef = useRef<number | null>(null);
 
-  const loadDashboardData = useCallback(async (query: string): Promise<void> => {
-    currentQueryRef.current = query;
+  const loadDashboardData = useCallback(async (): Promise<void> => {
     setError("");
     try {
-      setData(await loadDashboard(query));
+      setData(await loadDashboard());
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     }
@@ -81,7 +79,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       setError(caught instanceof Error ? caught.message : String(caught));
     }
     try {
-      await loadDashboardData(currentQueryRef.current);
+      await loadDashboardData();
     } finally {
       setRefreshing(false);
     }
@@ -94,7 +92,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     understanding: Understanding,
   ): Promise<void> => {
     await saveReview(lessonId, answers, understanding);
-    await loadDashboardData(currentQueryRef.current);
+    await loadDashboardData();
     setSaved(true);
     if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
     savedTimerRef.current = window.setTimeout(() => setSaved(false), 1800);
@@ -102,12 +100,12 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
 
   const removeLesson = useCallback(async (lessonId: string): Promise<void> => {
     await deleteLesson(lessonId);
-    await loadDashboardData(currentQueryRef.current);
+    await loadDashboardData();
   }, [loadDashboardData]);
 
   const resetAll = useCallback(async (): Promise<void> => {
     await resetAllLessons();
-    await loadDashboardData(currentQueryRef.current);
+    await loadDashboardData();
   }, [loadDashboardData]);
 
   useEffect(() => {
