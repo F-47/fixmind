@@ -1,17 +1,10 @@
 import { Check } from "lucide-react";
+import { TerminalShell } from "./terminalShell";
 
 export default function TerminalCard() {
   return (
-    <div className="rounded-xl border border-line bg-surface shadow-[0_0_80px_-20px_var(--color-accent-dim)]">
-      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <span className="h-2.5 w-2.5 rounded-full bg-bad/70" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#e8b35f]/70" />
-        <span className="h-2.5 w-2.5 rounded-full bg-good/70" />
-        <span className="ml-2 font-mono text-xs text-muted">
-          fixmind review
-        </span>
-      </div>
-      <div className="space-y-3 px-5 py-5 font-mono text-[13px] leading-relaxed">
+    <TerminalShell title="fixmind review">
+      <div className="space-y-3 px-5 py-5">
         <p className="text-muted">$ fixmind review</p>
         <p className="text-ink">
           <span className="text-accent">&gt;</span> What must be true about the
@@ -28,6 +21,6 @@ export default function TerminalCard() {
           understood - next check in 3 days
         </div>
       </div>
-    </div>
+    </TerminalShell>
   );
 }

@@ -6,7 +6,11 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/cn";
 import { trackUmamiEvent } from "@/lib/umami";
-import { DOCS, extractDocOutline, searchDocs } from "@/components/docs/docs-data";
+import {
+  DOCS,
+  extractDocOutline,
+  searchDocs,
+} from "@/components/docs/docs-data";
 
 const DocContent = lazy(() =>
   import("@/components/docs/DocContent").then((module) => ({
@@ -32,8 +36,8 @@ export default function Docs({ initialDocId }: DocsPageProps) {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [hash, setHash] = useState(
-    () => (typeof window === "undefined" ? "" : window.location.hash),
+  const [hash, setHash] = useState(() =>
+    typeof window === "undefined" ? "" : window.location.hash,
   );
 
   useEffect(() => {
@@ -234,6 +238,37 @@ export default function Docs({ initialDocId }: DocsPageProps) {
       </aside>
 
       <article className="min-w-0 flex-1">
+        {showOutline && (
+          <details
+            className="mb-6 rounded-2xl border border-line bg-surface p-4 xl:hidden"
+            open
+          >
+            <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
+              On this page
+              <span className="ml-2 text-accent">({outline.length})</span>
+            </summary>
+            <nav className="mt-4 space-y-1.5">
+              {outline.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/docs/${activeDoc.id}#${item.id}`}
+                  data-umami-event="docs_outline_jump"
+                  data-umami-doc-id={activeDoc.id}
+                  data-umami-section-id={item.id}
+                  className={cn(
+                    "block rounded-md px-2 py-1.5 text-sm transition-colors",
+                    item.level === 3 ? "pl-4 text-[13px]" : "text-sm",
+                    hash === `#${item.id}`
+                      ? "bg-accent/10 text-ink"
+                      : "text-muted hover:bg-surface-2 hover:text-ink",
+                  )}
+                >
+                  {item.title}
+                </Link>
+              ))}
+            </nav>
+          </details>
+        )}
         <Suspense fallback={<DocContentFallback />}>
           <DocContent
             content={activeDoc.content}
