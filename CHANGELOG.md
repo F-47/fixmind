@@ -14,7 +14,7 @@ All notable changes to the `fixmind` package are documented here. Format follows
 ### Changed
 - Added best-effort Git autofill for `fixmind save-manual` and the MCP `save_lesson` path, including template seeding plus diff-based `filesChanged`, `mistakePattern`, `concepts`, and `codeExample` inference when available.
 - Updated the CLI, README, and MCP docs to describe the new autofill behavior accurately.
-- Moved due lessons into the dashboard sidebar and limited the preview so the progress section appears sooner and the page scrolls less.
+- Kept due lessons in the main dashboard flow but limited the preview so the progress section appears sooner and the page scrolls less.
 
 ## [1.0.25]
 

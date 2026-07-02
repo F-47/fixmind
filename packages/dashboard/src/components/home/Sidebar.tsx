@@ -1,6 +1,5 @@
 import { type RefObject } from "react";
 import { Download, Trash } from "lucide-react";
-import { ReviewInbox } from "@/components/home/ReviewInbox";
 import { exportUrl } from "@/lib/api";
 import { formatToolName } from "@/lib/format";
 import type { DashboardData } from "@/lib/types";
@@ -8,8 +7,6 @@ import { RankList } from "@/components/shared/RankList";
 
 interface Props {
   data: DashboardData;
-  dueLessons: DashboardData["due"];
-  onOpenLesson(lessonId: string, review: boolean): void;
   resetDialogRef: RefObject<HTMLDialogElement | null>;
   setConfirmingReset(value: boolean): void;
   resetAll(): void;
@@ -17,8 +14,6 @@ interface Props {
 
 export function Sidebar({
   data,
-  dueLessons,
-  onOpenLesson,
   resetDialogRef,
   setConfirmingReset,
   resetAll,
@@ -26,12 +21,6 @@ export function Sidebar({
   const hasLessons = data.summary.total > 0;
   return (
     <aside className="self-start max-[900px]:static max-[900px]:border-t max-[900px]:border-line max-[900px]:pt-10 [&>section]:border-t [&>section]:border-line [&>section]:pt-6 [&>section]:pb-6 [&>section:first-child]:border-t-0 [&>section:first-child]:pt-0 sticky top-10 border-l border-line pl-10 max-[900px]:border-l-0 max-[900px]:pl-0">
-      <ReviewInbox
-        lessons={dueLessons}
-        onOpen={(lesson, review) => onOpenLesson(lesson.id, review)}
-        maxVisible={3}
-        compact
-      />
       {data.models.length > 0 && (
         <section>
           <h2 className="mb-3 text-lg font-semibold tracking-tight">Models</h2>
