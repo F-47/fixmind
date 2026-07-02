@@ -11,7 +11,7 @@ import type {
 interface Props {
   state: LessonFilterState;
   setState: Dispatch<SetStateAction<LessonFilterState>>;
-  clientOptions: string[];
+  modelOptions: FilterOption[];
   conceptOptions: string[];
   patternOptions: string[];
   fileOptions: string[];
@@ -20,7 +20,7 @@ interface Props {
 export function AdvancedFilters({
   state,
   setState,
-  clientOptions,
+  modelOptions,
   conceptOptions,
   patternOptions,
   fileOptions,
@@ -56,7 +56,13 @@ export function AdvancedFilters({
         )}
       </summary>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <FilterSelect
+          label="Model"
+          value={state.client}
+          onChange={(value) => setState((prev) => ({ ...prev, client: value }))}
+          options={modelOptions}
+        />
         <FilterSelect
           label="Learning state"
           value={state.learningState}
@@ -82,18 +88,6 @@ export function AdvancedFilters({
           ]}
         />
         <FilterSelect
-          label="Status"
-          value={state.status}
-          onChange={(value) =>
-            setState((prev) => ({ ...prev, status: value as LessonStatusFilter }))
-          }
-          options={[
-            ["all", "All lessons"],
-            ["active", "Active"],
-            ["superseded", "Superseded"],
-          ]}
-        />
-        <FilterSelect
           label="Date"
           value={state.date}
           onChange={(value) =>
@@ -107,17 +101,21 @@ export function AdvancedFilters({
             ["older", "Older"],
           ]}
         />
+        <FilterSelect
+          label="Status"
+          value={state.status}
+          onChange={(value) =>
+            setState((prev) => ({ ...prev, status: value as LessonStatusFilter }))
+          }
+          options={[
+            ["all", "All lessons"],
+            ["active", "Active"],
+            ["superseded", "Superseded"],
+          ]}
+        />
       </div>
 
-      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <FieldInput
-          label="Client"
-          value={state.client}
-          placeholder="Claude, Cursor, Codex..."
-          listId="client-options"
-          options={clientOptions}
-          onChange={(value) => setState((prev) => ({ ...prev, client: value || "all" }))}
-        />
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <FieldInput
           label="Concept"
           value={state.concept}
@@ -146,7 +144,7 @@ export function AdvancedFilters({
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-          Search matches title, body, files, concepts, tools, tags, and project paths.
+          Search matches titles, bodies, files, concepts, tools, tags, and paths.
         </p>
         <button
           type="button"
@@ -175,12 +173,6 @@ export function AdvancedFilters({
           Clear filters
         </button>
       </div>
-
-      <datalist id="client-options">
-        {clientOptions.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
       <datalist id="concept-options">
         {conceptOptions.map((option) => (
           <option key={option} value={option} />
@@ -199,6 +191,8 @@ export function AdvancedFilters({
     </details>
   );
 }
+
+type FilterOption = [string, string];
 
 function FieldInput({
   label,
