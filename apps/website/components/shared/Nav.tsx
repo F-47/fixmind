@@ -195,7 +195,13 @@ export function Nav() {
     <>
       <a
         href="#content"
-        className="fixed left-4 top-4 z-[60] rounded-md bg-accent px-3 py-2 text-sm font-medium text-bg opacity-0 shadow-lg transition focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg"
+        onClick={() => {
+          (document.activeElement as HTMLElement | null)?.blur();
+        }}
+        className={cn(
+          "fixed left-4 top-4 z-[60] -translate-y-16 rounded-md bg-accent px-3 py-2 text-sm font-medium text-bg shadow-lg transition-transform focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-bg",
+          "pointer-events-none opacity-0 focus-visible:pointer-events-auto focus-visible:translate-y-0 focus-visible:opacity-100",
+        )}
       >
         Skip to content
       </a>

@@ -38,7 +38,7 @@ export function DocContent({
       components={{
         h1: ({ node, children, ...props }) => (
           <h1
-            className="mb-8 mt-2 scroll-mt-36 font-display text-3xl font-semibold tracking-tight text-ink first:mt-0 sm:text-4xl"
+            className="mb-8 scroll-mt-36 font-display text-3xl font-semibold tracking-tight text-ink first:mt-0 sm:text-4xl"
             {...props}
           >
             {renderHighlightedChildren(children, searchTerms)}

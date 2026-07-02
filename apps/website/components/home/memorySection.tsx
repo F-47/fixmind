@@ -38,7 +38,10 @@ export default function MemorySection() {
 
         <div className="min-w-0 rounded-2xl border border-line bg-page p-6 shadow-[0_0_80px_-40px_var(--color-accent-dim)]">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
-            <div className="flex min-w-0 items-center gap-2 font-mono text-[11px] uppercase tracking-[.18em] text-accent">
+            <div
+              className="flex min-w-0 items-center gap-2 font-mono text-[11px] uppercase tracking-[.18em] text-accent"
+              title="Reviewed lessons are local bug-fix notes that Fixmind can bring back into context."
+            >
               <BrainCircuit className="size-4" />
               Memory snapshot
             </div>
@@ -54,8 +57,8 @@ export default function MemorySection() {
                   3
                 </div>
                 <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">
-                  lessons ready to resurface as guidance when the next fix
-                  matches an old pattern.
+                  Three reviewed lessons stay in the default retrieval set so
+                  the agent gets focused guidance instead of a full archive dump.
                 </p>
               </div>
               <div className="w-full rounded-lg border border-accent/20 bg-accent/5 px-4 py-2.5 font-mono text-sm text-ink sm:max-w-[250px]">

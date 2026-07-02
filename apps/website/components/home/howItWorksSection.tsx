@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { CopyButton } from "@/components/ui/CopyButton";
+import { TerminalShell } from "./terminalShell";
 
 export default function HowItWorksSection() {
   return (
@@ -108,15 +109,7 @@ function DashboardPreview() {
     },
   ];
   return (
-    <div className="rounded-xl border border-line bg-surface shadow-[0_0_80px_-20px_var(--color-accent-dim)]">
-      <div className="flex items-center gap-2 border-b border-line px-4 py-3">
-        <span className="h-2.5 w-2.5 rounded-full bg-bad/70" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#e8b35f]/70" />
-        <span className="h-2.5 w-2.5 rounded-full bg-good/70" />
-        <span className="ml-2 font-mono text-xs text-muted">
-          npx fixmind dashboard
-        </span>
-      </div>
+    <TerminalShell title="npx fixmind dashboard">
       <div className="px-5 py-5">
         <div className="flex items-baseline justify-between">
           <p className="font-mono text-xs uppercase tracking-[0.15em] text-ink">
@@ -148,6 +141,6 @@ function DashboardPreview() {
           <span className="text-accent">Next.js hydration x3</span>
         </div>
       </div>
-    </div>
+    </TerminalShell>
   );
 }
