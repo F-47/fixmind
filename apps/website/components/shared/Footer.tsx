@@ -17,6 +17,15 @@ export function Footer() {
             {CONTACT_EMAIL}
           </a>
           <span className="hidden h-1 w-1 rounded-full bg-line md:inline-block" />
+          <a
+            href="https://ko-fi.com/B2N322IARY"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-md border border-line px-3 py-1.5 text-ink transition-colors hover:border-accent/60 hover:text-accent"
+          >
+            Support the project
+          </a>
+          <span className="hidden h-1 w-1 rounded-full bg-line md:inline-block" />
           <p>Built for Claude Code, Cursor, and Codex.</p>
         </div>
       </div>
