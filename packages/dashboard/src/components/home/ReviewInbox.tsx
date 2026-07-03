@@ -1,5 +1,6 @@
 import { ArrowRight, ChevronDown, Clock3, ExternalLink } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { cn } from "@/components/shared/cn";
 import { formatDate, formatToolName } from "@/lib/format";
 import type { DashboardLesson } from "@/lib/types";
@@ -44,10 +45,18 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
             Review inbox
           </div>
         </div>
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-warn/25 bg-warn/8 px-3 py-1 font-mono text-[10px] uppercase tracking-[.18em] text-warn">
-          <Clock3 className="size-3.5" />
-          {sortedLessons.length} due
-        </span>
+        <div className="flex items-center gap-3">
+          <Link
+            to="/practice"
+            className="inline-flex items-center gap-2 rounded-full border border-line bg-page px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-muted transition hover:border-accent/40 hover:text-ink"
+          >
+            Practice mode
+          </Link>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-warn/25 bg-warn/8 px-3 py-1 font-mono text-[10px] uppercase tracking-[.18em] text-warn">
+            <Clock3 className="size-3.5" />
+            {sortedLessons.length} due
+          </span>
+        </div>
       </div>
 
       {sortedLessons.length > 0 ? (

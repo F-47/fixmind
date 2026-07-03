@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 export function DashboardNavbar() {
   const location = useLocation();
   const inLesson = location.pathname.startsWith("/lessons/");
+  const inPractice = location.pathname.startsWith("/practice");
 
   return (
     <header className="sticky top-0 z-30 border-b border-line/80 bg-page/90 backdrop-blur-xl">
@@ -25,7 +26,7 @@ export function DashboardNavbar() {
         </Link>
 
         <div className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-          {inLesson ? "Lesson" : "Dashboard"}
+          {inLesson ? "Lesson" : inPractice ? "Practice" : "Dashboard"}
         </div>
       </div>
     </header>

@@ -26,9 +26,7 @@ export function LessonRoutePage() {
   );
   const proactiveMatches = useMemo(
     () =>
-      lesson && data
-        ? findProactiveMemoryMatches(lesson, data.lessons)
-        : [],
+      lesson && data ? findProactiveMemoryMatches(lesson, data.lessons) : [],
     [data, lesson],
   );
 
@@ -65,7 +63,7 @@ export function LessonRoutePage() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl py-8 sm:py-12 px-6 lg:px-8 xl:px-0">
+    <main className="mx-auto max-w-7xl py-8 sm:py-12 sm:px-6 lg:px-8">
       {!memoryDismissed && proactiveMatches.length > 0 && (
         <ProactiveMemoryPanel
           matches={proactiveMatches}

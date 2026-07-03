@@ -116,7 +116,7 @@ export function LessonRecallBlock({
         {title}
       </h2>
       <div>
-        <p className="text-base leading-relaxed text-muted">{prompt}</p>
+        <p className="text-sm leading-relaxed text-muted">{prompt}</p>
         <textarea
           className="mt-3 min-h-24 w-full border border-line bg-surface p-3 text-ink outline-none focus:border-accent"
           value={answer}

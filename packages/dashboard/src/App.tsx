@@ -10,6 +10,11 @@ const LessonRoutePage = lazy(() =>
     default: module.LessonRoutePage,
   })),
 );
+const PracticePage = lazy(() =>
+  import("@/components/practice/PracticePage").then((module) => ({
+    default: module.PracticePage,
+  })),
+);
 
 function ScrollToTop() {
   const location = useLocation();
@@ -40,6 +45,7 @@ function AppRoutes() {
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<HomePage />} />
+          <Route path="/practice" element={<PracticePage />} />
           <Route path="/lessons/:lessonId" element={<LessonRoutePage />} />
           <Route path="*" element={<Navigate replace to="/" />} />
         </Routes>
