@@ -6,7 +6,7 @@ import { lessonTagClass } from "@/components/lesson/lessonStyles";
 export function LessonHeader({ lesson }: { lesson: DashboardLesson }) {
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 font-mono text-[11px] uppercase tracking-[.2em] text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 font-mono text-[10px] uppercase tracking-[.2em] text-muted">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span>{lesson.displayPattern}</span>
           <span>&middot;</span>
@@ -22,10 +22,12 @@ export function LessonHeader({ lesson }: { lesson: DashboardLesson }) {
         </span>
       </div>
 
-      <h1 className="mt-3 font-serif text-4xl leading-tight font-bold tracking-tight max-sm:text-3xl">
+      <h1 className="mt-3 font-serif text-[2.65rem] leading-tight font-bold tracking-tight sm:text-4xl">
         {lesson.title}
       </h1>
-      <p className="mt-3 text-lg leading-relaxed text-muted">{lesson.displayTakeaway}</p>
+      <p className="mt-3 text-[17px] leading-relaxed text-muted sm:text-lg">
+        {lesson.displayTakeaway}
+      </p>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {lesson.concepts.map((concept) => (

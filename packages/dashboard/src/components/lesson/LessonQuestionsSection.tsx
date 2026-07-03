@@ -83,7 +83,7 @@ export function LessonQuestionsSection({
 
   return (
     <>
-      <div className="mt-10 border-t border-line pt-8">
+      <div className="mt-12 border-t border-line pt-8">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <h2 className="text-2xl font-semibold tracking-tight">
             Check your understanding
@@ -107,10 +107,10 @@ export function LessonQuestionsSection({
           const check = selfChecks[question.id];
           return (
             <div
-              className="grid grid-cols-[2.5rem_1fr] gap-4 border-t border-line py-6 first:border-t-0"
+              className="grid grid-cols-[2.5rem_1fr] gap-5 border-t border-line py-7 first:border-t-0"
               key={question.id}
             >
-              <div className="font-serif text-3xl leading-none text-muted/30">
+              <div className="font-serif text-3xl leading-none text-muted/25">
                 {String(index + 1).padStart(2, "0")}
               </div>
               <div>
@@ -119,7 +119,7 @@ export function LessonQuestionsSection({
                 </MarkdownText>
                 {reviewMode && (
                   <textarea
-                    className="mt-3 min-h-24 w-full border border-line bg-surface p-3 text-ink outline-none focus:border-accent"
+                    className="mt-4 min-h-28 w-full border border-line bg-surface p-3 text-ink outline-none focus:border-accent"
                     value={answers[question.id] ?? ""}
                     onChange={(event) =>
                       setAnswers({
@@ -149,7 +149,7 @@ export function LessonQuestionsSection({
                 </button>
                 <div
                   className={cn(
-                    "mt-3 grid transition-[grid-template-rows] duration-300 ease-out",
+                    "mt-4 grid transition-[grid-template-rows] duration-300 ease-out",
                     isRevealed ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
                   )}
                 >
@@ -200,7 +200,7 @@ export function LessonQuestionsSection({
 
       {reviewMode ? (
         <div className="mt-8 border-t border-line pt-8">
-          <p className="mb-4 font-mono text-[11px] uppercase tracking-[.15em] text-muted">
+          <p className="mb-4 font-mono text-[10px] uppercase tracking-[.15em] text-muted">
             Self-check score: {recallScore} / {recallKeys.length} ({recallChecked} /{" "}
             {recallKeys.length} checked)
           </p>
@@ -218,7 +218,7 @@ export function LessonQuestionsSection({
                 <option value="partial">Not learned</option>
               </select>
               <button
-                className="cursor-pointer border-0 bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[.2em] text-page disabled:opacity-50"
+                className="cursor-pointer border-0 bg-accent px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-page disabled:opacity-50"
                 onClick={() => void submit()}
                 disabled={!understanding}
               >
@@ -237,7 +237,7 @@ export function LessonQuestionsSection({
         <div className="mt-8 border-t border-line pt-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <button
-              className="cursor-pointer border-0 bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[.2em] text-page"
+              className="cursor-pointer border-0 bg-accent px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-page"
               onClick={onStartReview}
             >
               Test my recall

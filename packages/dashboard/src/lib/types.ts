@@ -1,4 +1,5 @@
 export type Understanding = "understood" | "partial" | "copied_blindly" | "unknown";
+export type PracticeMode = "free" | "mcq" | "mixed";
 
 export interface Tag {
   name: string;

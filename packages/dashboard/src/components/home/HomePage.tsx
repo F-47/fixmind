@@ -126,7 +126,7 @@ export function HomePage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
-      <Hero totalLessons={data.summary.total} />
+      <Hero totalLessons={data.summary.total} dueLessons={data.due.length} />
 
       {hasDueLessons && (
         <ReviewInbox

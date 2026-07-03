@@ -20,7 +20,7 @@ export function LessonCodeSection({ lesson }: { lesson: DashboardLesson }) {
       </h2>
       {hasCode ? (
         <>
-          <div className="grid grid-cols-2 gap-3 max-[640px]:grid-cols-1">
+          <div className="grid grid-cols-2 gap-4 max-[640px]:grid-cols-1">
             <CodeBlock
               label="Broken approach"
               value={broken}
@@ -37,16 +37,18 @@ export function LessonCodeSection({ lesson }: { lesson: DashboardLesson }) {
             />
           </div>
           {lesson.codeExplanation && (
-            <div className="mt-5">
+            <div className="mt-6">
               <div className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
                 Key difference
               </div>
-              <p className="mt-1.5 text-base leading-relaxed">{lesson.codeExplanation}</p>
+              <p className="mt-2 text-sm leading-relaxed">
+                {lesson.codeExplanation}
+              </p>
             </div>
           )}
         </>
       ) : (
-        <p className="text-base leading-relaxed text-muted">
+        <p className="text-sm leading-relaxed text-muted">
           No useful code comparison was captured for this lesson.
         </p>
       )}
