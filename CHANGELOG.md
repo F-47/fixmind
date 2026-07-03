@@ -11,16 +11,18 @@ All notable changes to the `fixmind` package are documented here. Format follows
 - `fixmind diagnose` / `fixmind diagnostics`, a read-only command that explains likely local blockers when a lesson did not save, including Git diff state, setup markers, and Claude save permissions.
 - `fixmind insights`, a read-only command that surfaces the last 30 days of mistake patterns, fragile concepts, and recurring files/tools.
 - The dashboard lesson page now warns about the most relevant prior lesson before you review the current one, with a short explanation of why it matched.
+- The dashboard now adds Practice mode for due lessons, with free response, MCQ, and mixed drills.
+- The dashboard now adds lesson search and advanced filters, including learning state, understanding level, status, client, concept, mistake pattern, file, and date filters.
+- The proactive memory panel now highlights related lessons before you continue, so you can compare the current fix against nearby prior mistakes.
 
 ### Changed
 
 - Added best-effort Git autofill for `fixmind save-manual` and the MCP `save_lesson` path, including template seeding plus diff-based `filesChanged`, `mistakePattern`, `concepts`, and `codeExample` inference when available.
 - Updated the CLI, README, and MCP docs to describe the new autofill behavior accurately.
 - Kept due lessons in the main dashboard flow but limited the preview so the progress section appears sooner and the page scrolls less.
-- The dashboard now loads the full local lesson corpus once and filters it in-app by search text, learning state, understanding level, status, client, concept, mistake pattern, file, and date.
 - The dashboard advanced filters now stay user-controlled, so Clear filters resets the values and closes the accordion instead of forcing it open.
 - The Model filter now uses the same interactive select as the other advanced filters, and the empty review inbox no longer takes up space when there are no due lessons.
-- The proactive memory panel on lesson pages now opens as a collapsible disclosure instead of pushing the full match list into view immediately.
+- The dashboard now loads the full local lesson corpus once and filters it in-app for faster client-side searching and filtering.
 
 ## [1.0.25]
 
