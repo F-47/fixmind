@@ -16,6 +16,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }: Props) {
   const [showAll, setShowAll] = useState(false);
+  const practiceCardClassName =
+    "group flex w-full items-stretch justify-between gap-4 rounded-2xl border border-accent/30 bg-gradient-to-r from-accent/10 via-surface-2 to-surface-2 p-4 shadow-[0_14px_40px_-28px_rgba(0,0,0,0.65)] transition";
   const sortedLessons = useMemo(
     () =>
       [...lessons].sort(
@@ -36,7 +38,7 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
         compact ? "p-4" : "p-5",
       )}
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
+      <div className="flex w-full flex-wrap items-baseline justify-between gap-3">
         <div className="space-y-1">
           <h2 className={cn("font-semibold tracking-tight", compact ? "text-xl" : "text-2xl")}>
             Due lessons
@@ -46,12 +48,6 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            to="/practice"
-            className="inline-flex items-center gap-2 rounded-full border border-line bg-page px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-muted transition hover:border-accent/40 hover:text-ink"
-          >
-            Practice mode
-          </Link>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-warn/25 bg-warn/8 px-3 py-1 font-mono text-[10px] uppercase tracking-[.18em] text-warn">
             <Clock3 className="size-3.5" />
             {sortedLessons.length} due
@@ -163,6 +159,32 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
                 : `Show ${sortedLessons.length - visibleLessons.length} more`}
             </button>
           )}
+          <Link
+            to="/practice"
+            className={`${practiceCardClassName} mt-4 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-[0_18px_45px_-26px_rgba(0,0,0,0.75)]`}
+          >
+            <span className="min-w-0 flex-1 space-y-2 text-left">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-[.24em] text-muted">
+                  Practice mode
+                </span>
+                <span className="rounded-full border border-line bg-page px-2.5 py-1 font-mono text-[10px] uppercase tracking-[.18em] text-muted">
+                  Due lessons
+                </span>
+              </div>
+              <span className="block text-base font-medium tracking-tight text-ink">
+                Start a short drill from the lessons waiting in your inbox
+              </span>
+              <span className="block max-w-lg text-sm leading-relaxed text-muted">
+                Practice uses the same due queue, so it appears and disappears
+                with the review inbox.
+              </span>
+            </span>
+            <span className="inline-flex shrink-0 self-center cursor-pointer items-center gap-2 border-0 bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[.2em] text-page transition hover:translate-y-[-1px]">
+              Start now
+              <ArrowRight className="size-3.5" />
+            </span>
+          </Link>
         </>
       ) : (
         <div className="mt-5 rounded-2xl border border-dashed border-line bg-page/40 px-5 py-8 text-center">
