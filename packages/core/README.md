@@ -5,6 +5,15 @@
 
 Fixmind is a local-first CLI and MCP server. It records short learning lessons after meaningful coding fixes, then reuses reviewed lessons as memory when a new task looks familiar. Everything stays on your machine and connects to your AI agents through the Model Context Protocol (MCP).
 
+## What's new in 1.0.26
+
+- The dashboard now has a dedicated review inbox for due lessons, so the next action is visible without digging through the full lesson list.
+- Memory retrieval now returns ranked lessons with matched fields, matched terms, and a short explanation for why each result matched.
+- Lesson quality feedback now includes field-level hints and autofill suggestions when a lesson is weak.
+- Reusable lesson templates now cover architecture boundary, stale state, async timing, off-by-one, and null guard bugs.
+- Practice mode now prefers believable MCQ distractors from similar lessons and falls back to free response when it cannot build a strong question.
+- Proactive memory warnings now compare mistake pattern, changed files, concepts, tags, tool, and overlapping terms while excluding the current and inactive lessons.
+
 ## Features
 
 - **Local by Default:** Lessons live in `~/.fixmind/learning.db`. No account needed, no external API calls.
