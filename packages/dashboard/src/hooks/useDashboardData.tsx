@@ -18,12 +18,17 @@ import {
 } from "@/lib/api";
 import type { DashboardData, SyncMeta, Understanding } from "@/lib/types";
 
-function syncMetaFromError(caught: unknown): SyncMeta {
+function syncMetaFromError(caught: unknown, previous?: SyncMeta | null): SyncMeta {
   return {
-    loggedIn: false,
+    loggedIn: previous?.loggedIn ?? false,
     syncEnabled: false,
-    pendingPushCount: 0,
-    conflictCount: 0,
+    needsReauth: previous?.needsReauth,
+    email: previous?.email,
+    lastPushedAt: previous?.lastPushedAt,
+    lastPulledAt: previous?.lastPulledAt,
+    lastSuccessfulSyncAt: previous?.lastSuccessfulSyncAt,
+    pendingPushCount: previous?.pendingPushCount ?? 0,
+    conflictCount: previous?.conflictCount ?? 0,
     lastSyncError: caught instanceof Error ? caught.message : String(caught),
   };
 }
@@ -78,7 +83,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
-      setSyncMeta(syncMetaFromError(caught));
+      setSyncMeta((previous) => syncMetaFromError(caught, previous));
     }
     try {
       await loadDashboardData();
@@ -115,7 +120,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       .then(setSyncMeta)
       .catch((caught) => {
         setError(caught instanceof Error ? caught.message : String(caught));
-        setSyncMeta(syncMetaFromError(caught));
+        setSyncMeta((previous) => syncMetaFromError(caught, previous));
       });
     return () => {
       if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
