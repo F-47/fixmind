@@ -1,4 +1,4 @@
-import { FilterX, RefreshCw } from "lucide-react";
+import { FilterX } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -8,6 +8,7 @@ import { AdvancedFilters } from "@/components/home/AdvancedFilters";
 import { Hero } from "@/components/home/Hero";
 import { LessonList } from "@/components/home/LessonList";
 import { ReviewInbox } from "@/components/home/ReviewInbox";
+import { SyncStatusCard } from "@/components/home/SyncStatusCard";
 import { formatToolName, formatWeek, weekStartOf } from "@/lib/format";
 import {
   DEFAULT_LESSON_FILTERS,
@@ -26,7 +27,6 @@ export function HomePage() {
   const [filters, setFilters] = useState<LessonFilterState>(DEFAULT_LESSON_FILTERS);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [syncJustCompleted, setSyncJustCompleted] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
   const resetDialogRef = useRef<HTMLDialogElement>(null);
@@ -106,8 +106,6 @@ export function HomePage() {
   const hasDueLessons = data.due.length > 0;
   const totalPages = Math.max(1, Math.ceil(filteredLessons.length / PAGE_SIZE));
   const pageLessons = filteredLessons.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const canSync = Boolean(syncMeta?.loggedIn && syncMeta.syncEnabled);
-  const syncButtonLabel = syncJustCompleted ? "Synced" : "Sync";
   const hasAdvancedFilters =
     filters.learningState !== "all" ||
     filters.understanding !== "all" ||
@@ -127,6 +125,12 @@ export function HomePage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
       <Hero totalLessons={data.summary.total} />
+
+      <SyncStatusCard
+        syncMeta={syncMeta}
+        refreshing={refreshing}
+        onRefresh={refreshDashboard}
+      />
 
       {hasDueLessons && (
         <ReviewInbox
@@ -189,58 +193,6 @@ export function HomePage() {
                       <FilterX size={12} />
                       Clear filters
                     </button>
-                  )}
-                  {canSync && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void (async () => {
-                          const synced = await refreshDashboard();
-                          if (!synced) return;
-                          setSyncJustCompleted(true);
-                          window.setTimeout(() => setSyncJustCompleted(false), 1400);
-                        })();
-                      }}
-                      disabled={refreshing}
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] transition-colors disabled:cursor-not-allowed disabled:opacity-50",
-                        syncJustCompleted
-                          ? "border-positive/40 bg-positive/10 text-positive hover:border-positive/40 hover:text-positive"
-                          : "border-line bg-surface-2 text-muted hover:border-accent/40 hover:text-ink",
-                      )}
-                      title={
-                        syncJustCompleted
-                          ? "Sync completed"
-                          : "Pull the latest lessons from sync"
-                      }
-                    >
-                      <RefreshCw
-                        size={12}
-                        className={cn(
-                          refreshing && "animate-spin",
-                          !refreshing && syncJustCompleted && "text-positive",
-                        )}
-                      />
-                      {refreshing ? "Syncing" : syncButtonLabel}
-                    </button>
-                  )}
-                  {!canSync && (
-                    <div
-                      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-2 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[.18em] text-muted opacity-70"
-                      title="Requires an active Pro or Team plan"
-                    >
-                      <RefreshCw size={12} />
-                      <span>Sync</span>
-                      <a
-                        href="https://fixmind.dev/pricing"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center rounded-full border border-accent/30 bg-accent/10 px-2 py-0.5 text-[9px] tracking-[.22em] text-accent transition hover:border-accent/50 hover:bg-accent/15"
-                        aria-label="View Pro pricing"
-                      >
-                        Pro
-                      </a>
-                    </div>
                   )}
                 </div>
               </div>

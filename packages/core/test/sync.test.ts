@@ -127,6 +127,29 @@ test("login succeeds but reports unentitled when no entitlement exists", async (
   })();
 });
 
+test("status reports pending local changes before the first push", async () => {
+  const backend = new FakeBackend();
+  backend.grantEntitlement("dev@example.com");
+  const credentials = {
+    supabaseUrl: "https://example.supabase.co",
+    supabaseAnonKey: "anon-key",
+    email: "dev@example.com",
+    password: "hunter2",
+    passphrase: "shared passphrase",
+  };
+
+  await withMachine(async (store) => {
+    const engine = createSyncEngine(store, backend);
+    await engine.login(credentials);
+    store.save(lessonInput());
+
+    const status = await engine.status();
+    assert.equal(status.pendingPushCount, 1);
+    assert.equal(status.conflictCount, 0);
+    assert.equal(status.lastSuccessfulSyncAt, undefined);
+  })();
+});
+
 test("login succeeds but reports unentitled when the entitlement is canceled", async () => {
   const backend = new FakeBackend();
   backend.grantEntitlement("dev@example.com", { plan: "pro", status: "canceled" });
@@ -246,9 +269,43 @@ test("push from one machine and pull on another applies the lesson", async () =>
     await engineB.login(credentials);
     const result = await engineB.pull();
     assert.equal(result.applied, 1);
+    const status = await engineB.status();
+    assert.equal(status.lastSuccessfulSyncAt !== undefined, true);
+    assert.equal(status.pendingPushCount, 0);
     const synced = storeB.get(lessonId);
     assert.ok(synced);
     assert.equal(synced?.title, "Hydration mismatch");
+  })();
+});
+
+test("pulled remote lessons are not counted as pending local uploads", async () => {
+  const backend = new FakeBackend();
+  backend.grantEntitlement("dev@example.com");
+  const credentials = {
+    supabaseUrl: "https://example.supabase.co",
+    supabaseAnonKey: "anon-key",
+    email: "dev@example.com",
+    password: "hunter2",
+    passphrase: "shared passphrase",
+  };
+
+  let lessonId = "";
+  await withMachine(async (storeA) => {
+    const engineA = createSyncEngine(storeA, backend);
+    await engineA.login(credentials);
+    const saved = storeA.save(lessonInput());
+    lessonId = saved.id;
+    await engineA.push();
+  })();
+
+  await withMachine(async (storeB) => {
+    const engineB = createSyncEngine(storeB, backend);
+    await engineB.login(credentials);
+    await engineB.pull();
+
+    const status = await engineB.status();
+    assert.equal(status.pendingPushCount, 0);
+    assert.equal(storeB.get(lessonId)?.title, "Hydration mismatch");
   })();
 });
 

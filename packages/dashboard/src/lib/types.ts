@@ -78,3 +78,16 @@ export interface DashboardData {
   progress: ProgressData;
   summary: { total: number; due: number; learning: number; understood: number; memoryReady: number };
 }
+
+export interface SyncMeta {
+  loggedIn: boolean;
+  syncEnabled: boolean;
+  needsReauth?: boolean;
+  email?: string;
+  lastPushedAt?: string;
+  lastPulledAt?: string;
+  lastSuccessfulSyncAt?: string;
+  lastSyncError?: string;
+  pendingPushCount: number;
+  conflictCount: number;
+}

@@ -123,6 +123,26 @@ test("dashboard api returns lesson data and accepts review submissions", async (
   });
 });
 
+test("dashboard sync status returns the richer local sync metadata", async () => {
+  await withDashboard(async ({ dashboardUrl }) => {
+    const statusResponse = await fetch(`${dashboardUrl}/api/sync/status`);
+    assert.equal(statusResponse.status, 200);
+    const status = await statusResponse.json() as {
+      loggedIn: boolean;
+      syncEnabled: boolean;
+      pendingPushCount: number;
+      conflictCount: number;
+      lastSuccessfulSyncAt?: string;
+    };
+
+    assert.equal(status.loggedIn, false);
+    assert.equal(status.syncEnabled, false);
+    assert.equal(status.pendingPushCount, 0);
+    assert.equal(status.conflictCount, 0);
+    assert.equal(status.lastSuccessfulSyncAt, undefined);
+  });
+});
+
 test("dashboard export delete and reset endpoints work", async () => {
   await withDashboard(async ({ dashboardUrl, store, savedId }) => {
     const jsonExport = await fetch(`${dashboardUrl}/api/export?format=json`);
