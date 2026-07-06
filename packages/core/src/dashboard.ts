@@ -22,6 +22,7 @@ export interface DashboardHandle {
 
 const HOST = "127.0.0.1";
 const DASHBOARD_DIRECTORY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dashboard");
+const DASHBOARD_SYNC_TIMEOUT_MS = 12_000;
 
 export async function startDashboard(options: DashboardOptions = {}): Promise<DashboardHandle> {
   const store = options.store ?? createLessonStore();
@@ -92,7 +93,7 @@ async function handleRequest(
     if (request.method === "POST" && url.pathname === "/api/sync/pull") {
       const { createSyncEngine } = await import("./sync.js");
       try {
-        const result = await createSyncEngine(store).pull();
+        const result = await withDashboardSyncTimeout(() => createSyncEngine(store).pull());
         sendJson(response, 200, result);
       } catch (error) {
         sendJson(response, 400, { error: error instanceof Error ? error.message : String(error) });
@@ -103,7 +104,7 @@ async function handleRequest(
     if (request.method === "POST" && url.pathname === "/api/sync/run") {
       const { createSyncEngine } = await import("./sync.js");
       try {
-        const result = await createSyncEngine(store).run();
+        const result = await withDashboardSyncTimeout(() => createSyncEngine(store).run());
         sendJson(response, 200, result);
       } catch (error) {
         sendJson(response, 400, { error: error instanceof Error ? error.message : String(error) });
@@ -113,7 +114,7 @@ async function handleRequest(
 
     if (request.method === "GET" && url.pathname === "/api/sync/status") {
       const { createSyncEngine } = await import("./sync.js");
-      sendJson(response, 200, await createSyncEngine(store).status());
+      sendJson(response, 200, await withDashboardSyncTimeout(() => createSyncEngine(store).status()));
       return;
     }
 
@@ -252,4 +253,13 @@ function openBrowser(url: string): void {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function withDashboardSyncTimeout<T>(operation: () => Promise<T>): Promise<T> {
+  return Promise.race([
+    operation(),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Sync timed out. Try again.")), DASHBOARD_SYNC_TIMEOUT_MS),
+    ),
+  ]);
 }
