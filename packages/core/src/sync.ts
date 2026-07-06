@@ -23,6 +23,9 @@ interface SyncConfig {
   entitled?: boolean;
   lastPushedAt?: string;
   lastPulledAt?: string;
+  lastSuccessfulSyncAt?: string;
+  lastSyncError?: string;
+  remoteSnapshots?: Record<string, string>;
 }
 
 function syncConfigPath(): string {
@@ -57,9 +60,23 @@ export interface SyncEngine {
   loginWithGithub(params: { supabaseUrl: string; supabaseAnonKey: string; onAuthUrl?: (url: string) => void }): Promise<GithubLoginResult>;
   completeGithubLogin(params: { supabaseUrl: string; supabaseAnonKey: string; email: string; userId: string; session: SessionTokens; passphrase: string }): Promise<LoginResult>;
   logout(): void;
-  status(): Promise<{ loggedIn: boolean; syncEnabled: boolean; needsReauth?: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string }>;
+  status(): Promise<SyncStatus>;
   push(): Promise<{ pushed: number }>;
   pull(): Promise<{ pulled: number; applied: number }>;
+  run(): Promise<{ pushed: number; pulled: number; applied: number }>;
+}
+
+export interface SyncStatus {
+  loggedIn: boolean;
+  syncEnabled: boolean;
+  needsReauth?: boolean;
+  email?: string;
+  lastPushedAt?: string;
+  lastPulledAt?: string;
+  lastSuccessfulSyncAt?: string;
+  lastSyncError?: string;
+  pendingPushCount: number;
+  conflictCount: number;
 }
 
 const AUTO_SYNC_TIMEOUT_MS = 10_000;
@@ -123,7 +140,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
     session: SessionTokens,
     key: Buffer,
   ): Promise<number> {
-    const lessons = store.updatedSince(config.lastPushedAt ?? EPOCH);
+    const lessons = pendingLessons(config);
     if (lessons.length === 0) return 0;
 
     const rows: SyncRow[] = lessons.map((lesson) => {
@@ -133,8 +150,47 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
     await activeBackend.upsertLessons(config.userId, session, rows);
 
     const newest = lessons.reduce((max, lesson) => (lesson.updatedAt > max ? lesson.updatedAt : max), config.lastPushedAt ?? EPOCH);
-    writeSyncConfig({ ...config, lastPushedAt: newest });
+    const nextSnapshots = { ...(config.remoteSnapshots ?? {}) };
+    for (const lesson of lessons) delete nextSnapshots[lesson.id];
+    writeSyncConfig({
+      ...config,
+      lastPushedAt: newest,
+      remoteSnapshots: nextSnapshots,
+    });
     return lessons.length;
+  }
+
+  function updateSyncConfig(mutator: (config: SyncConfig) => SyncConfig): SyncConfig | undefined {
+    const config = readSyncConfig();
+    if (!config) return undefined;
+    const next = mutator(config);
+    writeSyncConfig(next);
+    return next;
+  }
+
+  function markSyncSuccess(extra: Partial<SyncConfig> = {}): void {
+    updateSyncConfig((config) => ({
+      ...config,
+      ...extra,
+      lastSuccessfulSyncAt: new Date().toISOString(),
+      lastSyncError: undefined,
+    }));
+  }
+
+  function markSyncError(error: unknown): void {
+    const message = error instanceof Error ? error.message : String(error);
+    updateSyncConfig((config) => ({ ...config, lastSyncError: message }));
+  }
+
+  function pendingPushCount(config: SyncConfig): number {
+    return pendingLessons(config).length;
+  }
+
+  function pendingLessons(config: SyncConfig): Lesson[] {
+    const remoteSnapshots = config.remoteSnapshots ?? {};
+    return store.updatedSince(config.lastPushedAt ?? EPOCH).filter((lesson) =>
+      remoteSnapshots[lesson.id] !== lesson.updatedAt
+    );
   }
 
   async function establishKey(
@@ -207,6 +263,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       salt,
       keyBase64: key.toString("base64"),
       entitled,
+      lastSyncError: undefined,
     });
     if (entitled) {
       try {
@@ -256,7 +313,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
 
     async status() {
       const config = readSyncConfig();
-      if (!config) return { loggedIn: false, syncEnabled: false };
+      if (!config) return { loggedIn: false, syncEnabled: false, pendingPushCount: 0, conflictCount: 0 };
       const activeBackend = backendFor(config);
       const session: SessionTokens = { accessToken: config.accessToken, refreshToken: config.refreshToken };
       try {
@@ -270,6 +327,10 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
             email: config.email,
             lastPushedAt: config.lastPushedAt,
             lastPulledAt: config.lastPulledAt,
+            lastSuccessfulSyncAt: config.lastSuccessfulSyncAt,
+            lastSyncError: config.lastSyncError,
+            pendingPushCount: pendingPushCount(config),
+            conflictCount: 0,
           };
         }
         return {
@@ -278,6 +339,10 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
           email: config.email,
           lastPushedAt: config.lastPushedAt,
           lastPulledAt: config.lastPulledAt,
+          lastSuccessfulSyncAt: config.lastSuccessfulSyncAt,
+          lastSyncError: config.lastSyncError,
+          pendingPushCount: pendingPushCount(config),
+          conflictCount: 0,
         };
       }
       const syncEnabled = await isEntitled(activeBackend, session).catch(() => false);
@@ -287,6 +352,10 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
         email: config.email,
         lastPushedAt: config.lastPushedAt,
         lastPulledAt: config.lastPulledAt,
+        lastSuccessfulSyncAt: config.lastSuccessfulSyncAt,
+        lastSyncError: config.lastSyncError,
+        pendingPushCount: pendingPushCount(config),
+        conflictCount: 0,
       };
     },
 
@@ -295,9 +364,15 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       const activeBackend = backendFor(config);
       const key = Buffer.from(config.keyBase64, "base64");
       const session: SessionTokens = { accessToken: config.accessToken, refreshToken: config.refreshToken };
-      await requireEntitlement(activeBackend, session);
-      const pushed = await pushPendingLessons(config, activeBackend, session, key);
-      return { pushed };
+      try {
+        await requireEntitlement(activeBackend, session);
+        const pushed = await pushPendingLessons(config, activeBackend, session, key);
+        markSyncSuccess();
+        return { pushed };
+      } catch (error) {
+        markSyncError(error);
+        throw error;
+      }
     },
 
     async pull() {
@@ -305,24 +380,41 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       const activeBackend = backendFor(config);
       const key = Buffer.from(config.keyBase64, "base64");
       const session: SessionTokens = { accessToken: config.accessToken, refreshToken: config.refreshToken };
-      await requireEntitlement(activeBackend, session);
+      try {
+        await requireEntitlement(activeBackend, session);
 
-      const rows = await activeBackend.fetchLessonsSince(config.userId, session, config.lastPulledAt ?? EPOCH);
-      if (rows.length === 0) return { pulled: 0, applied: 0 };
-
-      let applied = 0;
-      let newest = config.lastPulledAt ?? EPOCH;
-      for (const row of rows) {
-        const lesson = JSON.parse(decrypt({ iv: row.iv, ciphertext: row.ciphertext }, key)) as Lesson;
-        const local = store.get(lesson.id);
-        if (!local || lesson.updatedAt > local.updatedAt) {
-          store.upsertFromRemote(lesson);
-          applied += 1;
+        const rows = await activeBackend.fetchLessonsSince(config.userId, session, config.lastPulledAt ?? EPOCH);
+        if (rows.length === 0) {
+          markSyncSuccess();
+          return { pulled: 0, applied: 0 };
         }
-        if (row.updatedAt > newest) newest = row.updatedAt;
+
+        let applied = 0;
+        let newest = config.lastPulledAt ?? EPOCH;
+        const remoteSnapshots = { ...(config.remoteSnapshots ?? {}) };
+        for (const row of rows) {
+          const lesson = JSON.parse(decrypt({ iv: row.iv, ciphertext: row.ciphertext }, key)) as Lesson;
+          const local = store.get(lesson.id);
+          if (!local || lesson.updatedAt > local.updatedAt) {
+            store.upsertFromRemote(lesson);
+            applied += 1;
+            remoteSnapshots[lesson.id] = lesson.updatedAt;
+          }
+          if (row.updatedAt > newest) newest = row.updatedAt;
+        }
+        writeSyncConfig({ ...config, lastPulledAt: newest, remoteSnapshots });
+        markSyncSuccess({ lastPulledAt: newest, remoteSnapshots });
+        return { pulled: rows.length, applied };
+      } catch (error) {
+        markSyncError(error);
+        throw error;
       }
-      writeSyncConfig({ ...config, lastPulledAt: newest });
-      return { pulled: rows.length, applied };
+    },
+
+    async run() {
+      const { pushed } = await this.push();
+      const { pulled, applied } = await this.pull();
+      return { pushed, pulled, applied };
     },
   };
 }

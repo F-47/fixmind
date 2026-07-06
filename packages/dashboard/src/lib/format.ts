@@ -6,6 +6,14 @@ export function formatDate(value: string): string {
   );
 }
 
+export function formatDateTime(value?: string): string {
+  if (!value) return "Never";
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 const weekLabel = new Intl.DateTimeFormat(undefined, {
   month: "short",
   day: "numeric",

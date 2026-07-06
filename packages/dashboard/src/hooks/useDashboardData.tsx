@@ -13,19 +13,20 @@ import {
   loadDashboard,
   resetAllLessons,
   saveReview,
-  syncPull,
+  syncRun,
   syncStatus,
 } from "@/lib/api";
-import type { DashboardData, Understanding } from "@/lib/types";
+import type { DashboardData, SyncMeta, Understanding } from "@/lib/types";
 
-type SyncMeta = {
-  loggedIn: boolean;
-  syncEnabled: boolean;
-  needsReauth?: boolean;
-  email?: string;
-  lastPushedAt?: string;
-  lastPulledAt?: string;
-};
+function syncMetaFromError(caught: unknown): SyncMeta {
+  return {
+    loggedIn: false,
+    syncEnabled: false,
+    pendingPushCount: 0,
+    conflictCount: 0,
+    lastSyncError: caught instanceof Error ? caught.message : String(caught),
+  };
+}
 
 interface DashboardDataContextValue {
   data: DashboardData | null;
@@ -71,12 +72,13 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
       const status = await syncStatus();
       setSyncMeta(status);
       if (status.syncEnabled) {
-        await syncPull();
+        await syncRun();
         setSyncMeta(await syncStatus());
         synced = true;
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
+      setSyncMeta(syncMetaFromError(caught));
     }
     try {
       await loadDashboardData();
@@ -109,7 +111,12 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
   }, [loadDashboardData]);
 
   useEffect(() => {
-    syncStatus().then(setSyncMeta).catch(() => setSyncMeta(null));
+    syncStatus()
+      .then(setSyncMeta)
+      .catch((caught) => {
+        setError(caught instanceof Error ? caught.message : String(caught));
+        setSyncMeta(syncMetaFromError(caught));
+      });
     return () => {
       if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
     };

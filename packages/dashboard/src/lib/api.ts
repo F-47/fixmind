@@ -1,4 +1,4 @@
-import type { DashboardData, Understanding } from "./types";
+import type { DashboardData, SyncMeta, Understanding } from "./types";
 
 async function requestOk(input: RequestInfo | URL, init?: RequestInit, fallback = "Request failed."): Promise<void> {
   const response = await fetch(input, init);
@@ -45,6 +45,10 @@ export async function syncPull(): Promise<{ pulled: number; applied: number }> {
   return requestJson<{ pulled: number; applied: number }>("/api/sync/pull", { method: "POST" }, "Could not sync pull lessons.");
 }
 
-export async function syncStatus(): Promise<{ loggedIn: boolean; syncEnabled: boolean; needsReauth?: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string }> {
-  return requestJson<{ loggedIn: boolean; syncEnabled: boolean; needsReauth?: boolean; email?: string; lastPushedAt?: string; lastPulledAt?: string }>("/api/sync/status", undefined, "Could not load sync status.");
+export async function syncRun(): Promise<{ pushed: number; pulled: number; applied: number }> {
+  return requestJson<{ pushed: number; pulled: number; applied: number }>("/api/sync/run", { method: "POST" }, "Could not run sync.");
+}
+
+export async function syncStatus(): Promise<SyncMeta> {
+  return requestJson<SyncMeta>("/api/sync/status", undefined, "Could not load sync status.");
 }
