@@ -1,11 +1,17 @@
 "use client";
 
+import { InfoPill } from "@/components/ui/InfoPill";
+import { supabase } from "@/lib/supabase";
+import {
+  ArrowRight,
+  Loader2,
+  Mail,
+  ShieldCheck,
+  SquareTerminal,
+} from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { ArrowRight, Check, Loader2, Mail, ShieldCheck, SquareTerminal } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
-import { InfoPill } from "@/components/ui/InfoPill";
 
 function emailFromQuery(): string {
   return new URLSearchParams(window.location.search).get("email") ?? "";
@@ -14,6 +20,9 @@ function emailFromQuery(): string {
 function accountUrl(): string {
   return `${window.location.origin}/account`;
 }
+
+const oauthButtonClassName =
+  "inline-flex w-full items-center justify-center gap-2 rounded-lg border border-black/90 bg-[#0d1117] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#161b22] hover:text-white";
 
 // ─── Animated feature item ────────────────────────────────────────────────
 
@@ -84,12 +93,24 @@ export function AuthForm() {
 
   async function handleGithub() {
     if (!supabase) return;
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "github",
       options: {
         redirectTo: accountUrl(),
       },
     });
+    if (error) toast.error(error.message);
+  }
+
+  async function handleGoogle() {
+    if (!supabase) return;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: accountUrl(),
+      },
+    });
+    if (error) toast.error(error.message);
   }
 
   return (
@@ -120,8 +141,9 @@ export function AuthForm() {
               One login for optional sync.
             </h2>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-muted">
-              Fixmind is still fully local without an account. Sign in only if you
-              want encrypted sync across machines or need to manage a paid plan.
+              Fixmind is still fully local without an account. Sign in only if
+              you want encrypted sync across machines or need to manage a paid
+              plan.
             </p>
 
             <div className="mt-7 space-y-3">
@@ -133,7 +155,9 @@ export function AuthForm() {
               />
               <FeatureItem
                 index={1}
-                icon={<SquareTerminal size={16} className="shrink-0 text-accent" />}
+                icon={
+                  <SquareTerminal size={16} className="shrink-0 text-accent" />
+                }
                 title="Terminal sync on this device"
                 description={
                   <>
@@ -209,19 +233,35 @@ export function AuthForm() {
             </button>
           </form>
 
-          <button
-            type="button"
-            onClick={handleGithub}
-            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-black/90 bg-[#0d1117] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#161b22] hover:text-white"
-          >
-            <img
-              src="/logos/github.svg"
-              alt=""
-              aria-hidden="true"
-              className="size-4 shrink-0"
-            />
-            Continue with GitHub
-          </button>
+          <div className="mt-3 grid gap-3">
+            <button
+              type="button"
+              onClick={handleGoogle}
+              className={oauthButtonClassName}
+            >
+              <img
+                src="/logos/google.svg"
+                alt=""
+                aria-hidden="true"
+                className="size-4 shrink-0"
+              />
+              Continue with Google
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGithub}
+              className={oauthButtonClassName}
+            >
+              <img
+                src="/logos/github.svg"
+                alt=""
+                aria-hidden="true"
+                className="size-4 shrink-0"
+              />
+              Continue with GitHub
+            </button>
+          </div>
 
           <button
             type="button"
