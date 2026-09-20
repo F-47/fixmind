@@ -51,7 +51,10 @@ try {
 
   $appProcess.CloseMainWindow() | Out-Null
   if (-not $appProcess.WaitForExit(5000)) {
-    $appProcess.Kill($true)
+    & "$env:SystemRoot\System32\taskkill.exe" /PID $appProcess.Id /T /F | Out-Null
+    if ($LASTEXITCODE -ne 0 -and -not $appProcess.HasExited) {
+      throw "Could not stop the installed Fixmind process tree."
+    }
     $appProcess.WaitForExit()
   }
 
