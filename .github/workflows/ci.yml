@@ -59,6 +59,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/desktop/src-tauri
+      - run: npm run prepare:sidecar -w @fixmind/desktop
       - run: cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml -- --check
       - run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
       - run: cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml
