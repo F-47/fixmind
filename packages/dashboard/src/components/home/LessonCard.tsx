@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { formatDate, statusColor, statusLabel } from "@/lib/format";
-import { cn } from "@/components/shared/cn";
-import type { DashboardLesson } from "@/lib/types";
 import { Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { cn } from "@/components/shared/cn";
+import { formatDate, statusColor, statusLabel } from "@/lib/format";
+import type { DashboardLesson } from "@/lib/types";
 
 interface Props {
   lesson: DashboardLesson;
@@ -25,8 +25,6 @@ export function LessonCard({ lesson, onOpen, onDelete }: Props) {
   return (
     <article
       className="group cursor-pointer border-t border-line py-5 first:border-t-0 first:pt-0"
-      role="button"
-      tabIndex={0}
       onClick={() => onOpen(lesson, false)}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -57,6 +55,7 @@ export function LessonCard({ lesson, onOpen, onDelete }: Props) {
           <span>{lesson.tool}</span>
         </div>
         <button
+          type="button"
           className="cursor-pointer border-0 bg-transparent p-0 opacity-0 transition group-hover:opacity-100 hover:text-danger"
           onClick={(event) => {
             event.stopPropagation();
@@ -65,6 +64,7 @@ export function LessonCard({ lesson, onOpen, onDelete }: Props) {
         >
           <Trash2 className="size-3.5" />
         </button>
+        {/* biome-ignore lint/a11y/useKeyWithClickEvents: the native dialog already supports keyboard dismissal */}
         <dialog
           ref={dialogRef}
           className="fixed top-1/2 left-1/2 z-50 w-[min(420px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 border border-line bg-page p-6 text-ink shadow-[0_40px_100px_-30px_rgba(0,0,0,0.7)]"
@@ -79,12 +79,14 @@ export function LessonCard({ lesson, onOpen, onDelete }: Props) {
           </p>
           <div className="mt-6 flex justify-end gap-5 font-mono text-[11px] uppercase tracking-[.2em]">
             <button
+              type="button"
               className="cursor-pointer border-0 bg-transparent p-0 text-muted hover:text-ink"
               onClick={() => setConfirmingDelete(false)}
             >
               Cancel
             </button>
             <button
+              type="button"
               className="cursor-pointer border-0 bg-transparent p-0 font-bold text-danger hover:underline"
               onClick={() => onDelete(lesson.id)}
             >

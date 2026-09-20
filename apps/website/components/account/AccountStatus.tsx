@@ -14,14 +14,11 @@ import {
   TerminalSquare,
 } from "lucide-react";
 import Link from "next/link";
+import { InfoPill } from "@/components/ui/InfoPill";
 import { cn } from "@/lib/cn";
 import { supabase } from "@/lib/supabase";
+import { useEntitlementQuery, useLessonCountQuery } from "@/services/queries";
 import { CommandCard } from "./CommandCard";
-import { InfoPill } from "@/components/ui/InfoPill";
-import {
-  useEntitlementQuery,
-  useLessonCountQuery,
-} from "@/services/queries";
 
 function capitalize(value: string): string {
   return value.length > 0 ? value[0].toUpperCase() + value.slice(1) : value;
@@ -39,25 +36,19 @@ function StatCard({ icon, label, value, accent }: StatCardProps) {
     <div
       className={cn(
         "flex items-start gap-3 rounded-xl border p-4 transition-colors",
-        accent
-          ? "border-accent/30 bg-accent/5"
-          : "border-line bg-surface-2 hover:border-accent/20",
+        accent ? "border-accent/30 bg-accent/5" : "border-line bg-surface-2 hover:border-accent/20",
       )}
     >
       <div
         className={cn(
           "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border",
-          accent
-            ? "border-accent/30 bg-accent/10 text-accent"
-            : "border-line bg-bg/40 text-muted",
+          accent ? "border-accent/30 bg-accent/10 text-accent" : "border-line bg-bg/40 text-muted",
         )}
       >
         {icon}
       </div>
       <div className="min-w-0">
-        <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
-          {label}
-        </p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">{label}</p>
         <p className="mt-1 break-all text-sm text-ink">{value}</p>
       </div>
     </div>
@@ -71,16 +62,14 @@ export function AccountStatus({ session }: { session: Session }) {
   const lessonCount = lessonCountQuery.data;
 
   const email = session.user.email ?? "";
-  const state =
-    entitlementQuery.isLoading
-      ? "loading"
-      : entitlement === null
-        ? "free"
-        : entitlement.status === "active"
-          ? "active"
-          : "inactive";
-  const planName =
-    entitlement && entitlement.plan ? capitalize(entitlement.plan) : "Free";
+  const state = entitlementQuery.isLoading
+    ? "loading"
+    : entitlement === null
+      ? "free"
+      : entitlement.status === "active"
+        ? "active"
+        : "inactive";
+  const planName = entitlement?.plan ? capitalize(entitlement.plan) : "Free";
   const syncEnabled = state === "active";
 
   const statusTitle =
@@ -123,12 +112,8 @@ export function AccountStatus({ session }: { session: Session }) {
                     ? "Loading"
                     : "Inactive"}
             </InfoPill>
-            <h2 className="mt-4 font-display text-2xl font-semibold text-ink">
-              {statusTitle}
-            </h2>
-            <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted">
-              {statusBody}
-            </p>
+            <h2 className="mt-4 font-display text-2xl font-semibold text-ink">{statusTitle}</h2>
+            <p className="mt-2 max-w-lg text-sm leading-relaxed text-muted">{statusBody}</p>
           </div>
           <button
             type="button"
@@ -144,16 +129,10 @@ export function AccountStatus({ session }: { session: Session }) {
         <div
           className={cn(
             "mt-6 grid gap-3",
-            syncEnabled
-              ? "sm:grid-cols-2 md:grid-cols-4"
-              : "sm:grid-cols-2 md:grid-cols-3",
+            syncEnabled ? "sm:grid-cols-2 md:grid-cols-4" : "sm:grid-cols-2 md:grid-cols-3",
           )}
         >
-          <StatCard
-            icon={<Mail size={14} />}
-            label="Signed in as"
-            value={email}
-          />
+          <StatCard icon={<Mail size={14} />} label="Signed in as" value={email} />
           <StatCard
             icon={<CreditCard size={14} />}
             label="Plan"
@@ -203,13 +182,10 @@ export function AccountStatus({ session }: { session: Session }) {
         </div>
 
         <div className="mt-6 rounded-xl border border-line bg-bg/35 p-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">
-            CLI access
-          </p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted">CLI access</p>
           <p className="mt-2 text-sm leading-relaxed text-muted">
-            Use <code className="text-ink">npx fixmind setup</code> to register
-            the MCP server on a new machine. The Login card below turns on
-            encrypted sync when you want it.
+            Use <code className="text-ink">npx fixmind setup</code> to register the MCP server on a
+            new machine. The Login card below turns on encrypted sync when you want it.
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <CommandCard
@@ -224,8 +200,8 @@ export function AccountStatus({ session }: { session: Session }) {
             />
           </div>
           <p className="mt-3 text-xs leading-relaxed text-muted">
-            Install globally only if you want a persistent{" "}
-            <code className="text-ink">fixmind</code> command on your PATH.
+            Install globally only if you want a persistent <code className="text-ink">fixmind</code>{" "}
+            command on your PATH.
           </p>
         </div>
 
@@ -235,9 +211,8 @@ export function AccountStatus({ session }: { session: Session }) {
               Best practice
             </p>
             <p className="mt-2 text-sm leading-relaxed text-muted">
-              Sign in once on each device. After that, opening the dashboard
-              usually refreshes lessons for you, and these commands cover the
-              manual cases:
+              Sign in once on each device. After that, opening the dashboard usually refreshes
+              lessons for you, and these commands cover the manual cases:
             </p>
             <div className="mt-3 grid gap-3">
               <CommandCard
@@ -282,9 +257,8 @@ export function AccountStatus({ session }: { session: Session }) {
                   Keep your lessons in sync on every machine.
                 </h3>
                 <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-                  Fixmind stays local on this device for free. Pro adds
-                  encrypted sync, so the same lessons follow you from laptop to
-                  desktop without extra setup.
+                  Fixmind stays local on this device for free. Pro adds encrypted sync, so the same
+                  lessons follow you from laptop to desktop without extra setup.
                 </p>
               </div>
               <div className="hidden rounded-full border border-accent/30 bg-accent/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-accent sm:block">
@@ -292,9 +266,7 @@ export function AccountStatus({ session }: { session: Session }) {
               </div>
             </div>
             <div className="relative mt-4 grid gap-2 text-sm text-muted sm:grid-cols-3">
-              <div className="rounded-lg border border-line bg-bg/35 px-3 py-2">
-                Encrypted sync
-              </div>
+              <div className="rounded-lg border border-line bg-bg/35 px-3 py-2">Encrypted sync</div>
               <div className="rounded-lg border border-line bg-bg/35 px-3 py-2">
                 Lessons on every device
               </div>
@@ -321,9 +293,7 @@ export function AccountStatus({ session }: { session: Session }) {
           >
             <div>
               <p className="text-sm font-medium text-ink">How sync works</p>
-              <p className="text-sm text-muted">
-                See the login and sync commands.
-              </p>
+              <p className="text-sm text-muted">See the login and sync commands.</p>
             </div>
             <span className="text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-accent">
               &rarr;

@@ -1,5 +1,5 @@
-import type { Lesson, ConceptStat, Understanding } from "./types.js";
 import { buildLearningInsights, type LearningInsights } from "./learning-insights.js";
+import type { ConceptStat, Lesson, Understanding } from "./types.js";
 
 export interface DashboardLesson extends Lesson {
   displayTakeaway: string;
@@ -37,6 +37,7 @@ export interface DashboardData {
   topics: ConceptStat[];
   patterns: PatternStat[];
   insights: LearningInsights;
+  weeklyDigest: LearningInsights;
   progress: ProgressData;
   summary: {
     total: number;
@@ -64,18 +65,24 @@ export function buildDashboardData(
     topics,
     patterns: groupPatterns(all),
     insights: buildLearningInsights(allLessons, now),
+    weeklyDigest: buildLearningInsights(allLessons, now, 7),
     progress: buildProgressData(allLessons),
     summary: {
       total: all.length,
       due: dueIds.size,
       learning: all.filter((lesson) => isLearning(lesson.understanding)).length,
       understood: all.filter((lesson) => lesson.understanding === "understood").length,
-      memoryReady: all.filter((lesson) => lesson.status === "active" && lesson.reviewCount > 0).length,
+      memoryReady: all.filter((lesson) => lesson.status === "active" && lesson.reviewCount > 0)
+        .length,
     },
   };
 }
 
-export function buildProgressData(allLessons: Lesson[], weeks = 12, now = new Date()): ProgressData {
+export function buildProgressData(
+  allLessons: Lesson[],
+  weeks = 12,
+  now = new Date(),
+): ProgressData {
   const currentWeekStart = startOfWeek(now);
   const buckets: string[] = [];
   for (let i = weeks - 1; i >= 0; i -= 1) {
@@ -94,12 +101,13 @@ export function buildProgressData(allLessons: Lesson[], weeks = 12, now = new Da
     const week = toIsoDate(startOfWeek(new Date(lesson.createdAt)));
     if (!counts.has(week)) continue;
     counts.set(week, (counts.get(week) ?? 0) + 1);
-    understandingCounts.get(week)![lesson.understanding] += 1;
+    const breakdown = understandingCounts.get(week);
+    if (breakdown) breakdown[lesson.understanding] += 1;
   }
 
   return {
     lessonsPerWeek: buckets.map((week) => ({ weekStart: week, count: counts.get(week) ?? 0 })),
-    understandingByWeek: buckets.map((week) => understandingCounts.get(week)!),
+    understandingByWeek: Array.from(understandingCounts.values()),
   };
 }
 
@@ -124,9 +132,8 @@ export function toDashboardLesson(lesson: Lesson): DashboardLesson {
   return {
     ...lesson,
     displayTakeaway: lesson.takeaway?.trim() || concise(lesson.fixSummary),
-    displayPattern: lesson.mistakePattern?.trim()
-      || lesson.concepts[0]?.trim()
-      || "General debugging",
+    displayPattern:
+      lesson.mistakePattern?.trim() || lesson.concepts[0]?.trim() || "General debugging",
   };
 }
 

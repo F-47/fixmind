@@ -1,5 +1,5 @@
 import { ContactForm } from "@/components/contact/ContactForm";
-import { ReasonCard, type ContactReason } from "@/components/contact/ReasonCard";
+import { type ContactReason, ReasonCard } from "@/components/contact/ReasonCard";
 import { CONTACT_EMAIL, SUPPORT_EMAIL } from "@/components/shared/constants";
 
 const REASONS: ContactReason[] = [
@@ -26,16 +26,13 @@ export default function Contact() {
             className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-accent/15 blur-[130px]"
           />
           <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
-              Contact
-            </p>
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">Contact</p>
             <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
               Talk to a person, not a ticket queue.
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-muted">
-              Fixmind is a small, solo-maintained project. Email goes straight
-              to the person building it - expect a real reply, not an
-              auto-responder.
+              Fixmind is a small, solo-maintained project. Email goes straight to the person
+              building it - expect a real reply, not an auto-responder.
             </p>
           </div>
         </section>

@@ -1,8 +1,8 @@
-import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import Docs from "@/components/docs";
 import { DOCS } from "@/components/docs/docs-data";
 import { pageMetadata } from "@/lib/seo";
-import Docs from "@/components/docs";
 
 type PageProps = {
   params: Promise<{ slug: string }>;

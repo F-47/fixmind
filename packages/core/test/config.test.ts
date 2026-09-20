@@ -3,8 +3,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { buildMcpInstructions } from "../src/mcp.js";
 import { readConfig, writeConfig } from "../src/config.js";
+import { buildMcpInstructions } from "../src/mcp.js";
 
 test("config defaults to strict capture mode", () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-config-"));
@@ -22,11 +22,14 @@ test("config writes and reads balanced capture mode", () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-config-balanced-"));
   const filePath = path.join(home, "config.json");
   try {
-    writeConfig({
-      version: 1,
-      reviewIntervalsDays: { understood: 7, partial: 3, copied_blindly: 1 },
-      captureMode: "balanced",
-    }, filePath);
+    writeConfig(
+      {
+        version: 1,
+        reviewIntervalsDays: { understood: 7, partial: 3, copied_blindly: 1 },
+        captureMode: "balanced",
+      },
+      filePath,
+    );
     assert.equal(readConfig(filePath).captureMode, "balanced");
   } finally {
     fs.rmSync(home, { recursive: true, force: true });

@@ -4,6 +4,31 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+- Cleared the monorepo's Biome warning debt and restored the affected lint rules to error severity.
+
+### Added
+
+- `fixmind inject` and `fixmind hooks <claude|cursor>`: recall lessons automatically at session start instead of only when the agent asks. Claude Code sessions receive the current project's most relevant reviewed lessons as context; Cursor gets a memory rule. Both are offered during `fixmind setup` and can be installed any time.
+- `fixmind export --format anki`: every review question becomes an Anki-importable note (question on the front, expected answer plus the takeaway on the back, concepts and mistake pattern as tags).
+- `fixmind insights --weekly` plus a dashboard "This week" card summarizing the last 7 days of lessons, top patterns, and concepts still being learned.
+- The desktop app now sends an OS notification when lessons become due for review while it is running.
+- `fixmind setup --starter-pack`: 15 curated example lessons, tagged `fixmind-starter` and excluded from stats and insights, so reviews and memory have content from day one.
+
+### Changed
+
+- Windows releases now require Tauri-signed update artifacts but defer paid Authenticode publisher signing; installers can show Windows Unknown publisher or SmartScreen warnings until publisher signing is added.
+- The dashboard API now answers unchanged lesson requests with an HTTP 304, so reopening or refreshing the dashboard skips rebuilding and re-downloading the lesson list (about 130x faster with no transfer on a 5,000-lesson history). The endpoint also accepts `?limit=` and `?offset=` to page through lessons.
+- Review scheduling is now adaptive. Each lesson tracks an SM-2-style ease factor, so lessons you consistently understand stretch toward the 60-day ceiling faster, while a shaky or blind-copied lesson resurfaces after 1 day and climbs back slowly. Existing lessons keep their current position in the schedule when the database migrates.
+- Saving a lesson no longer waits for encrypted sync. The MCP `save_lesson` tool and the dashboard schedule a debounced background push, and CLI saves hand the push to a detached background process, so saves return as soon as the lesson is stored locally. Pending lessons upload on the next save, dashboard open, or `fixmind sync push`, and failures still surface in `fixmind sync status` and the dashboard sync panel.
+- `fixmind search`, the dashboard search API, and MCP memory retrieval are now backed by an SQLite FTS5 trigram index instead of a full table scan. Results and ranking are unchanged, and short queries keep the previous behavior.
+- The lessons database migrates itself on startup. Existing databases are copied to `lessons.db.bak` before the first migration runs.
+- The MCP `memory` tool's default listing (no query) now uses an indexed query, making it roughly an order of magnitude faster on large lesson histories.
+
+### Fixed
+
+- Packaged desktop builds now provide a valid empty updater configuration until release CI injects the production endpoint and public key, preventing startup failure in locally built installers.
+- The MCP server now reports the installed `fixmind` package version instead of a hardcoded placeholder, so MCP clients see the real version.
+
 ## [1.0.26]
 
 ### Added

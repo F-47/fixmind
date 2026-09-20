@@ -15,11 +15,8 @@ export function PricingFallback() {
         </div>
       </section>
       <section className="mx-auto grid max-w-6xl gap-5 px-6 pb-24 pt-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <div
-            key={index}
-            className="rounded-xl border border-line bg-surface p-6"
-          >
+        {Array.from({ length: 4 }, (_, position) => `plan-${position}`).map((key) => (
+          <div key={key} className="rounded-xl border border-line bg-surface p-6">
             <div className="flex items-center justify-between gap-4">
               <div className="h-5 w-20 animate-pulse rounded bg-surface-2" />
               <div className="h-4 w-24 animate-pulse rounded bg-surface-2" />
@@ -39,11 +36,8 @@ export function PricingFallback() {
           <div className="h-5 w-40 animate-pulse rounded bg-surface-2" />
           <div className="mt-3 h-9 w-[min(92vw,540px)] animate-pulse rounded bg-surface-2" />
           <div className="mt-12 grid gap-5 sm:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={index}
-                className="rounded-xl border border-line bg-surface p-6"
-              >
+            {Array.from({ length: 3 }, (_, position) => `faq-${position}`).map((key) => (
+              <div key={key} className="rounded-xl border border-line bg-surface p-6">
                 <div className="h-5 w-10 animate-pulse rounded bg-surface-2" />
                 <div className="mt-4 h-6 w-44 animate-pulse rounded bg-surface-2" />
                 <div className="mt-3 space-y-3">

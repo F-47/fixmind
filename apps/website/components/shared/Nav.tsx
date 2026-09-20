@@ -1,12 +1,12 @@
 "use client";
 
 import { LogIn, User } from "lucide-react";
-import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { Logo } from "./Logo";
+import { usePathname } from "next/navigation";
+import { type MouseEvent, type ReactNode, useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 import { useSessionQuery } from "@/services/queries";
+import { Logo } from "./Logo";
 
 const SECTION_IDS = ["loop", "memory", "features", "tokens", "how"];
 
@@ -16,9 +16,7 @@ function sectionFromHash(hash: string): string | null {
 }
 
 function useActiveSection(enabled: boolean, hash: string): string | null {
-  const [active, setActive] = useState<string | null>(() =>
-    sectionFromHash(hash),
-  );
+  const [active, setActive] = useState<string | null>(() => sectionFromHash(hash));
 
   useEffect(() => {
     setActive(sectionFromHash(hash));
@@ -29,9 +27,9 @@ function useActiveSection(enabled: boolean, hash: string): string | null {
       setActive(null);
       return;
     }
-    const sections = SECTION_IDS.map((id) =>
-      document.getElementById(id),
-    ).filter((el): el is HTMLElement => el !== null);
+    const sections = SECTION_IDS.map((id) => document.getElementById(id)).filter(
+      (el): el is HTMLElement => el !== null,
+    );
     if (sections.length === 0) return;
 
     const visible = new Set<string>();
@@ -79,11 +77,7 @@ function NavLink({
   const hash = to.includes("#") ? to.slice(to.indexOf("#")) : "";
 
   function handleClick(event: MouseEvent<HTMLAnchorElement>) {
-    if (
-      !hash ||
-      typeof window === "undefined" ||
-      window.location.pathname !== "/"
-    ) {
+    if (!hash || typeof window === "undefined" || window.location.pathname !== "/") {
       onClick?.();
       return;
     }
@@ -99,9 +93,7 @@ function NavLink({
     const top = target.getBoundingClientRect().top + window.scrollY - offset;
     window.scrollTo({
       top: Math.max(0, top),
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
     });
     onClick?.();
   }
@@ -165,13 +157,14 @@ const SECONDARY_LINKS = [
 
 export function Nav() {
   const pathname = usePathname() ?? "/";
-  const [hash, setHash] = useState(
-    () => (typeof window === "undefined" ? "" : window.location.hash),
+  const [hash, setHash] = useState(() =>
+    typeof window === "undefined" ? "" : window.location.hash,
   );
   const active = useActiveSection(pathname === "/", hash);
   const [menuOpen, setMenuOpen] = useState(false);
   const { data: session } = useSessionQuery();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: route changes can replace the hash without a hashchange event
   useEffect(() => {
     const onHashChange = () => setHash(window.location.hash);
     onHashChange();
@@ -179,13 +172,12 @@ export function Nav() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, [pathname]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: navigation must close the mobile menu
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
-  function isLinkActive(
-    link: (typeof PRIMARY_LINKS)[number] | (typeof SECONDARY_LINKS)[number],
-  ) {
+  function isLinkActive(link: (typeof PRIMARY_LINKS)[number] | (typeof SECONDARY_LINKS)[number]) {
     if (link.section) return active === link.section;
     if (link.to === "/docs") return pathname.startsWith("/docs");
     return pathname === link.to;
@@ -193,6 +185,7 @@ export function Nav() {
 
   return (
     <>
+      {/* biome-ignore lint/a11y/useValidAnchor: this skip link targets the page's main content landmark */}
       <a
         href="#content"
         onClick={() => {
@@ -215,8 +208,7 @@ export function Nav() {
               event.preventDefault();
               window.scrollTo({
                 top: 0,
-                behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
-                  .matches
+                behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
                   ? "auto"
                   : "smooth",
               });
@@ -270,15 +262,14 @@ export function Nav() {
               title={session ? "Account" : "Login"}
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-md border transition-colors hover:border-accent/60 hover:text-accent",
-                pathname === "/account"
-                  ? "border-accent/60 text-accent"
-                  : "border-line text-ink",
+                pathname === "/account" ? "border-accent/60 text-accent" : "border-line text-ink",
               )}
             >
               {session ? <User size={16} /> : <LogIn size={16} />}
             </Link>
 
             <button
+              type="button"
               id="mobile-menu-toggle"
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}

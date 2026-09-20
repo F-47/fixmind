@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export function ScrollToTop() {
   const pathname = usePathname();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: every route transition should scroll to the top
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [pathname]);
@@ -15,10 +16,11 @@ export function ScrollToTop() {
 
 export function ScrollToHash() {
   const pathname = usePathname();
-  const [hash, setHash] = useState(
-    () => (typeof window === "undefined" ? "" : window.location.hash),
+  const [hash, setHash] = useState(() =>
+    typeof window === "undefined" ? "" : window.location.hash,
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: route changes can replace the hash without a hashchange event
   useEffect(() => {
     const onHashChange = () => setHash(window.location.hash);
     onHashChange();
@@ -26,6 +28,7 @@ export function ScrollToHash() {
     return () => window.removeEventListener("hashchange", onHashChange);
   }, [pathname]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: retry anchor scrolling after route content changes
   useEffect(() => {
     if (!hash) return;
 
@@ -43,14 +46,13 @@ export function ScrollToHash() {
       window.requestAnimationFrame(() => {
         window.scrollTo({
           top: Math.max(0, top),
-          behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
-            .matches
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
             ? "auto"
             : "smooth",
         });
       });
     }
-  }, [pathname, hash]);
+  }, [hash, pathname]);
 
   return null;
 }

@@ -16,12 +16,8 @@ export function ContactForm() {
         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-good/10 text-good">
           <Check size={18} />
         </div>
-        <h3 className="mt-4 font-display text-lg font-semibold text-ink">
-          Message sent
-        </h3>
-        <p className="mt-2 text-sm text-muted">
-          Thanks - we'll reply by email as soon as we can.
-        </p>
+        <h3 className="mt-4 font-display text-lg font-semibold text-ink">Message sent</h3>
+        <p className="mt-2 text-sm text-muted">Thanks - we'll reply by email as soon as we can.</p>
       </div>
     );
   }
@@ -45,19 +41,10 @@ export function ContactForm() {
         }}
       />
       <input type="hidden" name="access_key" value={WEB3FORMS_ACCESS_KEY} />
-      <input
-        type="hidden"
-        name="subject"
-        value="New message from fixmind.dev/contact"
-      />
+      <input type="hidden" name="subject" value="New message from fixmind.dev/contact" />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field id="name" label="Name" type="text" placeholder="Your name" />
-        <Field
-          id="email"
-          label="Email"
-          type="email"
-          placeholder="you@example.com"
-        />
+        <Field id="email" label="Email" type="email" placeholder="you@example.com" />
       </div>
       <div className="mt-4">
         <label
@@ -100,10 +87,7 @@ function Field({
 }) {
   return (
     <div>
-      <label
-        htmlFor={id}
-        className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted"
-      >
+      <label htmlFor={id} className="font-mono text-[11px] uppercase tracking-[0.15em] text-muted">
         {label}
       </label>
       <input

@@ -1,8 +1,8 @@
-import { Suspense, lazy, useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { HomePage } from "@/components/home/HomePage";
 import { DashboardNavbar } from "@/components/shared/DashboardNavbar";
 import { MarginArt } from "@/components/shared/MarginArt";
-import { HomePage } from "@/components/home/HomePage";
 import { DashboardDataProvider, useDashboardData } from "@/hooks/useDashboardData";
 
 const LessonRoutePage = lazy(() =>
@@ -19,6 +19,7 @@ const PracticePage = lazy(() =>
 function ScrollToTop() {
   const location = useLocation();
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: every dashboard navigation should reset scroll position
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [location.pathname, location.search]);

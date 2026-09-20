@@ -31,9 +31,12 @@ export function readConfig(filePath = configPath()): FixmindConfig {
     return {
       version: typeof parsed.version === "number" ? parsed.version : DEFAULT_CONFIG.version,
       reviewIntervalsDays: {
-        understood: parsed.reviewIntervalsDays?.understood ?? DEFAULT_CONFIG.reviewIntervalsDays.understood,
+        understood:
+          parsed.reviewIntervalsDays?.understood ?? DEFAULT_CONFIG.reviewIntervalsDays.understood,
         partial: parsed.reviewIntervalsDays?.partial ?? DEFAULT_CONFIG.reviewIntervalsDays.partial,
-        copied_blindly: parsed.reviewIntervalsDays?.copied_blindly ?? DEFAULT_CONFIG.reviewIntervalsDays.copied_blindly,
+        copied_blindly:
+          parsed.reviewIntervalsDays?.copied_blindly ??
+          DEFAULT_CONFIG.reviewIntervalsDays.copied_blindly,
       },
       captureMode: parsed.captureMode === "balanced" ? "balanced" : "strict",
     };

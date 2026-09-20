@@ -14,9 +14,9 @@ export default function MemorySection() {
             Reviewed lessons come back when the next task looks familiar.
           </h2>
           <p className="mt-4 max-w-xl text-base leading-relaxed text-muted">
-            Fixmind does not just store what went wrong. It pulls a few reviewed
-            lessons back into context so the agent reuses the rule faster
-            instead of relearning the same mistake from scratch.
+            Fixmind does not just store what went wrong. It pulls a few reviewed lessons back into
+            context so the agent reuses the rule faster instead of relearning the same mistake from
+            scratch.
           </p>
 
           <div className="mt-8 grid gap-4">
@@ -53,22 +53,17 @@ export default function MemorySection() {
           <div className="mt-6 grid gap-5">
             <div className="grid gap-5 sm:flex sm:items-end sm:justify-between sm:gap-6">
               <div className="min-w-0">
-                <div className="font-serif text-5xl font-bold tracking-tight text-ink">
-                  3
-                </div>
+                <div className="font-serif text-5xl font-bold tracking-tight text-ink">3</div>
                 <p className="mt-2 max-w-xs text-sm leading-relaxed text-muted">
-                  Three reviewed lessons stay in the default retrieval set so
-                  the agent gets focused guidance instead of a full archive dump.
+                  Three reviewed lessons stay in the default retrieval set so the agent gets focused
+                  guidance instead of a full archive dump.
                 </p>
               </div>
               <div className="w-full rounded-lg border border-accent/20 bg-accent/5 px-4 py-2.5 font-mono text-sm text-ink sm:max-w-[250px]">
                 <div className="flex min-w-0 items-center justify-between gap-3">
                   <span className="text-accent">$</span>
                   <span className="min-w-0 truncate">use fixmind memory</span>
-                  <CopyButton
-                    text="use fixmind memory"
-                    eventName="copy_memory_command"
-                  />
+                  <CopyButton text="use fixmind memory" eventName="copy_memory_command" />
                 </div>
               </div>
             </div>
@@ -91,18 +86,10 @@ export default function MemorySection() {
   );
 }
 
-function MemoryDetail({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function MemoryDetail({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-line bg-page/70 p-5">
-      <div className="font-mono text-[10px] uppercase tracking-[.18em] text-muted">
-        {label}
-      </div>
+      <div className="font-mono text-[10px] uppercase tracking-[.18em] text-muted">{label}</div>
       <p className="mt-2 text-sm leading-relaxed text-ink">{children}</p>
     </div>
   );
@@ -121,17 +108,14 @@ function MemoryStatus({
     <div
       className={cn(
         "flex items-start gap-3 rounded-xl border p-4",
-        tone === "relevant"
-          ? "border-accent/20 bg-accent/8"
-          : "border-line bg-surface",
+        tone === "relevant" ? "border-accent/20 bg-accent/8" : "border-line bg-surface",
       )}
     >
       <span
         className={cn(
           "mt-1 size-2 rounded-full",
           tone === "good" ? "bg-good" : "bg-accent",
-          tone === "relevant" &&
-            "shadow-[0_0_0_3px_rgba(var(--color-accent-rgb),0.12)]",
+          tone === "relevant" && "shadow-[0_0_0_3px_rgba(var(--color-accent-rgb),0.12)]",
         )}
       />
       <div>

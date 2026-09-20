@@ -25,7 +25,7 @@ This page shows the shape of a Fixmind lesson. Every lesson saved by an AI agent
 | `understanding` | no | `understood`, `partial`, `copied_blindly`, or `unknown`. This is usually set during review. |
 | `supersedesLessonId`, `supersedeReason` | no | See [Superseding](#superseding). |
 
-Fields not listed above (`id`, `createdAt`, `updatedAt`, `tool`, `nextReviewAt`, `reviewCount`, `status`) are assigned by Fixmind, not by the caller.
+Fields not listed above (`id`, `createdAt`, `updatedAt`, `tool`, `nextReviewAt`, `reviewCount`, `ease`, `lastIntervalDays`, `status`) are assigned by Fixmind, not by the caller.
 
 ## Quality gate
 
@@ -48,15 +48,15 @@ For example, a native app failing to resolve a database package is not only a mo
 
 ## Spaced repetition
 
-When you review a lesson with `fixmind review`, Fixmind sets the next review date from your answer and the current review count:
+When you review a lesson with `fixmind review`, Fixmind sets the next review date with an adaptive, SM-2-style schedule. Each lesson tracks an ease factor that reflects how consistently you have known it:
 
-| Understanding | Interval |
-|---|---|
-| `copied_blindly` | Always 1 day. Review again almost immediately. |
-| `partial` | `3 x review count` days, capped at 14. |
-| `understood` | `7 x 2^(review count - 1)` days, capped at 60. |
+| Understanding | First pass | After that |
+|---|---|---|
+| `understood` | 7 days | last interval x ease, capped at 60 days. |
+| `partial` | 3 days | last interval x ease, capped at 14 days. |
+| `copied_blindly` | Always 1 day, and the interval ladder resets. | |
 
-A lesson marked `understood` is reviewed after 7 days, then 14, then 28, then 56, then every 60. A newly saved lesson is always due the next day.
+The ease factor starts at 2.5, moves up 0.1 for `understood`, down 0.14 for `partial`, and down 0.54 for `copied_blindly`, and never drops below 1.3. Because a lapse resets the interval ladder and lowers the ease factor, a lesson that once burned you climbs back to long intervals more slowly than one you consistently nail. A newly saved lesson is always due the next day.
 
 ## Superseding
 

@@ -1,12 +1,12 @@
-import { createElement, type ReactNode } from "react";
+import cliReferenceRaw from "@docs/cli-reference.md?raw";
+import faqRaw from "@docs/faq.md?raw";
+import lessonSchemaRaw from "@docs/lesson-schema.md?raw";
+import mcpClientsRaw from "@docs/mcp-clients.md?raw";
+import mcpIntegrationRaw from "@docs/mcp-integration.md?raw";
 import quickstartRaw from "@docs/quickstart.md?raw";
 import syncSetupRaw from "@docs/sync-setup.md?raw";
-import cliReferenceRaw from "@docs/cli-reference.md?raw";
-import mcpClientsRaw from "@docs/mcp-clients.md?raw";
-import lessonSchemaRaw from "@docs/lesson-schema.md?raw";
-import faqRaw from "@docs/faq.md?raw";
-import mcpIntegrationRaw from "@docs/mcp-integration.md?raw";
 import changelogRaw from "@root/CHANGELOG.md?raw";
+import { createElement, type ReactNode } from "react";
 
 export type DocEntry = {
   id: string;
@@ -136,9 +136,7 @@ export const DOC_FILENAME_TO_ID: Record<string, string> = {
   "changelog.md": "changelog",
 };
 
-export function resolveDocLink(
-  href: string,
-): { docId: string; hash: string } | null {
+export function resolveDocLink(href: string): { docId: string; hash: string } | null {
   const match = /([^/]+\.md)(#.*)?$/i.exec(href);
   if (!match) return null;
   const docId = DOC_FILENAME_TO_ID[match[1].toLowerCase()];
@@ -222,13 +220,10 @@ function outlineSlugify(text: string): string {
 }
 
 function buildSearchText(doc: DocEntry): string {
-  const withoutCode = doc.content
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`([^`]+)`/g, "$1");
-  const headings = Array.from(
-    withoutCode.matchAll(/^#{1,3}\s+(.+)$/gm),
-    (match) => match[1],
-  ).join(" ");
+  const withoutCode = doc.content.replace(/```[\s\S]*?```/g, " ").replace(/`([^`]+)`/g, "$1");
+  const headings = Array.from(withoutCode.matchAll(/^#{1,3}\s+(.+)$/gm), (match) => match[1]).join(
+    " ",
+  );
   return `${doc.title} ${doc.summary} ${doc.keywords.join(" ")} ${headings} ${withoutCode}`.toLowerCase();
 }
 
@@ -236,7 +231,6 @@ function buildDocSections(doc: DocEntry): DocSection[] {
   const lines = doc.content.split(/\r?\n/);
   const sections: DocSection[] = [];
   let currentTitle = doc.title;
-  let currentLevel = 1;
   let currentLines: string[] = [];
 
   const flush = () => {
@@ -258,7 +252,6 @@ function buildDocSections(doc: DocEntry): DocSection[] {
     if (headingMatch) {
       flush();
       currentTitle = headingMatch[2].trim();
-      currentLevel = headingMatch[1].length;
       currentLines = [];
       continue;
     }
@@ -274,8 +267,7 @@ function buildDocSections(doc: DocEntry): DocSection[] {
         {
           id: slugify(doc.title),
           title: doc.title,
-          searchText:
-            `${doc.title} ${doc.summary} ${doc.content}`.toLowerCase(),
+          searchText: `${doc.title} ${doc.summary} ${doc.content}`.toLowerCase(),
           preview: doc.summary,
         },
       ];
@@ -290,10 +282,7 @@ function selectSectionMatch(doc: SearchDoc, terms: string[]): SearchResult {
   return {
     doc,
     section: best && best.score > 0 ? best.section : doc.sections[0],
-    score:
-      best && best.score > 0
-        ? scoreDoc(doc, terms) + best.score
-        : scoreDoc(doc, terms),
+    score: best && best.score > 0 ? scoreDoc(doc, terms) + best.score : scoreDoc(doc, terms),
   };
 }
 
@@ -403,8 +392,7 @@ function scoreText(
 
   let score = 0;
   if (prefix) score += options.prefixBonus;
-  if (wholeWordCount > 0)
-    score += options.exactBonus + Math.min(wholeWordCount - 1, 2);
+  if (wholeWordCount > 0) score += options.exactBonus + Math.min(wholeWordCount - 1, 2);
   if (score === 0 && options.allowSubstring && normalized.includes(term)) {
     score += 1;
   }

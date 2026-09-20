@@ -23,8 +23,8 @@ export default function Hero() {
             <span className="text-accent text-glow">Learn from it.</span>
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted">
-            Fixmind turns each AI-assisted fix into a local lesson you can
-            review, search, and reuse the next time the same bug shows up.
+            Fixmind turns each AI-assisted fix into a local lesson you can review, search, and reuse
+            the next time the same bug shows up.
           </p>
 
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">

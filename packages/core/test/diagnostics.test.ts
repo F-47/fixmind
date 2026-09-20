@@ -66,7 +66,10 @@ test("buildDiagnosticsReport explains when git autofill and Claude permissions a
 
     assert.match(report, /Git repository: yes/);
     assert.match(report, /Current diff: 1 changed file\(s\)/);
-    assert.match(report, /Git autofill: filesChanged=yes, concepts=yes, mistakePattern=yes, codeExample=yes/);
+    assert.match(
+      report,
+      /Git autofill: filesChanged=yes, concepts=yes, mistakePattern=yes, codeExample=yes/,
+    );
     assert.match(report, /Claude save permission: enabled/);
     assert.match(report, /No obvious local blocker found/);
   } finally {
@@ -77,7 +80,9 @@ test("buildDiagnosticsReport explains when git autofill and Claude permissions a
 
 test("buildDiagnosticsReport explains missing local blockers when no repo or setup exists", () => {
   const homeDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-diagnostics-empty-home-"));
-  const projectDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-diagnostics-empty-project-"));
+  const projectDirectory = fs.mkdtempSync(
+    path.join(os.tmpdir(), "fixmind-diagnostics-empty-project-"),
+  );
   try {
     const report = buildDiagnosticsReport(projectDirectory, homeDirectory).join("\n");
 

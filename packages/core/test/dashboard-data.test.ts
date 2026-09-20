@@ -18,10 +18,19 @@ function lesson(overrides: Partial<Lesson> = {}): Lesson {
     fixSummary: "Revoke each object URL when the preview changes or unmounts.",
     concepts: ["Resource cleanup"],
     filesChanged: ["Upload.tsx"],
-    reviewQuestions: [{ id: "q1", question: "When should it be revoked?", expectedAnswer: "On replacement or cleanup.", status: "unanswered" }],
+    reviewQuestions: [
+      {
+        id: "q1",
+        question: "When should it be revoked?",
+        expectedAnswer: "On replacement or cleanup.",
+        status: "unanswered",
+      },
+    ],
     understanding: "unknown",
     nextReviewAt: "2026-06-02T00:00:00.000Z",
     reviewCount: 0,
+    ease: 2.5,
+    lastIntervalDays: null,
     tags: [],
     status: "active",
     ...overrides,
@@ -30,7 +39,10 @@ function lesson(overrides: Partial<Lesson> = {}): Lesson {
 
 test("uses deterministic presentation fallbacks for old lessons", () => {
   const view = toDashboardLesson(lesson());
-  assert.equal(view.displayTakeaway, "Revoke each object URL when the preview changes or unmounts.");
+  assert.equal(
+    view.displayTakeaway,
+    "Revoke each object URL when the preview changes or unmounts.",
+  );
   assert.equal(view.displayPattern, "Resource cleanup");
 });
 
@@ -109,7 +121,13 @@ test("buildDashboardData includes monthly learning insights from recent lessons"
     }),
   ];
 
-  const data = buildDashboardData(lessons, lessons, lessons.slice(0, 2), [{ name: "Hydration timing", count: 2 }], now);
+  const data = buildDashboardData(
+    lessons,
+    lessons,
+    lessons.slice(0, 2),
+    [{ name: "Hydration timing", count: 2 }],
+    now,
+  );
 
   assert.equal(data.insights.periodDays, 30);
   assert.equal(data.insights.recentLessons, 3);

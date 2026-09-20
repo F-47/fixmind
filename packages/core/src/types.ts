@@ -42,6 +42,8 @@ export interface Lesson {
   understanding: Understanding;
   nextReviewAt: string;
   reviewCount: number;
+  ease: number;
+  lastIntervalDays: number | null;
   sourceDiff?: string;
   tags: Tag[];
   status: LessonStatus;

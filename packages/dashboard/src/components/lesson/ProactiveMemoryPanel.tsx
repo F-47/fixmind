@@ -1,4 +1,4 @@
-import { ExternalLink, ChevronDown, X } from "lucide-react";
+import { ChevronDown, ExternalLink, X } from "lucide-react";
 import { cn } from "@/components/shared/cn";
 import { formatToolName } from "@/lib/format";
 import type { ProactiveMemoryMatch } from "@/lib/proactive-memory";
@@ -19,12 +19,10 @@ export function ProactiveMemoryPanel({ matches, onDismiss, onOpenLesson }: Props
           <div className="font-mono text-[11px] uppercase tracking-[.22em] text-warn">
             Before you fix
           </div>
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Relevant memory found
-          </h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Relevant memory found</h2>
           <p className="max-w-2xl text-[15px] leading-relaxed text-muted sm:text-base">
-            {matches.length} prior lesson{matches.length === 1 ? "" : "s"} match this
-            fix. Expand to review them before continuing.
+            {matches.length} prior lesson{matches.length === 1 ? "" : "s"} match this fix. Expand to
+            review them before continuing.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
@@ -55,9 +53,7 @@ export function ProactiveMemoryPanel({ matches, onDismiss, onOpenLesson }: Props
               key={match.lesson.id}
               className={cn(
                 "rounded-2xl border p-4",
-                index === 0
-                  ? "border-warn/25 bg-page/80"
-                  : "border-line bg-page/55",
+                index === 0 ? "border-warn/25 bg-page/80" : "border-line bg-page/55",
               )}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">

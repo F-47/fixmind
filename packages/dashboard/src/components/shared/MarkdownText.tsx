@@ -13,21 +13,15 @@ export function MarkdownText({ children, className }: MarkdownTextProps) {
       <ReactMarkdown
         components={{
           h1: ({ children: content }) => (
-            <h1 className="mt-5 text-2xl font-semibold tracking-tight first:mt-0">
-              {content}
-            </h1>
+            <h1 className="mt-5 text-2xl font-semibold tracking-tight first:mt-0">{content}</h1>
           ),
           h2: ({ children: content }) => (
-            <h2 className="mt-5 text-xl font-semibold tracking-tight first:mt-0">
-              {content}
-            </h2>
+            <h2 className="mt-5 text-xl font-semibold tracking-tight first:mt-0">{content}</h2>
           ),
           h3: ({ children: content }) => (
             <h3 className="mt-4 text-lg font-semibold first:mt-0">{content}</h3>
           ),
-          p: ({ children: content }) => (
-            <p className="mt-3 first:mt-0">{content}</p>
-          ),
+          p: ({ children: content }) => <p className="mt-3 first:mt-0">{content}</p>,
           ul: ({ children: content }) => (
             <ul className="mt-3 list-disc space-y-1 pl-5">{content}</ul>
           ),
@@ -56,8 +50,7 @@ export function MarkdownText({ children, className }: MarkdownTextProps) {
             </pre>
           ),
           code: ({ children: content, className: codeClassName }) => {
-            const isBlock =
-              Boolean(codeClassName) || String(content).includes("\n");
+            const isBlock = Boolean(codeClassName) || String(content).includes("\n");
             return (
               <code
                 className={cn(

@@ -1,15 +1,12 @@
 import { spawn } from "node:child_process";
-import { fileURLToPath } from "node:url";
 import { stdin, stdout } from "node:process";
-import { isCancel, log, outro, password } from "@clack/prompts";
-import { readConfig, writeConfig } from "./config.js";
-import { createLessonStore, initializeDataDirectory } from "./storage.js";
-import { createSyncEngine, PRICING_URL } from "./sync.js";
-import type { SetupScope } from "./setup.js";
+import { fileURLToPath } from "node:url";
+import { confirm, isCancel, log, password } from "@clack/prompts";
 import {
   common,
-  isAddressInUseError,
+  greenText,
   intro,
+  isAddressInUseError,
   multiselect,
   note,
   optionalPort,
@@ -19,16 +16,28 @@ import {
   startSpinner,
   supportedClientOptions,
   terminalLink,
+  text,
   unwrap,
   validateClients,
   validateScope,
-  greenText,
-  text,
 } from "./cli-utils.js";
-import { configureClients, configureInstructions, configurePermissions, detectClients, genericMcpConfiguration } from "./setup.js";
+import { readConfig, writeConfig } from "./config.js";
+import { configureSessionStartHook } from "./session-injection.js";
+import type { SetupScope } from "./setup.js";
+import {
+  configureClients,
+  configureInstructions,
+  configurePermissions,
+  detectClients,
+  genericMcpConfiguration,
+} from "./setup.js";
+import { installStarterLessons, starterLessonCount } from "./starter-lessons.js";
+import { createLessonStore, initializeDataDirectory } from "./storage.js";
+import { createSyncEngine, PRICING_URL } from "./sync.js";
 
 const DEFAULT_SUPABASE_URL = "https://jpczzgekindvuivnwjuw.supabase.co";
-const DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwY3p6Z2VraW5kdnVpdm53anV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwNzEyMjEsImV4cCI6MjA5NzY0NzIyMX0.qG-9H5BZi3sKHVQrzL3iI9ALmJgoTizLCU4Bxzpw0Bo";
+const DEFAULT_SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwY3p6Z2VraW5kdnVpdm53anV3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwNzEyMjEsImV4cCI6MjA5NzY0NzIyMX0.qG-9H5BZi3sKHVQrzL3iI9ALmJgoTizLCU4Bxzpw0Bo";
 export async function setup(options: Record<string, string | boolean>): Promise<void> {
   const paths = initializeDataDirectory();
   const config = readConfig();
@@ -67,7 +76,11 @@ export async function setup(options: Record<string, string | boolean>): Promise<
     const selectedScope = await select({
       message: "Where should fixmind be configured?",
       options: [
-        { value: "user", label: "This device", hint: "Available in every project (~/.claude, ~/.cursor, ...)" },
+        {
+          value: "user",
+          label: "This device",
+          hint: "Available in every project (~/.claude, ~/.cursor, ...)",
+        },
         { value: "project", label: "This project only", hint: `Stored inside ${projectDirectory}` },
       ],
       initialValue: "user",
@@ -87,10 +100,67 @@ export async function setup(options: Record<string, string | boolean>): Promise<
   const results = configureClients(setupOptions);
   const instructions = configureInstructions(setupOptions);
   const permissions = configurePermissions(setupOptions);
-  logSetupResults(paths.directory, scope, captureMode, results, instructions, permissions, projectDirectory);
+  logSetupResults(
+    paths.directory,
+    scope,
+    captureMode,
+    results,
+    instructions,
+    permissions,
+    projectDirectory,
+  );
+
+  if (options["starter-pack"] || (interactive && (await askStarterPack()))) {
+    installStarterPack(dryRun);
+  }
+
+  if (clients.includes("claude")) {
+    if (options["session-start-hook"] || (interactive && (await askSessionStartHook()))) {
+      const hookResult = configureSessionStartHook({ scope, projectDirectory, dryRun });
+      console.log(`Session-start hook: ${hookResult.status} - ${hookResult.filePath}`);
+    }
+  }
 
   if (!logSetupFollowUp(options, interactive)) return;
   await handleSetupNextAction(options);
+}
+
+async function askSessionStartHook(): Promise<boolean> {
+  return unwrap(
+    await confirm({
+      message: "Inject relevant lessons when Claude Code sessions start?",
+      initialValue: false,
+      ...common,
+    }),
+  );
+}
+
+async function askStarterPack(): Promise<boolean> {
+  return unwrap(
+    await confirm({
+      message: `Load ${starterLessonCount()} starter lessons to try reviews and memory?`,
+      initialValue: false,
+      ...common,
+    }),
+  );
+}
+
+function installStarterPack(dryRun: boolean): void {
+  if (dryRun) {
+    console.log(`Starter lessons: would install ${starterLessonCount()} examples.`);
+    return;
+  }
+  const store = createLessonStore();
+  try {
+    const result = installStarterLessons(store);
+    console.log(
+      result.skipped
+        ? "Starter lessons: already installed."
+        : `Starter lessons: installed ${result.installed} examples.`,
+    );
+  } finally {
+    store.close();
+  }
 }
 
 function setupSummaryLine(scope: SetupScope, projectDirectory: string): string {
@@ -111,15 +181,23 @@ function logSetupResults(
   console.log(`Local data initialized at ${pathsDirectory}.`);
   console.log(setupSummaryLine(scope, projectDirectory));
   console.log(`Capture mode: ${captureMode}.`);
-  for (const result of results) console.log(`${result.client}: ${result.status} - ${result.detail}`);
-  for (const result of instructions) console.log(`${result.client} instructions: ${result.status} - ${result.filePath}`);
-  for (const result of permissions) console.log(`${result.client} permissions: ${result.status} - ${result.filePath}`);
+  for (const result of results)
+    console.log(`${result.client}: ${result.status} - ${result.detail}`);
+  for (const result of instructions)
+    console.log(`${result.client} instructions: ${result.status} - ${result.filePath}`);
+  for (const result of permissions)
+    console.log(`${result.client} permissions: ${result.status} - ${result.filePath}`);
   console.log("Restart configured AI clients so they discover the MCP server.");
 }
 
-function logSetupFollowUp(options: Record<string, string | boolean>, interactive: boolean): boolean {
-  if (Boolean(options["dry-run"]) || options["no-dashboard"] || !interactive) {
-    console.log("Run `npx fixmind dashboard` to open the local dashboard, or `npx fixmind login` to enable sync.");
+function logSetupFollowUp(
+  options: Record<string, string | boolean>,
+  interactive: boolean,
+): boolean {
+  if (options["dry-run"] || options["no-dashboard"] || !interactive) {
+    console.log(
+      "Run `npx fixmind dashboard` to open the local dashboard, or `npx fixmind login` to enable sync.",
+    );
     return false;
   }
   return true;
@@ -129,9 +207,17 @@ async function handleSetupNextAction(options: Record<string, string | boolean>):
   const nextAction = await select({
     message: "What would you like to do next?",
     options: [
-      { value: "dashboard", label: "Open dashboard", hint: "Launch the local dashboard in your browser." },
+      {
+        value: "dashboard",
+        label: "Open dashboard",
+        hint: "Launch the local dashboard in your browser.",
+      },
       { value: "login", label: "Sign in now", hint: "Set up encrypted sync on this machine." },
-      { value: "done", label: "Finish setup", hint: "Return to the terminal without opening anything." },
+      {
+        value: "done",
+        label: "Finish setup",
+        hint: "Return to the terminal without opening anything.",
+      },
     ],
     initialValue: "done",
     ...common,
@@ -163,7 +249,9 @@ export async function settingsCommand(options: Record<string, string | boolean>)
   const current = readConfig();
   const interactive = stdin.isTTY && stdout.isTTY;
   const captureModeInput = optionString(options["capture-mode"]);
-  const captureMode = captureModeInput ? validateCaptureMode(captureModeInput) : await chooseCaptureMode(current.captureMode, interactive);
+  const captureMode = captureModeInput
+    ? validateCaptureMode(captureModeInput)
+    : await chooseCaptureMode(current.captureMode, interactive);
   const next = { ...current, captureMode };
   writeConfig(next);
   console.log(`Capture mode set to ${captureMode}.`);
@@ -183,8 +271,16 @@ async function chooseCaptureMode(
   const selected = await select({
     message: "Capture mode",
     options: [
-      { value: "strict", label: "Strict", hint: "Default. Capture only clear, learning-worthy fixes." },
-      { value: "balanced", label: "Balanced", hint: "Capture more borderline fixes, while still rejecting junk." },
+      {
+        value: "strict",
+        label: "Strict",
+        hint: "Default. Capture only clear, learning-worthy fixes.",
+      },
+      {
+        value: "balanced",
+        label: "Balanced",
+        hint: "Capture more borderline fixes, while still rejecting junk.",
+      },
     ],
     initialValue: current,
     ...common,
@@ -229,7 +325,7 @@ export async function loginCommand(options: Record<string, string | boolean>): P
     const message = result.entitled
       ? greenText(`Logged in as ${result.email}. Sync is active.`)
       : `Signed in as ${result.email}. An active Pro or Team plan is required to enable sync. ` +
-        `Subscribe at ${PRICING_URL} to start syncing, then run \`npx fixmind sync push\`.`; 
+        `Subscribe at ${PRICING_URL} to start syncing, then run \`npx fixmind sync push\`.`;
 
     console.log(message);
   } finally {
@@ -245,7 +341,8 @@ async function promptPassphrase(interactive: boolean): Promise<string> {
   while (true) {
     const value = unwrap(
       await password({
-        message: "Sync encryption passphrase (encrypts lessons before they sync; use the same one on every machine)",
+        message:
+          "Sync encryption passphrase (encrypts lessons before they sync; use the same one on every machine)",
         ...common,
       }),
     );
@@ -264,8 +361,12 @@ function resolveSupabaseCredentials(options: Record<string, string | boolean>): 
   supabaseAnonKey: string;
 } {
   return {
-    supabaseUrl: optionString(options.url) ?? process.env.FIXMIND_SUPABASE_URL ?? DEFAULT_SUPABASE_URL,
-    supabaseAnonKey: optionString(options.key) ?? process.env.FIXMIND_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_ANON_KEY,
+    supabaseUrl:
+      optionString(options.url) ?? process.env.FIXMIND_SUPABASE_URL ?? DEFAULT_SUPABASE_URL,
+    supabaseAnonKey:
+      optionString(options.key) ??
+      process.env.FIXMIND_SUPABASE_ANON_KEY ??
+      DEFAULT_SUPABASE_ANON_KEY,
   };
 }
 
@@ -275,11 +376,22 @@ async function performLogin(
   interactive: boolean,
   supabaseUrl: string,
   supabaseAnonKey: string,
-): Promise<{ email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } }> {
+): Promise<{
+  email: string;
+  entitled: boolean;
+  session: { accessToken: string; refreshToken: string };
+}> {
   const usePasswordLogin = Boolean(optionString(options.email) || options["password-login"]);
   const fixedPassphrase = optionString(options.passphrase);
   if (usePasswordLogin) {
-    return loginWithPassword(engine, options, interactive, supabaseUrl, supabaseAnonKey, fixedPassphrase);
+    return loginWithPassword(
+      engine,
+      options,
+      interactive,
+      supabaseUrl,
+      supabaseAnonKey,
+      fixedPassphrase,
+    );
   }
   return interactive
     ? loginWithGithubInteractive(engine, supabaseUrl, supabaseAnonKey, fixedPassphrase)
@@ -293,15 +405,35 @@ async function loginWithPassword(
   supabaseUrl: string,
   supabaseAnonKey: string,
   fixedPassphrase: string | undefined,
-): Promise<{ email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } }> {
+): Promise<{
+  email: string;
+  entitled: boolean;
+  session: { accessToken: string; refreshToken: string };
+}> {
   return retryIncorrectPassphrase(interactive, fixedPassphrase, async (passphrase) => {
-    const email = optionString(options.email) ?? (interactive
-      ? unwrap(await text({ message: "Email", ...common }))
-      : (() => { throw new Error("Usage: fixmind login --email <email> --password <password> --passphrase <passphrase>"); })());
-    const userPassword = optionString(options.password) ?? (interactive
-      ? unwrap(await password({ message: "Password", ...common }))
-      : (() => { throw new Error("--password is required outside an interactive terminal."); })());
-    return engine.login({ supabaseUrl, supabaseAnonKey, email, password: userPassword, passphrase });
+    const email =
+      optionString(options.email) ??
+      (interactive
+        ? unwrap(await text({ message: "Email", ...common }))
+        : (() => {
+            throw new Error(
+              "Usage: fixmind login --email <email> --password <password> --passphrase <passphrase>",
+            );
+          })());
+    const userPassword =
+      optionString(options.password) ??
+      (interactive
+        ? unwrap(await password({ message: "Password", ...common }))
+        : (() => {
+            throw new Error("--password is required outside an interactive terminal.");
+          })());
+    return engine.login({
+      supabaseUrl,
+      supabaseAnonKey,
+      email,
+      password: userPassword,
+      passphrase,
+    });
   });
 }
 
@@ -310,7 +442,11 @@ async function loginWithGithubInteractive(
   supabaseUrl: string,
   supabaseAnonKey: string,
   fixedPassphrase: string | undefined,
-): Promise<{ email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } }> {
+): Promise<{
+  email: string;
+  entitled: boolean;
+  session: { accessToken: string; refreshToken: string };
+}> {
   let spinnerHandle = startSpinner("Opening your browser to sign in with GitHub...");
   let fallbackUrl: string | undefined;
   try {
@@ -325,11 +461,21 @@ async function loginWithGithubInteractive(
       },
     });
     spinnerHandle.stop("GitHub sign-in complete. Enter your sync passphrase.");
-    return completeGithubLogin(engine, supabaseUrl, supabaseAnonKey, githubSession, fixedPassphrase, true);
+    return completeGithubLogin(
+      engine,
+      supabaseUrl,
+      supabaseAnonKey,
+      githubSession,
+      fixedPassphrase,
+      true,
+    );
   } catch (error) {
     spinnerHandle.stop("GitHub sign in failed.");
     if (fallbackUrl) {
-      log.message(`If the browser didn't open: ${terminalLink("Click here to sign in", fallbackUrl)}`, common);
+      log.message(
+        `If the browser didn't open: ${terminalLink("Click here to sign in", fallbackUrl)}`,
+        common,
+      );
     }
     throw error;
   }
@@ -340,31 +486,55 @@ async function loginWithGithubNonInteractive(
   supabaseUrl: string,
   supabaseAnonKey: string,
   fixedPassphrase: string | undefined,
-): Promise<{ email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } }> {
+): Promise<{
+  email: string;
+  entitled: boolean;
+  session: { accessToken: string; refreshToken: string };
+}> {
   const githubSession = await engine.loginWithGithub({
     supabaseUrl,
     supabaseAnonKey,
-    onAuthUrl: (url) => console.log(`Opening your browser to sign in with GitHub...\nIf it doesn't open, visit: ${url}`),
+    onAuthUrl: (url) =>
+      console.log(
+        `Opening your browser to sign in with GitHub...\nIf it doesn't open, visit: ${url}`,
+      ),
   });
-  return completeGithubLogin(engine, supabaseUrl, supabaseAnonKey, githubSession, fixedPassphrase, false);
+  return completeGithubLogin(
+    engine,
+    supabaseUrl,
+    supabaseAnonKey,
+    githubSession,
+    fixedPassphrase,
+    false,
+  );
 }
 
 async function completeGithubLogin(
   engine: ReturnType<typeof createSyncEngine>,
   supabaseUrl: string,
   supabaseAnonKey: string,
-  githubSession: { email: string; userId: string; session: { accessToken: string; refreshToken: string } },
+  githubSession: {
+    email: string;
+    userId: string;
+    session: { accessToken: string; refreshToken: string };
+  },
   fixedPassphrase: string | undefined,
   interactive: boolean,
-): Promise<{ email: string; entitled: boolean; session: { accessToken: string; refreshToken: string } }> {
-  return retryIncorrectPassphrase(interactive, fixedPassphrase, async (passphrase) => engine.completeGithubLogin({
-    supabaseUrl,
-    supabaseAnonKey,
-    email: githubSession.email,
-    userId: githubSession.userId,
-    session: githubSession.session,
-    passphrase,
-  }));
+): Promise<{
+  email: string;
+  entitled: boolean;
+  session: { accessToken: string; refreshToken: string };
+}> {
+  return retryIncorrectPassphrase(interactive, fixedPassphrase, async (passphrase) =>
+    engine.completeGithubLogin({
+      supabaseUrl,
+      supabaseAnonKey,
+      email: githubSession.email,
+      userId: githubSession.userId,
+      session: githubSession.session,
+      passphrase,
+    }),
+  );
 }
 
 export async function logoutCommand(): Promise<void> {
@@ -408,12 +578,14 @@ export async function syncCommand(sub: string | undefined): Promise<void> {
   }
 }
 
-async function printSyncStatus(
-  engine: ReturnType<typeof createSyncEngine>,
-): Promise<void> {
+async function printSyncStatus(engine: ReturnType<typeof createSyncEngine>): Promise<void> {
   const status = await engine.status();
   if (!status.loggedIn) {
-    console.log(status.needsReauth ? "Sync session expired. Run `npx fixmind login` again." : "Not logged in. Run `npx fixmind login`.");
+    console.log(
+      status.needsReauth
+        ? "Sync session expired. Run `npx fixmind login` again."
+        : "Not logged in. Run `npx fixmind login`.",
+    );
     return;
   }
   if (!status.syncEnabled) {
@@ -442,7 +614,7 @@ async function retryIncorrectPassphrase<T>(
   action: (passphrase: string) => Promise<T>,
 ): Promise<T> {
   for (;;) {
-    const passphrase = fixedPassphrase ?? await promptPassphrase(interactive);
+    const passphrase = fixedPassphrase ?? (await promptPassphrase(interactive));
     try {
       return await action(passphrase);
     } catch (error) {

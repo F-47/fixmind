@@ -30,19 +30,23 @@ export const lessonQualityCases: LessonQualityCase[] = [
         "localStorage does not exist on the server, so the server always renders the default theme while the client immediately renders the stored theme, producing two different outputs for the same markup.",
       fixSummary:
         "Render the default theme on the server and read localStorage inside a useEffect after mount, so the markup matches on both server and client before the theme is corrected.",
-      takeaway: "Never read browser-only storage during the initial render - read it after mount instead.",
+      takeaway:
+        "Never read browser-only storage during the initial render - read it after mount instead.",
       whenNotApplicable:
         "Does not apply to values that are guaranteed to be identical on server and client, like a static default theme with no persisted preference.",
       concepts: ["hydration", "useEffect"],
-      badCodeExample: "const [theme, setTheme] = useState(localStorage.getItem('theme') ?? 'light')",
+      badCodeExample:
+        "const [theme, setTheme] = useState(localStorage.getItem('theme') ?? 'light')",
       goodCodeExample:
         "const [theme, setTheme] = useState('light')\nuseEffect(() => {\n  const stored = localStorage.getItem('theme')\n  if (stored) setTheme(stored)\n}, [])",
-      reviewQuestions: [{
-        question:
-          "A teammate wants to read the user's saved sidebar width on first render to avoid a layout shift. What problem will they hit, and how should they structure the code instead?",
-        expectedAnswer:
-          "The same hydration mismatch: the server has no localStorage, so it would render a default width while the client renders the saved one. They should render the default width on the server and apply the saved width inside a useEffect after mount.",
-      }],
+      reviewQuestions: [
+        {
+          question:
+            "A teammate wants to read the user's saved sidebar width on first render to avoid a layout shift. What problem will they hit, and how should they structure the code instead?",
+          expectedAnswer:
+            "The same hydration mismatch: the server has no localStorage, so it would render a default width while the client renders the saved one. They should render the default width on the server and apply the saved width inside a useEffect after mount.",
+        },
+      ],
     },
   },
   {
@@ -54,16 +58,23 @@ export const lessonQualityCases: LessonQualityCase[] = [
       problem: "The cli.ts file had grown too large and mixed unrelated concerns.",
       mistake:
         "Moved formatDate and parseDate out of cli.ts into a new date-utils.ts file without changing their implementation.",
-      rootCause: "The helpers were defined inline in cli.ts alongside unrelated CLI argument parsing.",
-      fixSummary: "Extracted formatDate and parseDate into src/date-utils.ts and imported them from cli.ts.",
-      takeaway: "Group reusable date-formatting helpers in their own module for easier reuse and testing.",
-      whenNotApplicable: "Does not apply to helpers that are only used in one file - inlining is fine there.",
+      rootCause:
+        "The helpers were defined inline in cli.ts alongside unrelated CLI argument parsing.",
+      fixSummary:
+        "Extracted formatDate and parseDate into src/date-utils.ts and imported them from cli.ts.",
+      takeaway:
+        "Group reusable date-formatting helpers in their own module for easier reuse and testing.",
+      whenNotApplicable:
+        "Does not apply to helpers that are only used in one file - inlining is fine there.",
       concepts: ["code organization"],
-      reviewQuestions: [{
-        question: "If you find a helper used by three different CLI commands, where should it live and why?",
-        expectedAnswer:
-          "In its own shared module, so each command imports the same implementation instead of duplicating it.",
-      }],
+      reviewQuestions: [
+        {
+          question:
+            "If you find a helper used by three different CLI commands, where should it live and why?",
+          expectedAnswer:
+            "In its own shared module, so each command imports the same implementation instead of duplicating it.",
+        },
+      ],
     },
   },
   {
@@ -75,18 +86,22 @@ export const lessonQualityCases: LessonQualityCase[] = [
       problem: "The primary button looked cramped on mobile screens compared to the design spec.",
       mistake:
         "Used a fixed 8px padding on the button for all screen sizes instead of the 12px the design spec calls for on small screens.",
-      rootCause: "The button's className hardcoded padding-2 instead of a responsive padding utility.",
-      fixSummary: "Changed the button's className to use padding-3 on small screens, matching the design spec.",
+      rootCause:
+        "The button's className hardcoded padding-2 instead of a responsive padding utility.",
+      fixSummary:
+        "Changed the button's className to use padding-3 on small screens, matching the design spec.",
       takeaway: "Match spacing values to the design spec's breakpoints, not a single fixed value.",
       whenNotApplicable:
         "Does not apply once the design system defines a single padding scale that already matches the spec at every breakpoint.",
       concepts: ["styling", "tailwind"],
-      reviewQuestions: [{
-        question:
-          "A different component hardcodes a 16px margin regardless of screen size. What should you check before assuming that's correct?",
-        expectedAnswer:
-          "Check whether the design spec defines different spacing per breakpoint, since a single hardcoded value may not match the spec on other screen sizes.",
-      }],
+      reviewQuestions: [
+        {
+          question:
+            "A different component hardcodes a 16px margin regardless of screen size. What should you check before assuming that's correct?",
+          expectedAnswer:
+            "Check whether the design spec defines different spacing per breakpoint, since a single hardcoded value may not match the spec on other screen sizes.",
+        },
+      ],
     },
   },
   {
@@ -102,10 +117,12 @@ export const lessonQualityCases: LessonQualityCase[] = [
       takeaway: "Be more careful with the code.",
       whenNotApplicable: "Not sure.",
       concepts: ["bugfix"],
-      reviewQuestions: [{
-        question: "What did you change to fix the login bug?",
-        expectedAnswer: "Fixed the logic that was wrong.",
-      }],
+      reviewQuestions: [
+        {
+          question: "What did you change to fix the login bug?",
+          expectedAnswer: "Fixed the logic that was wrong.",
+        },
+      ],
     },
   },
   {
@@ -124,12 +141,14 @@ export const lessonQualityCases: LessonQualityCase[] = [
       takeaway: "Guard optional nested fields before accessing their properties.",
       whenNotApplicable: "Does not apply when the schema guarantees avatar is always present.",
       concepts: ["null safety"],
-      reviewQuestions: [{
-        question:
-          "A settings page reads user.preferences.theme the same way. What should you check before assuming preferences.theme is safe to access?",
-        expectedAnswer:
-          "Whether preferences (or theme) can be null/undefined for some users, and guard the access the same way - check the parent before reading its property.",
-      }],
+      reviewQuestions: [
+        {
+          question:
+            "A settings page reads user.preferences.theme the same way. What should you check before assuming preferences.theme is safe to access?",
+          expectedAnswer:
+            "Whether preferences (or theme) can be null/undefined for some users, and guard the access the same way - check the parent before reading its property.",
+        },
+      ],
     },
   },
   {
@@ -144,16 +163,19 @@ export const lessonQualityCases: LessonQualityCase[] = [
         "slice's end index is exclusive, so subtracting 1 drops the last element of every page instead of including it.",
       fixSummary:
         "Changed the slice call to array.slice(start, start + pageSize), since slice already excludes the end index.",
-      takeaway: "Remember that Array.prototype.slice's end argument is exclusive - don't subtract 1 from it.",
+      takeaway:
+        "Remember that Array.prototype.slice's end argument is exclusive - don't subtract 1 from it.",
       whenNotApplicable:
         "Does not apply to APIs whose end index is inclusive, like some libraries' substring helpers.",
       concepts: ["pagination", "Array.slice"],
       badCodeExample: "items.slice(start, start + pageSize - 1)",
       goodCodeExample: "items.slice(start, start + pageSize)",
-      reviewQuestions: [{
-        question: "What did you change to fix the pagination bug?",
-        expectedAnswer: "Removed the '- 1' from the slice end index.",
-      }],
+      reviewQuestions: [
+        {
+          question: "What did you change to fix the pagination bug?",
+          expectedAnswer: "Removed the '- 1' from the slice end index.",
+        },
+      ],
     },
   },
   {
@@ -164,21 +186,26 @@ export const lessonQualityCases: LessonQualityCase[] = [
       title: "Crash when API returns null for an optional field",
       problem:
         "The orders page crashed with 'Cannot read properties of null (reading map)' for orders with no line items.",
-      mistake: "Called response.lineItems.map(...) assuming the API always returns an array for lineItems.",
+      mistake:
+        "Called response.lineItems.map(...) assuming the API always returns an array for lineItems.",
       rootCause:
         "The API returns null for lineItems when an order has no items, instead of an empty array, so .map() is called on null.",
       fixSummary: "Added a fallback to an empty array before calling .map() on lineItems.",
-      takeaway: "Treat API fields documented as arrays as possibly null, and default to an empty array before iterating.",
-      whenNotApplicable: "Does not apply to fields the API contract guarantees are always a non-null array.",
+      takeaway:
+        "Treat API fields documented as arrays as possibly null, and default to an empty array before iterating.",
+      whenNotApplicable:
+        "Does not apply to fields the API contract guarantees are always a non-null array.",
       concepts: ["null safety", "API contracts"],
       badCodeExample: "response.lineItems.map((item) => item.sku)",
       goodCodeExample: "(response.lineItems ?? []).map((item) => item.sku)",
-      reviewQuestions: [{
-        question:
-          "Another endpoint documents 'tags: string[]' but sometimes returns null. A teammate writes tags.map(...) directly. What will happen, and what should they check for any field documented as an array?",
-        expectedAnswer:
-          "It will crash the same way when tags is null, because .map() doesn't exist on null. They should default to an empty array (e.g. (tags ?? []).map(...)) for any field whose real-world API responses can be null even if the docs say array.",
-      }],
+      reviewQuestions: [
+        {
+          question:
+            "Another endpoint documents 'tags: string[]' but sometimes returns null. A teammate writes tags.map(...) directly. What will happen, and what should they check for any field documented as an array?",
+          expectedAnswer:
+            "It will crash the same way when tags is null, because .map() doesn't exist on null. They should default to an empty array (e.g. (tags ?? []).map(...)) for any field whose real-world API responses can be null even if the docs say array.",
+        },
+      ],
     },
   },
   {
@@ -201,12 +228,14 @@ export const lessonQualityCases: LessonQualityCase[] = [
         "Does not apply to effects that are meant to run on every render, like syncing a ref to the latest prop value.",
       concepts: ["useEffect", "dependency array"],
       filesChanged: ["src/components/ProductList.tsx"],
-      reviewQuestions: [{
-        question:
-          "A search box's useEffect calls an analytics API and has no dependency array. What will happen as the user types, and how should the effect be written instead?",
-        expectedAnswer:
-          "It will fire on every render - including every keystroke-triggered render - causing a flood of analytics calls. It should depend on the search term (or be debounced) so it only fires when that value actually changes.",
-      }],
+      reviewQuestions: [
+        {
+          question:
+            "A search box's useEffect calls an analytics API and has no dependency array. What will happen as the user types, and how should the effect be written instead?",
+          expectedAnswer:
+            "It will fire on every render - including every keystroke-triggered render - causing a flood of analytics calls. It should depend on the search term (or be debounced) so it only fires when that value actually changes.",
+        },
+      ],
     },
   },
   {
@@ -227,14 +256,18 @@ export const lessonQualityCases: LessonQualityCase[] = [
       whenNotApplicable:
         "Does not apply when the overlay is meant to block interaction with the content behind it, like a modal backdrop.",
       concepts: ["z-index", "stacking context", "pointer events"],
-      badCodeExample: "<div className=\"overlay z-50\" />\n<button className=\"save-button z-10\">Save</button>",
-      goodCodeExample: "<div className=\"overlay z-0\" />\n<button className=\"save-button z-10\">Save</button>",
-      reviewQuestions: [{
-        question:
-          "A teammate adds a full-page loading spinner with a high z-index, and afterward a modal's close button stops responding to clicks even though the spinner is hidden. What's the likely cause, and what would you check?",
-        expectedAnswer:
-          "The hidden spinner (or its container) may still be in the DOM with a z-index above the modal, intercepting clicks even while visually hidden. Check whether the element is actually removed/display:none, and compare z-index/stacking order against the modal.",
-      }],
+      badCodeExample:
+        '<div className="overlay z-50" />\n<button className="save-button z-10">Save</button>',
+      goodCodeExample:
+        '<div className="overlay z-0" />\n<button className="save-button z-10">Save</button>',
+      reviewQuestions: [
+        {
+          question:
+            "A teammate adds a full-page loading spinner with a high z-index, and afterward a modal's close button stops responding to clicks even though the spinner is hidden. What's the likely cause, and what would you check?",
+          expectedAnswer:
+            "The hidden spinner (or its container) may still be in the DOM with a z-index above the modal, intercepting clicks even while visually hidden. Check whether the element is actually removed/display:none, and compare z-index/stacking order against the modal.",
+        },
+      ],
     },
   },
   {
@@ -255,12 +288,14 @@ export const lessonQualityCases: LessonQualityCase[] = [
       concepts: ["pagination", "Array.slice"],
       badCodeExample: "items.slice(start, start + pageSize - 1)",
       goodCodeExample: "items.slice(start, start + pageSize)",
-      reviewQuestions: [{
-        question:
-          "A teammate writes `text.substring(start, end - 1)` assuming substring's end is inclusive like slice. Is that assumption correct, and what would happen?",
-        expectedAnswer:
-          "No - substring's end index is also exclusive, like slice's. Subtracting 1 would drop the last character of the range for the same reason this pagination bug dropped the last item.",
-      }],
+      reviewQuestions: [
+        {
+          question:
+            "A teammate writes `text.substring(start, end - 1)` assuming substring's end is inclusive like slice. Is that assumption correct, and what would happen?",
+          expectedAnswer:
+            "No - substring's end index is also exclusive, like slice's. Subtracting 1 would drop the last character of the range for the same reason this pagination bug dropped the last item.",
+        },
+      ],
     },
   },
   {
@@ -276,16 +311,19 @@ export const lessonQualityCases: LessonQualityCase[] = [
         "Accounts created before avatar uploads existed have user.avatar set to null instead of a placeholder object, so .url is read from null.",
       fixSummary:
         "Render a placeholder image when user.avatar is null, since accessing .url on null throws before the fallback can run.",
-      takeaway: "Treat optional nested objects as possibly null and guard before accessing their properties.",
+      takeaway:
+        "Treat optional nested objects as possibly null and guard before accessing their properties.",
       whenNotApplicable:
         "Does not apply once the backend guarantees avatar is always populated with at least a default object.",
       concepts: ["null safety"],
       badCodeExample: "<img src={user.avatar.url} />",
       goodCodeExample: "<img src={user.avatar?.url ?? '/default-avatar.png'} />",
-      reviewQuestions: [{
-        question: "How did you fix this bug?",
-        expectedAnswer: "Added a fallback to a placeholder image when user.avatar is null.",
-      }],
+      reviewQuestions: [
+        {
+          question: "How did you fix this bug?",
+          expectedAnswer: "Added a fallback to a placeholder image when user.avatar is null.",
+        },
+      ],
     },
   },
   {
@@ -297,18 +335,21 @@ export const lessonQualityCases: LessonQualityCase[] = [
       mistake: "Compared two Date objects directly with ==.",
       rootCause:
         "== compares Date objects by reference, not by value, so two distinct Date instances are never equal even if they represent the same moment.",
-      fixSummary: "Compared the dates with .getTime() instead, since that compares the underlying timestamps by value.",
+      fixSummary:
+        "Compared the dates with .getTime() instead, since that compares the underlying timestamps by value.",
       takeaway: "Compare Date objects with .getTime(), not == or ===.",
       whenNotApplicable: "Does not apply when comparing the exact same Date instance to itself.",
       concepts: ["Date", "equality"],
       badCodeExample: "if (dateA == dateB) { /* ... */ }",
       goodCodeExample: "if (dateA.getTime() === dateB.getTime()) { /* ... */ }",
-      reviewQuestions: [{
-        question:
-          "A teammate writes `if (objA == objB)` to compare two plain objects with the same keys/values. Will this work, and why or why not?",
-        expectedAnswer:
-          "No - like Dates, plain objects are compared by reference with ==, so two different objects with identical contents are never equal. They'd need a deep-equality check instead.",
-      }],
+      reviewQuestions: [
+        {
+          question:
+            "A teammate writes `if (objA == objB)` to compare two plain objects with the same keys/values. Will this work, and why or why not?",
+          expectedAnswer:
+            "No - like Dates, plain objects are compared by reference with ==, so two different objects with identical contents are never equal. They'd need a deep-equality check instead.",
+        },
+      ],
     },
   },
 ];

@@ -22,8 +22,8 @@ export function PracticeEmptyState({ onBack }: Props) {
         </h1>
 
         <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
-          Practice opens when lessons are due. When new lessons arrive, this
-          page turns into a short drill.
+          Practice opens when lessons are due. When new lessons arrive, this page turns into a short
+          drill.
         </p>
 
         <button

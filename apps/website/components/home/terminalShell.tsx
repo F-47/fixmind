@@ -19,9 +19,7 @@ export function TerminalShell({ title, className, children }: TerminalShellProps
         <span className="h-2.5 w-2.5 rounded-full bg-bad/70" />
         <span className="h-2.5 w-2.5 rounded-full bg-[#e8b35f]/70" />
         <span className="h-2.5 w-2.5 rounded-full bg-good/70" />
-        <span className="ml-2 truncate font-mono text-xs text-muted">
-          {title}
-        </span>
+        <span className="ml-2 truncate font-mono text-xs text-muted">{title}</span>
       </div>
       <div className="font-mono text-[13px] leading-relaxed">{children}</div>
     </div>

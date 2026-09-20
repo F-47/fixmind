@@ -1,7 +1,7 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
 
 export type SupportedClient = "codex" | "claude" | "cursor";
 
@@ -41,7 +41,8 @@ export function detectClients(homeDirectory = os.homedir()): SupportedClient[] {
   const detected: SupportedClient[] = [];
   if (commandExists("codex")) detected.push("codex");
   if (commandExists("claude")) detected.push("claude");
-  if (commandExists("cursor") || fs.existsSync(path.join(homeDirectory, ".cursor"))) detected.push("cursor");
+  if (commandExists("cursor") || fs.existsSync(path.join(homeDirectory, ".cursor")))
+    detected.push("cursor");
   return detected;
 }
 
@@ -54,7 +55,13 @@ export function configureClients(options: SetupOptions): SetupResult[] {
   const serverCommand = mcpServerCommand(platform);
   return options.clients.map((client) => {
     if (client === "cursor") {
-      return configureCursor(homeDirectory, projectDirectory, scope, serverCommand, Boolean(options.dryRun));
+      return configureCursor(
+        homeDirectory,
+        projectDirectory,
+        scope,
+        serverCommand,
+        Boolean(options.dryRun),
+      );
     }
     return configureCliClient(client, serverCommand, Boolean(options.dryRun), run, scope);
   });
@@ -66,7 +73,7 @@ export function genericMcpConfiguration(
   const server = mcpServerCommand(platform);
   return {
     mcpServers: {
-      "fixmind": {
+      fixmind: {
         command: server.command,
         args: server.args,
       },
@@ -102,9 +109,10 @@ function configureCliClient(
 
   // The Codex CLI has no project-scope flag for `mcp add`, so a project-scoped
   // request still registers the server globally; the detail message says so.
-  const addArgs = client === "claude"
-    ? ["mcp", "add", "--scope", scope, "fixmind", "--", server.command, ...server.args]
-    : ["mcp", "add", "fixmind", "--", server.command, ...server.args];
+  const addArgs =
+    client === "claude"
+      ? ["mcp", "add", "--scope", scope, "fixmind", "--", server.command, ...server.args]
+      : ["mcp", "add", "fixmind", "--", server.command, ...server.args];
   if (!dryRun) {
     try {
       run(client, addArgs);
@@ -119,9 +127,10 @@ function configureCliClient(
       throw error;
     }
   }
-  const note = client === "codex" && scope === "project"
-    ? " (codex has no project scope; registered globally instead)"
-    : "";
+  const note =
+    client === "codex" && scope === "project"
+      ? " (codex has no project scope; registered globally instead)"
+      : "";
   return {
     client,
     status: dryRun ? "dry_run" : "configured",
@@ -136,19 +145,24 @@ function configureCursor(
   server: ServerCommand,
   dryRun: boolean,
 ): SetupResult {
-  const directory = path.join(resolveScopeDirectory(homeDirectory, projectDirectory, scope), ".cursor");
+  const directory = path.join(
+    resolveScopeDirectory(homeDirectory, projectDirectory, scope),
+    ".cursor",
+  );
   const filePath = path.join(directory, "mcp.json");
   let config: Record<string, unknown> = {};
   if (fs.existsSync(filePath)) {
     try {
       config = JSON.parse(fs.readFileSync(filePath, "utf8")) as Record<string, unknown>;
     } catch (error) {
-      throw new Error(`Cannot configure Cursor because ${filePath} contains invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Cannot configure Cursor because ${filePath} contains invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
   const servers = isRecord(config.mcpServers) ? { ...config.mcpServers } : {};
-  if (isRecord(servers["fixmind"])) {
+  if (isRecord(servers.fixmind)) {
     return {
       client: "cursor",
       status: "already_configured",
@@ -156,7 +170,7 @@ function configureCursor(
     };
   }
 
-  servers["fixmind"] = { command: server.command, args: server.args };
+  servers.fixmind = { command: server.command, args: server.args };
   const updated = { ...config, mcpServers: servers };
   if (!dryRun) {
     fs.mkdirSync(directory, { recursive: true });
@@ -256,9 +270,7 @@ function injectInstruction(
   const block = instructionBlock(client);
   const marker = client === "cursor" ? "alwaysApply: true" : `${INSTRUCTION_MARKER}:start`;
 
-  const existing = fs.existsSync(filePath)
-    ? fs.readFileSync(filePath, "utf8")
-    : "";
+  const existing = fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
 
   if (existing.includes(marker)) {
     return { client, status: "already_configured", filePath };
@@ -266,9 +278,7 @@ function injectInstruction(
 
   if (!dryRun) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
-    const content = existing
-      ? `${existing.trimEnd()}\n\n${block}`
-      : block;
+    const content = existing ? `${existing.trimEnd()}\n\n${block}` : block;
     fs.writeFileSync(filePath, content, "utf8");
   }
 
@@ -289,7 +299,15 @@ export function configurePermissions(options: SetupOptions): PermissionResult[] 
   const scope = options.scope ?? "user";
   return options.clients
     .filter((client): client is "claude" => client === "claude")
-    .map((client) => configureClaudePermissions(client, homeDirectory, projectDirectory, scope, Boolean(options.dryRun)));
+    .map((client) =>
+      configureClaudePermissions(
+        client,
+        homeDirectory,
+        projectDirectory,
+        scope,
+        Boolean(options.dryRun),
+      ),
+    );
 }
 
 function configureClaudePermissions(
@@ -299,14 +317,19 @@ function configureClaudePermissions(
   scope: SetupScope,
   dryRun: boolean,
 ): PermissionResult {
-  const directory = path.join(resolveScopeDirectory(homeDirectory, projectDirectory, scope), ".claude");
+  const directory = path.join(
+    resolveScopeDirectory(homeDirectory, projectDirectory, scope),
+    ".claude",
+  );
   const filePath = path.join(directory, "settings.json");
   let config: Record<string, unknown> = {};
   if (fs.existsSync(filePath)) {
     try {
       config = JSON.parse(fs.readFileSync(filePath, "utf8")) as Record<string, unknown>;
     } catch (error) {
-      throw new Error(`Cannot configure Claude permissions because ${filePath} contains invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Cannot configure Claude permissions because ${filePath} contains invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
   }
 
@@ -331,9 +354,11 @@ function configureClaudePermissions(
   return { client, status: dryRun ? "dry_run" : "configured", filePath };
 }
 
-function commandExists(command: string): boolean {
+export function commandExists(command: string): boolean {
   try {
-    execFileSync(process.platform === "win32" ? "where.exe" : "which", [command], { stdio: "ignore" });
+    execFileSync(process.platform === "win32" ? "where.exe" : "which", [command], {
+      stdio: "ignore",
+    });
     return true;
   } catch {
     return false;
@@ -343,11 +368,18 @@ function commandExists(command: string): boolean {
 function runCommand(command: string, args: string[]): string {
   // On Windows, CLI tools installed via npm are typically `.cmd`/`.ps1` shims, which
   // Node refuses to spawn directly (EINVAL) unless `shell` is enabled.
-  return execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], shell: process.platform === "win32" });
+  return execFileSync(command, args, {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    shell: process.platform === "win32",
+  });
 }
 
 function formatCommand(command: string, args: string[]): string {
-  return [command, ...args.map((argument) => argument.includes(" ") ? JSON.stringify(argument) : argument)].join(" ");
+  return [
+    command,
+    ...args.map((argument) => (argument.includes(" ") ? JSON.stringify(argument) : argument)),
+  ].join(" ");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -360,7 +392,11 @@ function isMissingCommandError(error: unknown): boolean {
   // With `shell: true` on Windows, a missing command no longer surfaces as ENOENT;
   // cmd.exe instead exits non-zero and writes this message to stderr.
   const stderr = (error as { stderr?: unknown }).stderr;
-  const stderrText = Buffer.isBuffer(stderr) ? stderr.toString("utf8") : typeof stderr === "string" ? stderr : "";
+  const stderrText = Buffer.isBuffer(stderr)
+    ? stderr.toString("utf8")
+    : typeof stderr === "string"
+      ? stderr
+      : "";
   return /is not recognized as an internal or external command/i.test(stderrText);
 }
 

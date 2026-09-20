@@ -6,42 +6,30 @@ export default function HowItWorksSection() {
   return (
     <section id="how" className="border-y border-line bg-surface/40">
       <div className="mx-auto max-w-6xl px-6 py-24">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
-          How it works
-        </p>
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">How it works</p>
         <h2 className="mt-3 max-w-xl font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">
           Four steps, none of them yours to remember.
         </h2>
         <div className="mt-14 grid gap-16 lg:grid-cols-[1fr_400px] lg:items-start">
           <div>
-            <HowStep
-              number="01"
-              title="Set up the MCP server"
-              command="npx fixmind setup"
-            >
-              Use <code className="text-ink">npx fixmind setup</code> to
-              register the MCP server with Claude Code, Cursor, or Codex on
-              this device or just this project. No global install is required.
+            <HowStep number="01" title="Set up the MCP server" command="npx fixmind setup">
+              Use <code className="text-ink">npx fixmind setup</code> to register the MCP server
+              with Claude Code, Cursor, or Codex on this device or just this project. No global
+              install is required.
             </HowStep>
             <HowStep number="02" title="Fix bugs like normal">
               Keep working the way you already do. Your agent calls{" "}
-              <code className="text-ink">save_lesson</code> after a fix that
-              actually taught it something - never for renames or formatting.
+              <code className="text-ink">save_lesson</code> after a fix that actually taught it
+              something - never for renames or formatting.
             </HowStep>
             <HowStep number="03" title="Lesson stored on your machine">
-              Problem, mistake, root cause, bad/good code, and one recall
-              question - saved to a local database, not a server you don&apos;t
-              control.
+              Problem, mistake, root cause, bad/good code, and one recall question - saved to a
+              local database, not a server you don&apos;t control.
             </HowStep>
-            <HowStep
-              number="04"
-              title="Browse before you forget"
-              command="npx fixmind dashboard"
-            >
-              Due reviews, progress signals, and recurring concepts, all in the
-              local dashboard. Prefer the terminal?{" "}
-              <code className="text-ink">fixmind review</code> does the same job
-              one question at a time.
+            <HowStep number="04" title="Browse before you forget" command="npx fixmind dashboard">
+              Due reviews, progress signals, and recurring concepts, all in the local dashboard.
+              Prefer the terminal? <code className="text-ink">fixmind review</code> does the same
+              job one question at a time.
             </HowStep>
           </div>
           <div className="lg:sticky lg:top-24">
@@ -72,9 +60,7 @@ function HowStep({
       </div>
       <div className="pb-10">
         <h3 className="font-display text-lg font-semibold text-ink">{title}</h3>
-        <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted">
-          {children}
-        </p>
+        <p className="mt-1.5 max-w-md text-sm leading-relaxed text-muted">{children}</p>
         {command && (
           <div className="mt-3 inline-flex items-center gap-2 rounded-md border border-line bg-surface px-3 py-1.5 font-mono text-xs text-ink">
             <span className="text-muted">$</span>
@@ -137,8 +123,7 @@ function DashboardPreview() {
           ))}
         </div>
         <div className="mt-3 border-t border-line pt-3 font-mono text-[11px] text-muted">
-          Topics you keep encountering:{" "}
-          <span className="text-accent">Next.js hydration x3</span>
+          Topics you keep encountering: <span className="text-accent">Next.js hydration x3</span>
         </div>
       </div>
     </TerminalShell>

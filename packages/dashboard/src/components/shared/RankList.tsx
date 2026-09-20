@@ -12,19 +12,14 @@ export function RankList({
   limit = 6,
 }: Props) {
   if (!items.length) {
-    return (
-      <p className="text-sm text-muted">{emptyMessage}</p>
-    );
+    return <p className="text-sm text-muted">{emptyMessage}</p>;
   }
 
   return (
     <div className="grid gap-2.5">
       {items.slice(0, limit).map((item, i) => {
         return (
-          <div
-            className="flex items-baseline justify-between gap-3 text-sm"
-            key={item.name}
-          >
+          <div className="flex items-baseline justify-between gap-3 text-sm" key={item.name}>
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="font-mono text-[9px] font-bold text-accent/60 shrink-0">
                 {String(i + 1).padStart(2, "0")}

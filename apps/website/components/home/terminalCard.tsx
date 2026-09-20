@@ -7,8 +7,8 @@ export default function TerminalCard() {
       <div className="space-y-3 px-5 py-5">
         <p className="text-muted">$ fixmind review</p>
         <p className="text-ink">
-          <span className="text-accent">&gt;</span> What must be true about the
-          server render and the browser&apos;s first render?
+          <span className="text-accent">&gt;</span> What must be true about the server render and
+          the browser&apos;s first render?
         </p>
         <p className="text-ink">
           Your answer:{" "}

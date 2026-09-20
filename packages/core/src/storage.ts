@@ -1,25 +1,30 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { configPath, dataDirectory, databasePath } from "./paths.js";
 import { DEFAULT_CONFIG } from "./config.js";
-import { assertRealLineBreaks } from "./validation.js";
+import { applyMigrations, hasFtsIndex } from "./migrations.js";
+import { configPath, databasePath, dataDirectory } from "./paths.js";
+import { DEFAULT_EASE, nextReviewSchedule } from "./review-schedule.js";
 import type {
+  ConceptStat,
   Lesson,
   LessonInput,
   LessonStatus,
-  ConceptStat,
   MistakeStat,
   ReviewQuestion,
   Tag,
   Understanding,
 } from "./types.js";
+import { assertRealLineBreaks } from "./validation.js";
 
 export interface LessonStore {
   save(input: LessonInput): Lesson;
   get(id: string): Lesson | undefined;
   list(limit?: number): Lesson[];
+  topReviewed(limit: number): Lesson[];
+  textCandidates(terms: string[]): Lesson[];
+  contentVersion(now: Date): string;
   updatedSince(timestamp: string): Lesson[];
   upsertFromRemote(lesson: Lesson): void;
   search(query: string, options?: { includeSuperseded?: boolean }): Lesson[];
@@ -29,8 +34,8 @@ export interface LessonStore {
   delete(id: string): boolean;
   reset(): void;
   supersede(oldId: string, newId: string, reason?: string): { old: Lesson; new: Lesson };
-  conceptStats(): ConceptStat[];
-  mistakeStats(): MistakeStat[];
+  conceptStats(exclude?: (lesson: Lesson) => boolean): ConceptStat[];
+  mistakeStats(exclude?: (lesson: Lesson) => boolean): MistakeStat[];
   close(): void;
 }
 
@@ -60,6 +65,8 @@ interface RawRow {
   understanding: string;
   next_review_at: string;
   review_count: number;
+  ease: number;
+  last_interval_days: number | null;
   source_diff: string | null;
   tags: string;
   status: string;
@@ -81,44 +88,42 @@ export function initializeDataDirectory(): { directory: string; database: string
 export function createLessonStore(filePath = databasePath()): LessonStore {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const db = new DatabaseSync(filePath);
+  // Let a concurrent CLI/desktop writer finish before surfacing SQLITE_BUSY.
+  db.exec("PRAGMA busy_timeout = 5000");
+  applyMigrations(db, filePath);
+  const ftsEnabled = hasFtsIndex(db);
 
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS lessons (
-      id TEXT PRIMARY KEY,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      tool TEXT NOT NULL,
-      project_path TEXT NOT NULL,
-      title TEXT NOT NULL,
-      original_prompt TEXT NOT NULL,
-      problem TEXT NOT NULL,
-      mistake TEXT NOT NULL,
-      root_cause TEXT NOT NULL,
-      fix_summary TEXT NOT NULL,
-      takeaway TEXT,
-      mistake_pattern TEXT,
-      when_not_applicable TEXT,
-      concepts TEXT NOT NULL,
-      files_changed TEXT NOT NULL,
-      code_example TEXT,
-      bad_code_example TEXT,
-      good_code_example TEXT,
-      code_explanation TEXT,
-      practice_task TEXT,
-      review_questions TEXT NOT NULL,
-      understanding TEXT NOT NULL,
-      next_review_at TEXT NOT NULL,
-      review_count INTEGER NOT NULL DEFAULT 0,
-      source_diff TEXT,
-      tags TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'active',
-      superseded_by TEXT,
-      supersedes TEXT,
-      supersede_reason TEXT
-    );
-    CREATE INDEX IF NOT EXISTS idx_lessons_created_at ON lessons(created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_lessons_next_review_at ON lessons(next_review_at);
-  `);
+  const SEARCH_COLUMNS = [
+    "title",
+    "problem",
+    "root_cause",
+    "fix_summary",
+    "takeaway",
+    "mistake_pattern",
+    "concepts",
+    "tags",
+  ] as const;
+
+  const MEMORY_TEXT_COLUMNS = [
+    "title",
+    "mistake_pattern",
+    "problem",
+    "mistake",
+    "root_cause",
+    "fix_summary",
+    "takeaway",
+    "when_not_applicable",
+    "concepts",
+    "files_changed",
+    "tags",
+  ] as const;
+
+  const ftsPhrase = (text: string): string => `"${text.replace(/"/g, '""')}"`;
+
+  const countOf = (sql: string, ...args: Array<string | number>): number => {
+    const row = db.prepare(sql).get(...args) as unknown as { count: number };
+    return row.count;
+  };
 
   return {
     save(input: LessonInput): Lesson {
@@ -153,6 +158,8 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
         understanding: input.understanding ?? "unknown",
         nextReviewAt: input.nextReviewAt ?? addDays(now, 1).toISOString(),
         reviewCount: 0,
+        ease: DEFAULT_EASE,
+        lastIntervalDays: null,
         sourceDiff: input.sourceDiff,
         tags: input.tags ?? [],
         status: "active",
@@ -170,16 +177,34 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
           ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL
         )
       `).run(
-        lesson.id, lesson.createdAt, lesson.updatedAt, lesson.tool, lesson.projectPath,
-        lesson.title, lesson.originalPrompt, lesson.problem, lesson.mistake,
-        lesson.rootCause, lesson.fixSummary,
-        lesson.takeaway ?? null, lesson.mistakePattern ?? null, lesson.whenNotApplicable ?? null,
-        JSON.stringify(lesson.concepts), JSON.stringify(lesson.filesChanged),
-        lesson.codeExample ?? null, lesson.badCodeExample ?? null, lesson.goodCodeExample ?? null,
-        lesson.codeExplanation ?? null, lesson.practiceTask ?? null,
+        lesson.id,
+        lesson.createdAt,
+        lesson.updatedAt,
+        lesson.tool,
+        lesson.projectPath,
+        lesson.title,
+        lesson.originalPrompt,
+        lesson.problem,
+        lesson.mistake,
+        lesson.rootCause,
+        lesson.fixSummary,
+        lesson.takeaway ?? null,
+        lesson.mistakePattern ?? null,
+        lesson.whenNotApplicable ?? null,
+        JSON.stringify(lesson.concepts),
+        JSON.stringify(lesson.filesChanged),
+        lesson.codeExample ?? null,
+        lesson.badCodeExample ?? null,
+        lesson.goodCodeExample ?? null,
+        lesson.codeExplanation ?? null,
+        lesson.practiceTask ?? null,
         JSON.stringify(lesson.reviewQuestions),
-        lesson.understanding, lesson.nextReviewAt, lesson.reviewCount,
-        lesson.sourceDiff ?? null, JSON.stringify(lesson.tags), lesson.status,
+        lesson.understanding,
+        lesson.nextReviewAt,
+        lesson.reviewCount,
+        lesson.sourceDiff ?? null,
+        JSON.stringify(lesson.tags),
+        lesson.status,
       );
 
       if (input.supersedesLessonId && this.get(input.supersedesLessonId)) {
@@ -192,18 +217,105 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
     },
 
     get(id: string): Lesson | undefined {
-      const row = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id) as unknown as RawRow | undefined;
+      const row = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id) as unknown as
+        | RawRow
+        | undefined;
       return row ? fromDb(row) : undefined;
     },
 
     list(limit = 20): Lesson[] {
-      return (db.prepare("SELECT * FROM lessons ORDER BY created_at DESC LIMIT ?").all(limit) as unknown as RawRow[]).map(fromDb);
+      return (
+        db
+          .prepare("SELECT * FROM lessons ORDER BY created_at DESC LIMIT ?")
+          .all(limit) as unknown as RawRow[]
+      ).map(fromDb);
+    },
+
+    topReviewed(limit: number): Lesson[] {
+      return (
+        db
+          .prepare(
+            `SELECT * FROM lessons WHERE status = 'active' AND review_count > 0
+             ORDER BY (review_count * 10 + (julianday(updated_at) - 2440587.5) * 0.0864) DESC
+             LIMIT ?`,
+          )
+          .all(limit) as unknown as RawRow[]
+      ).map(fromDb);
+    },
+
+    textCandidates(terms: string[]): Lesson[] {
+      if (!ftsEnabled || terms.length === 0 || terms.some((term) => term.length < 3)) {
+        return this.list(Number.MAX_SAFE_INTEGER).filter(
+          (lesson) => lesson.status === "active" && lesson.reviewCount > 0,
+        );
+      }
+      const match = terms.map(ftsPhrase).join(" OR ");
+      const total = countOf("SELECT count(*) AS count FROM lessons");
+      const ftsCount = countOf(
+        "SELECT count(*) AS count FROM lessons_fts WHERE lessons_fts MATCH ?",
+        match,
+      );
+      if (ftsCount * 2 > total) {
+        return this.list(Number.MAX_SAFE_INTEGER).filter(
+          (lesson) => lesson.status === "active" && lesson.reviewCount > 0,
+        );
+      }
+      const likes: string[] = [];
+      const patterns: string[] = [];
+      for (const term of terms) {
+        for (const column of MEMORY_TEXT_COLUMNS) {
+          likes.push(`lower(${column}) LIKE ?`);
+          patterns.push(`%${term}%`);
+        }
+      }
+      return (
+        db
+          .prepare(
+            `SELECT * FROM lessons
+             WHERE rowid IN (SELECT rowid FROM lessons_fts WHERE lessons_fts MATCH ?)
+               AND status = 'active' AND review_count > 0
+               AND (${likes.join(" OR ")})`,
+          )
+          .all(match, ...patterns) as unknown as RawRow[]
+      ).map(fromDb);
+    },
+
+    contentVersion(now: Date): string {
+      const row = db
+        .prepare(
+          `SELECT count(*) AS count,
+                  coalesce(sum(CAST((julianday(updated_at) - 2440587.5) * 86400000 AS INTEGER)), 0) AS updatedSum,
+                  (SELECT min(next_review_at) FROM lessons WHERE next_review_at > ?) AS nextDue,
+                  (SELECT min(julianday(max(created_at, updated_at)) + 7)
+                     FROM lessons
+                    WHERE julianday(max(created_at, updated_at)) + 7 > julianday(?)) AS nextWeeklyExpiry,
+                  (SELECT min(julianday(max(created_at, updated_at)) + 30)
+                     FROM lessons
+                    WHERE julianday(max(created_at, updated_at)) + 30 > julianday(?)) AS nextMonthlyExpiry
+           FROM lessons`,
+        )
+        .get(now.toISOString(), now.toISOString(), now.toISOString()) as unknown as {
+        count: number;
+        updatedSum: number;
+        nextDue: string | null;
+        nextWeeklyExpiry: number | null;
+        nextMonthlyExpiry: number | null;
+      };
+      return [
+        row.count,
+        row.updatedSum,
+        row.nextDue ?? "none",
+        row.nextWeeklyExpiry ?? "none",
+        row.nextMonthlyExpiry ?? "none",
+      ].join(":");
     },
 
     updatedSince(timestamp: string): Lesson[] {
-      return (db.prepare(
-        "SELECT * FROM lessons WHERE updated_at > ? ORDER BY updated_at ASC",
-      ).all(timestamp) as unknown as RawRow[]).map(fromDb);
+      return (
+        db
+          .prepare("SELECT * FROM lessons WHERE updated_at > ? ORDER BY updated_at ASC")
+          .all(timestamp) as unknown as RawRow[]
+      ).map(fromDb);
     },
 
     upsertFromRemote(lesson: Lesson): void {
@@ -214,9 +326,9 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
           when_not_applicable, concepts, files_changed, code_example, bad_code_example,
           good_code_example, code_explanation, practice_task, review_questions,
           understanding, next_review_at, review_count, source_diff, tags,
-          status, superseded_by, supersedes, supersede_reason
+          status, superseded_by, supersedes, supersede_reason, ease, last_interval_days
         ) VALUES (
-          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+          ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
         )
         ON CONFLICT(id) DO UPDATE SET
           created_at=excluded.created_at, updated_at=excluded.updated_at, tool=excluded.tool,
@@ -231,55 +343,114 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
           next_review_at=excluded.next_review_at, review_count=excluded.review_count,
           source_diff=excluded.source_diff, tags=excluded.tags, status=excluded.status,
           superseded_by=excluded.superseded_by, supersedes=excluded.supersedes,
-          supersede_reason=excluded.supersede_reason
+          supersede_reason=excluded.supersede_reason,
+          ease=excluded.ease, last_interval_days=excluded.last_interval_days
       `).run(
-        lesson.id, lesson.createdAt, lesson.updatedAt, lesson.tool, lesson.projectPath,
-        lesson.title, lesson.originalPrompt, lesson.problem, lesson.mistake,
-        lesson.rootCause, lesson.fixSummary,
-        lesson.takeaway ?? null, lesson.mistakePattern ?? null, lesson.whenNotApplicable ?? null,
-        JSON.stringify(lesson.concepts), JSON.stringify(lesson.filesChanged),
-        lesson.codeExample ?? null, lesson.badCodeExample ?? null, lesson.goodCodeExample ?? null,
-        lesson.codeExplanation ?? null, lesson.practiceTask ?? null,
+        lesson.id,
+        lesson.createdAt,
+        lesson.updatedAt,
+        lesson.tool,
+        lesson.projectPath,
+        lesson.title,
+        lesson.originalPrompt,
+        lesson.problem,
+        lesson.mistake,
+        lesson.rootCause,
+        lesson.fixSummary,
+        lesson.takeaway ?? null,
+        lesson.mistakePattern ?? null,
+        lesson.whenNotApplicable ?? null,
+        JSON.stringify(lesson.concepts),
+        JSON.stringify(lesson.filesChanged),
+        lesson.codeExample ?? null,
+        lesson.badCodeExample ?? null,
+        lesson.goodCodeExample ?? null,
+        lesson.codeExplanation ?? null,
+        lesson.practiceTask ?? null,
         JSON.stringify(lesson.reviewQuestions),
-        lesson.understanding, lesson.nextReviewAt, lesson.reviewCount,
-        lesson.sourceDiff ?? null, JSON.stringify(lesson.tags), lesson.status,
-        lesson.supersededBy ?? null, lesson.supersedes ?? null, lesson.supersedeReason ?? null,
+        lesson.understanding,
+        lesson.nextReviewAt,
+        lesson.reviewCount,
+        lesson.sourceDiff ?? null,
+        JSON.stringify(lesson.tags),
+        lesson.status,
+        lesson.supersededBy ?? null,
+        lesson.supersedes ?? null,
+        lesson.supersedeReason ?? null,
+        lesson.ease ?? DEFAULT_EASE,
+        lesson.lastIntervalDays ?? null,
       );
     },
 
     search(query: string, options: { includeSuperseded?: boolean } = {}): Lesson[] {
-      const pattern = `%${query.toLowerCase()}%`;
-      const cols = ["title", "problem", "root_cause", "fix_summary", "takeaway", "mistake_pattern", "concepts", "tags"];
-      const textWhere = cols.map((c) => `lower(${c}) LIKE ?`).join(" OR ");
+      const needle = query.toLowerCase();
+      const pattern = `%${needle}%`;
+      const patterns = Array<string>(SEARCH_COLUMNS.length).fill(pattern);
+      const textWhere = SEARCH_COLUMNS.map((c) => `lower(${c}) LIKE ?`).join(" OR ");
+      const statusFilter = options.includeSuperseded ? "" : " AND status != 'superseded'";
+
+      if (ftsEnabled && needle.trim().length >= 3) {
+        return (
+          db
+            .prepare(
+              `SELECT * FROM lessons
+               WHERE rowid IN (SELECT rowid FROM lessons_fts WHERE lessons_fts MATCH ?)
+                 AND (${textWhere})${statusFilter}
+               ORDER BY created_at DESC`,
+            )
+            .all(ftsPhrase(needle), ...patterns) as unknown as RawRow[]
+        ).map(fromDb);
+      }
+
       const sql = options.includeSuperseded
         ? `SELECT * FROM lessons WHERE (${textWhere}) ORDER BY created_at DESC`
         : `SELECT * FROM lessons WHERE (${textWhere}) AND status != 'superseded' ORDER BY created_at DESC`;
-      return (db.prepare(sql).all(...Array<string>(cols.length).fill(pattern)) as unknown as RawRow[]).map(fromDb);
+      return (db.prepare(sql).all(...patterns) as unknown as RawRow[]).map(fromDb);
     },
 
     due(now = new Date()): Lesson[] {
-      return (db.prepare(
-        "SELECT * FROM lessons WHERE next_review_at <= ? AND status != 'superseded' ORDER BY next_review_at ASC",
-      ).all(now.toISOString()) as unknown as RawRow[]).map(fromDb);
+      return (
+        db
+          .prepare(
+            "SELECT * FROM lessons WHERE next_review_at <= ? AND status != 'superseded' ORDER BY next_review_at ASC",
+          )
+          .all(now.toISOString()) as unknown as RawRow[]
+      ).map(fromDb);
     },
 
     updateReview(id: string, questions: ReviewQuestion[], understanding: Understanding): Lesson {
-      const current = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id) as unknown as RawRow | undefined;
+      const current = db.prepare("SELECT * FROM lessons WHERE id = ?").get(id) as unknown as
+        | RawRow
+        | undefined;
       if (!current) throw new Error(`Lesson not found: ${id}`);
 
       const count = current.review_count + 1;
       const updatedAt = new Date();
-      const nextReviewAt = addDays(updatedAt, reviewIntervalDays(understanding, count));
+      const schedule = nextReviewSchedule(
+        understanding,
+        current.ease,
+        current.last_interval_days ?? null,
+      );
+      const nextReviewAt = addDays(updatedAt, schedule.intervalDays);
 
       db.prepare(
-        "UPDATE lessons SET review_questions=?, understanding=?, updated_at=?, next_review_at=?, review_count=? WHERE id=?",
-      ).run(JSON.stringify(questions), understanding, updatedAt.toISOString(), nextReviewAt.toISOString(), count, id);
+        "UPDATE lessons SET review_questions=?, understanding=?, updated_at=?, next_review_at=?, review_count=?, ease=?, last_interval_days=? WHERE id=?",
+      ).run(
+        JSON.stringify(questions),
+        understanding,
+        updatedAt.toISOString(),
+        nextReviewAt.toISOString(),
+        count,
+        schedule.ease,
+        schedule.lastIntervalDays,
+        id,
+      );
 
       return fromDb(db.prepare("SELECT * FROM lessons WHERE id = ?").get(id) as unknown as RawRow);
     },
 
     update(id: string, partial: Partial<LessonInput>): Lesson {
-      if (!(db.prepare("SELECT id FROM lessons WHERE id = ?").get(id))) {
+      if (!db.prepare("SELECT id FROM lessons WHERE id = ?").get(id)) {
         throw new Error(`Lesson not found: ${id}`);
       }
 
@@ -287,27 +458,40 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
       const params: (string | number | null)[] = [new Date().toISOString()];
 
       const reqFields = ["title", "problem", "mistake", "rootCause", "fixSummary"] as const;
-      const reqCols: Record<typeof reqFields[number], string> = {
-        title: "title", problem: "problem", mistake: "mistake",
-        rootCause: "root_cause", fixSummary: "fix_summary",
+      const reqCols: Record<(typeof reqFields)[number], string> = {
+        title: "title",
+        problem: "problem",
+        mistake: "mistake",
+        rootCause: "root_cause",
+        fixSummary: "fix_summary",
       };
       for (const f of reqFields) {
         const v = partial[f];
         if (v === undefined) continue;
         if (v.trim() === "") throw new Error(`Invalid lesson: ${f} is required.`);
-        params.push(v.trim()); sets.push(`${reqCols[f]} = ?`);
+        params.push(v.trim());
+        sets.push(`${reqCols[f]} = ?`);
       }
 
       const optFields = [
-        "takeaway", "mistakePattern", "whenNotApplicable",
-        "codeExample", "badCodeExample", "goodCodeExample",
-        "codeExplanation", "practiceTask",
+        "takeaway",
+        "mistakePattern",
+        "whenNotApplicable",
+        "codeExample",
+        "badCodeExample",
+        "goodCodeExample",
+        "codeExplanation",
+        "practiceTask",
       ] as const;
-      const optCols: Record<typeof optFields[number], string> = {
-        takeaway: "takeaway", mistakePattern: "mistake_pattern",
-        whenNotApplicable: "when_not_applicable", codeExample: "code_example",
-        badCodeExample: "bad_code_example", goodCodeExample: "good_code_example",
-        codeExplanation: "code_explanation", practiceTask: "practice_task",
+      const optCols: Record<(typeof optFields)[number], string> = {
+        takeaway: "takeaway",
+        mistakePattern: "mistake_pattern",
+        whenNotApplicable: "when_not_applicable",
+        codeExample: "code_example",
+        badCodeExample: "bad_code_example",
+        goodCodeExample: "good_code_example",
+        codeExplanation: "code_explanation",
+        practiceTask: "practice_task",
       };
       const codeFs = new Set<string>(["codeExample", "badCodeExample", "goodCodeExample"]);
       for (const f of optFields) {
@@ -315,13 +499,26 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
         if (v === undefined) continue;
         const trimmed = v.trim();
         if (trimmed && codeFs.has(f)) assertRealLineBreaks(trimmed, f);
-        params.push(trimmed || null); sets.push(`${optCols[f]} = ?`);
+        params.push(trimmed || null);
+        sets.push(`${optCols[f]} = ?`);
       }
 
-      if (partial.concepts !== undefined) { params.push(JSON.stringify(partial.concepts)); sets.push("concepts = ?"); }
-      if (partial.filesChanged !== undefined) { params.push(JSON.stringify(partial.filesChanged)); sets.push("files_changed = ?"); }
-      if (partial.tags !== undefined) { params.push(JSON.stringify(partial.tags)); sets.push("tags = ?"); }
-      if (partial.understanding !== undefined) { params.push(partial.understanding); sets.push("understanding = ?"); }
+      if (partial.concepts !== undefined) {
+        params.push(JSON.stringify(partial.concepts));
+        sets.push("concepts = ?");
+      }
+      if (partial.filesChanged !== undefined) {
+        params.push(JSON.stringify(partial.filesChanged));
+        sets.push("files_changed = ?");
+      }
+      if (partial.tags !== undefined) {
+        params.push(JSON.stringify(partial.tags));
+        sets.push("tags = ?");
+      }
+      if (partial.understanding !== undefined) {
+        params.push(partial.understanding);
+        sets.push("understanding = ?");
+      }
 
       db.prepare(`UPDATE lessons SET ${sets.join(", ")} WHERE id = ?`).run(...params, id);
       return fromDb(db.prepare("SELECT * FROM lessons WHERE id = ?").get(id) as unknown as RawRow);
@@ -338,23 +535,33 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
     },
 
     supersede(oldId: string, newId: string, reason?: string): { old: Lesson; new: Lesson } {
-      if (!db.prepare("SELECT id FROM lessons WHERE id = ?").get(oldId)) throw new Error(`Lesson not found: ${oldId}`);
-      if (!db.prepare("SELECT id FROM lessons WHERE id = ?").get(newId)) throw new Error(`Lesson not found: ${newId}`);
+      if (!db.prepare("SELECT id FROM lessons WHERE id = ?").get(oldId))
+        throw new Error(`Lesson not found: ${oldId}`);
+      if (!db.prepare("SELECT id FROM lessons WHERE id = ?").get(newId))
+        throw new Error(`Lesson not found: ${newId}`);
 
       const updatedAt = new Date().toISOString();
-      db.prepare("UPDATE lessons SET status='superseded', superseded_by=?, supersede_reason=?, updated_at=? WHERE id=?").run(newId, reason ?? null, updatedAt, oldId);
-      db.prepare("UPDATE lessons SET supersedes=?, supersede_reason=?, updated_at=? WHERE id=?").run(oldId, reason ?? null, updatedAt, newId);
+      db.prepare(
+        "UPDATE lessons SET status='superseded', superseded_by=?, supersede_reason=?, updated_at=? WHERE id=?",
+      ).run(newId, reason ?? null, updatedAt, oldId);
+      db.prepare(
+        "UPDATE lessons SET supersedes=?, supersede_reason=?, updated_at=? WHERE id=?",
+      ).run(oldId, reason ?? null, updatedAt, newId);
 
       return {
-        old: fromDb(db.prepare("SELECT * FROM lessons WHERE id = ?").get(oldId) as unknown as RawRow),
-        new: fromDb(db.prepare("SELECT * FROM lessons WHERE id = ?").get(newId) as unknown as RawRow),
+        old: fromDb(
+          db.prepare("SELECT * FROM lessons WHERE id = ?").get(oldId) as unknown as RawRow,
+        ),
+        new: fromDb(
+          db.prepare("SELECT * FROM lessons WHERE id = ?").get(newId) as unknown as RawRow,
+        ),
       };
     },
 
-    conceptStats(): ConceptStat[] {
+    conceptStats(exclude?: (lesson: Lesson) => boolean): ConceptStat[] {
       const counts = new Map<string, number>();
       for (const lesson of this.list(Number.MAX_SAFE_INTEGER)) {
-        if (lesson.status === "superseded") continue;
+        if (lesson.status === "superseded" || exclude?.(lesson)) continue;
         for (const concept of lesson.concepts) {
           counts.set(concept, (counts.get(concept) ?? 0) + 1);
         }
@@ -364,10 +571,10 @@ export function createLessonStore(filePath = databasePath()): LessonStore {
         .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
     },
 
-    mistakeStats(): MistakeStat[] {
+    mistakeStats(exclude?: (lesson: Lesson) => boolean): MistakeStat[] {
       const counts = new Map<string, number>();
       for (const lesson of this.list(Number.MAX_SAFE_INTEGER)) {
-        if (lesson.status === "superseded") continue;
+        if (lesson.status === "superseded" || exclude?.(lesson)) continue;
         counts.set(lesson.mistake, (counts.get(lesson.mistake) ?? 0) + 1);
       }
       return [...counts.entries()]
@@ -414,6 +621,8 @@ function fromDb(row: RawRow): Lesson {
     understanding: row.understanding as Understanding,
     nextReviewAt: row.next_review_at,
     reviewCount: row.review_count,
+    ease: row.ease,
+    lastIntervalDays: row.last_interval_days ?? null,
     sourceDiff: row.source_diff ?? undefined,
     tags: normalizeTags(JSON.parse(row.tags)),
     status: row.status as LessonStatus,
@@ -425,11 +634,4 @@ function fromDb(row: RawRow): Lesson {
 
 function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
-}
-
-function reviewIntervalDays(understanding: Understanding, reviewCount: number): number {
-  if (understanding === "copied_blindly") return 1;
-  if (understanding === "partial") return Math.min(3 * reviewCount, 14);
-  if (understanding === "understood") return Math.min(7 * 2 ** (reviewCount - 1), 60);
-  return 1;
 }

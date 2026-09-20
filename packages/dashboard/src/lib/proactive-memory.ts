@@ -66,10 +66,11 @@ export function findProactiveMemoryMatches(
     .filter((lesson) => lesson.id !== currentLesson.id && lesson.status === "active")
     .map((lesson) => scoreMemoryMatch(currentLesson, lesson, currentTokens))
     .filter((match) => match.score >= 7)
-    .sort((a, b) =>
-      b.score - a.score ||
-      b.lesson.reviewCount - a.lesson.reviewCount ||
-      b.lesson.updatedAt.localeCompare(a.lesson.updatedAt),
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        b.lesson.reviewCount - a.lesson.reviewCount ||
+        b.lesson.updatedAt.localeCompare(a.lesson.updatedAt),
     )
     .slice(0, limit);
 }
@@ -89,14 +90,29 @@ function scoreMemoryMatch(
     "pattern",
     matchedFields,
   );
-  score += scoreSharedValues(currentLesson.filesChanged, candidateLesson.filesChanged, "files", matchedFields);
-  score += scoreSharedValues(currentLesson.concepts, candidateLesson.concepts, "concepts", matchedFields);
+  score += scoreSharedValues(
+    currentLesson.filesChanged,
+    candidateLesson.filesChanged,
+    "files",
+    matchedFields,
+  );
+  score += scoreSharedValues(
+    currentLesson.concepts,
+    candidateLesson.concepts,
+    "concepts",
+    matchedFields,
+  );
   score += scoreSharedTags(currentLesson, candidateLesson, matchedFields);
   if (currentLesson.tool === candidateLesson.tool) {
     score += FIELD_WEIGHTS.tool;
     matchedFields.add("tool");
   }
-  score += scoreSharedTerms(currentTokens, lessonTokens(candidateLesson), matchedTerms, matchedFields);
+  score += scoreSharedTerms(
+    currentTokens,
+    lessonTokens(candidateLesson),
+    matchedTerms,
+    matchedFields,
+  );
 
   return {
     lesson: candidateLesson,
@@ -158,7 +174,9 @@ function scoreSharedTerms(
 }
 
 function buildSummary(matchedFields: Set<string>, matchedTerms: Set<string>): string {
-  const fieldNames = [...matchedFields].slice(0, 2).map((field) => FIELD_LABELS[field as keyof typeof FIELD_LABELS]);
+  const fieldNames = [...matchedFields]
+    .slice(0, 2)
+    .map((field) => FIELD_LABELS[field as keyof typeof FIELD_LABELS]);
   const reasons: string[] = [];
   if (fieldNames.length > 0) {
     reasons.push(`Shares ${joinList(fieldNames)}.`);
@@ -171,18 +189,20 @@ function buildSummary(matchedFields: Set<string>, matchedTerms: Set<string>): st
 }
 
 function lessonTokens(lesson: DashboardLesson): string[] {
-  return tokenize([
-    lesson.title,
-    lesson.problem,
-    lesson.mistake,
-    lesson.rootCause,
-    lesson.fixSummary,
-    lesson.takeaway ?? "",
-    lesson.mistakePattern ?? "",
-    ...lesson.concepts,
-    ...lesson.filesChanged,
-    ...lesson.tags.map((tag) => tag.name),
-  ].join(" "));
+  return tokenize(
+    [
+      lesson.title,
+      lesson.problem,
+      lesson.mistake,
+      lesson.rootCause,
+      lesson.fixSummary,
+      lesson.takeaway ?? "",
+      lesson.mistakePattern ?? "",
+      ...lesson.concepts,
+      ...lesson.filesChanged,
+      ...lesson.tags.map((tag) => tag.name),
+    ].join(" "),
+  );
 }
 
 function tokenize(text: string): string[] {
@@ -193,7 +213,10 @@ function tokenize(text: string): string[] {
 }
 
 function normalize(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 function sharedItems(left: string[], right: string[]): string[] {

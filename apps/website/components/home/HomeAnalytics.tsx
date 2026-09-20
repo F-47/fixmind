@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { trackUmamiEvent } from "@/lib/umami";
 
 const SECTION_IDS = ["loop", "memory", "features", "tokens", "how"] as const;

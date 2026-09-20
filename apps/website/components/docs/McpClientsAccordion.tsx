@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/cn";
 
 const MCP_CLIENTS = [
@@ -15,9 +15,7 @@ const MCP_CLIENTS = [
 ] as const;
 
 export function McpClientsAccordion() {
-  const [selected, setSelected] = useState<(typeof MCP_CLIENTS)[number]["id"]>(
-    MCP_CLIENTS[0].id,
-  );
+  const [selected, setSelected] = useState<(typeof MCP_CLIENTS)[number]["id"]>(MCP_CLIENTS[0].id);
 
   useEffect(() => {
     const update = () => {

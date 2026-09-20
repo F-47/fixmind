@@ -20,9 +20,7 @@ export function pageMetadata({
     alternates: {
       canonical: path,
     },
-    robots: noIndex
-      ? { index: false, follow: false }
-      : { index: true, follow: true },
+    robots: noIndex ? { index: false, follow: false } : { index: true, follow: true },
     openGraph: {
       type: "website",
       siteName: SITE_NAME,

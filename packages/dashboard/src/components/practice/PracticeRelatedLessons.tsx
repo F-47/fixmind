@@ -9,9 +9,7 @@ export function PracticeRelatedLessons({ matches, onOpenLesson }: Props) {
   return (
     <section className="rounded-3xl border border-line bg-surface/30 p-6">
       <div className="flex items-baseline justify-between gap-3 border-b border-line/70 pb-3">
-        <h3 className="text-2xl font-semibold tracking-tight">
-          Related lessons
-        </h3>
+        <h3 className="text-2xl font-semibold tracking-tight">Related lessons</h3>
         <span className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
           {matches.length}
         </span>

@@ -2,8 +2,6 @@ import { exec } from "node:child_process";
 import dns from "node:dns";
 import http from "node:http";
 import { createClient } from "@supabase/supabase-js";
-import { decrypt, deriveKey, encrypt, generateSalt } from "./crypto.js";
-import type { Lesson } from "./types.js";
 
 // Some networks resolve AAAA records that time out instead of failing fast,
 // which undici's fetch surfaces as an opaque "TypeError: fetch failed".
@@ -45,8 +43,14 @@ export interface SessionTokens {
 }
 
 export interface SyncBackend {
-  signIn(email: string, password: string): Promise<{ userId: string; refreshToken: string; accessToken: string }>;
-  signUp(email: string, password: string): Promise<{ userId: string; refreshToken: string; accessToken: string }>;
+  signIn(
+    email: string,
+    password: string,
+  ): Promise<{ userId: string; refreshToken: string; accessToken: string }>;
+  signUp(
+    email: string,
+    password: string,
+  ): Promise<{ userId: string; refreshToken: string; accessToken: string }>;
   signInWithGithub(onAuthUrl?: (url: string) => void): Promise<OAuthSession>;
   verifySession(session: SessionTokens): Promise<void>;
   getEntitlement(session: SessionTokens): Promise<Entitlement | undefined>;
@@ -89,7 +93,12 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function oauthCallbackPage(options: { ok: boolean; message: string; redirectUrl?: string; redirectLabel?: string }): string {
+function oauthCallbackPage(options: {
+  ok: boolean;
+  message: string;
+  redirectUrl?: string;
+  redirectLabel?: string;
+}): string {
   const tint = options.ok ? "124,92,255" : "255,92,114";
   return `<!doctype html>
 <html lang="en">
@@ -155,7 +164,10 @@ function oauthCallbackPage(options: { ok: boolean; message: string; redirectUrl?
 </html>`;
 }
 
-function createOAuthFlow(port: number, authUrl: string): {
+function createOAuthFlow(
+  port: number,
+  authUrl: string,
+): {
   codePromise: Promise<string>;
 } {
   let server: http.Server;
@@ -168,16 +180,19 @@ function createOAuthFlow(port: number, authUrl: string): {
     server = http.createServer((req, res) => {
       const url = new URL(req.url ?? "/", `http://127.0.0.1:${port}`);
       const code = url.searchParams.get("code");
-      const errorDescription = url.searchParams.get("error_description") ?? url.searchParams.get("error");
+      const errorDescription =
+        url.searchParams.get("error_description") ?? url.searchParams.get("error");
 
       if (errorDescription) {
         res.writeHead(200, { "Content-Type": "text/html" });
-        res.end(oauthCallbackPage({
-          ok: false,
-          message: `${errorDescription}. You can close this window and return to the terminal.`,
-          redirectUrl: authUrl,
-          redirectLabel: "Try again",
-        }));
+        res.end(
+          oauthCallbackPage({
+            ok: false,
+            message: `${errorDescription}. You can close this window and return to the terminal.`,
+            redirectUrl: authUrl,
+            redirectLabel: "Try again",
+          }),
+        );
         closeServer();
         reject(new Error(`GitHub sign in failed: ${errorDescription}`));
         return;
@@ -185,12 +200,15 @@ function createOAuthFlow(port: number, authUrl: string): {
 
       if (code) {
         res.writeHead(200, { "Content-Type": "text/html" });
-        res.end(oauthCallbackPage({
-          ok: true,
-          message: "GitHub sign-in is complete. Return to the terminal to enter your sync passphrase.",
-          redirectUrl: ACCOUNT_URL,
-          redirectLabel: "Open website account",
-        }));
+        res.end(
+          oauthCallbackPage({
+            ok: true,
+            message:
+              "GitHub sign-in is complete. Return to the terminal to enter your sync passphrase.",
+            redirectUrl: ACCOUNT_URL,
+            redirectLabel: "Open website account",
+          }),
+        );
         closeServer();
         resolve(code);
         return;
@@ -238,7 +256,8 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
     async signIn(email, password) {
       const supabase = client();
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error || !data.session) throw new Error(`Sign in failed: ${error?.message ?? "no session"}`);
+      if (error || !data.session)
+        throw new Error(`Sign in failed: ${error?.message ?? "no session"}`);
       return {
         userId: data.user.id,
         accessToken: data.session.access_token,
@@ -250,13 +269,13 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
       const supabase = client();
       const { data, error } = await supabase.auth.signUp({ email, password });
       if (error) throw new Error(`Sign up failed: ${error.message}`);
-      if (!data.session) {
+      if (!data.session || !data.user) {
         throw new Error(
           "Account created. Check your email to confirm it, then run `npx fixmind login` again.",
         );
       }
       return {
-        userId: data.user!.id,
+        userId: data.user.id,
         accessToken: data.session.access_token,
         refreshToken: data.session.refresh_token,
       };
@@ -278,27 +297,25 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
         provider: "github",
         options: { redirectTo, skipBrowserRedirect: true },
       });
-      if (error || !data.url) throw new Error(`GitHub sign in failed: ${error?.message ?? "no auth URL"}`);
+      if (error || !data.url)
+        throw new Error(`GitHub sign in failed: ${error?.message ?? "no auth URL"}`);
 
       const flow = createOAuthFlow(OAUTH_CALLBACK_PORT, data.url);
       onAuthUrl?.(data.url);
       openInBrowser(data.url);
 
       const code = await flow.codePromise;
-      try {
-        const { data: exchanged, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (exchangeError || !exchanged.session) {
-          throw new Error(`GitHub sign in failed: ${exchangeError?.message ?? "no session"}`);
-        }
-        return {
-          userId: exchanged.user.id,
-          email: exchanged.user.email ?? "",
-          accessToken: exchanged.session.access_token,
-          refreshToken: exchanged.session.refresh_token,
-        };
-      } catch (error) {
-        throw error;
+      const { data: exchanged, error: exchangeError } =
+        await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError || !exchanged.session) {
+        throw new Error(`GitHub sign in failed: ${exchangeError?.message ?? "no session"}`);
       }
+      return {
+        userId: exchanged.user.id,
+        email: exchanged.user.email ?? "",
+        accessToken: exchanged.session.access_token,
+        refreshToken: exchanged.session.refresh_token,
+      };
     },
 
     async verifySession(session) {
@@ -325,7 +342,11 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
         .maybeSingle();
       if (error) throw new Error(`Sync lookup failed: ${error.message}`);
       if (!data) return undefined;
-      return { salt: data.salt, verifierCiphertext: data.verifier_ciphertext, verifierIv: data.verifier_iv };
+      return {
+        salt: data.salt,
+        verifierCiphertext: data.verifier_ciphertext,
+        verifierIv: data.verifier_iv,
+      };
     },
 
     async createUserRecord(userId, session, record) {

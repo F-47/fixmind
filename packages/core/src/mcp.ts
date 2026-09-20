@@ -1,17 +1,22 @@
 #!/usr/bin/env node
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
 import { z } from "zod";
 import { readConfig } from "./config.js";
-import { buildGitAutofill } from "./git-autofill.js";
-import { formatMemoryResults, getMemoryResults } from "./memory.js";
-import { formatLessonTemplatePrompts } from "./lesson-templates.js";
 import { readGitContext } from "./git.js";
+import { buildGitAutofill } from "./git-autofill.js";
+import { formatLessonTemplatePrompts } from "./lesson-templates.js";
+import { formatMemoryResults, getMemoryResults } from "./memory.js";
 import { databasePath } from "./paths.js";
-import { initializeDataDirectory, createLessonStore, type LessonStore } from "./storage.js";
-import { assessLessonQuality, formatLessonQualityFeedback, validateLessonInput } from "./validation.js";
+import { createLessonStore, initializeDataDirectory, type LessonStore } from "./storage.js";
+import {
+  assessLessonQuality,
+  formatLessonQualityFeedback,
+  validateLessonInput,
+} from "./validation.js";
+import { readInstalledVersion } from "./version.js";
 
 function captureModeGuidance(captureMode: "strict" | "balanced"): string {
   return captureMode === "balanced"
@@ -117,7 +122,7 @@ the symptom, this was probably not a learning-worthy fix - do not save it.
 For codeExample, badCodeExample, and goodCodeExample: write multi-line snippets
 with real line breaks and normal indentation, the same way you'd write the code
 in a file. Do not flatten the snippet onto one line using the two characters
-"\" + "n" as a stand-in for a newline - the dashboard renders these fields
+"" + "n" as a stand-in for a newline - the dashboard renders these fields
 verbatim, so literal "\n" text shows up as "\n" instead of a line break.
 
 SUPERSEDING A PREVIOUS LESSON:
@@ -136,55 +141,153 @@ Write as a teacher, not as an agent log. Keep lessons short and human-readable.
 }
 
 const reviewQuestionSchema = z.object({
-  question: z.string().trim().min(1).describe("A TRANSFER question - apply the lesson to a different situation, spot the same mistake elsewhere, or predict an outcome. Do not ask 'what did you change' or 'summarize the fix'."),
-  expectedAnswer: z.string().trim().min(1).describe("The reasoning a developer who understood rootCause/takeaway would give - not just a description of the diff."),
+  question: z
+    .string()
+    .trim()
+    .min(1)
+    .describe(
+      "A TRANSFER question - apply the lesson to a different situation, spot the same mistake elsewhere, or predict an outcome. Do not ask 'what did you change' or 'summarize the fix'.",
+    ),
+  expectedAnswer: z
+    .string()
+    .trim()
+    .min(1)
+    .describe(
+      "The reasoning a developer who understood rootCause/takeaway would give - not just a description of the diff.",
+    ),
 });
 
 const memoryInputSchema = z.object({
-  query: z.string().trim().min(1).optional().describe("A short memory query derived from the current task or mistake pattern."),
+  query: z
+    .string()
+    .trim()
+    .min(1)
+    .optional()
+    .describe("A short memory query derived from the current task or mistake pattern."),
   limit: z.number().int().min(1).max(10).default(5).describe("How many memory lessons to return."),
 });
 
 export const lessonInputSchema = z.object({
-  tool: z.string().trim().min(1).optional().describe("The calling AI tool's name. Usually omit this — it is detected automatically from the MCP client."),
+  tool: z
+    .string()
+    .trim()
+    .min(1)
+    .optional()
+    .describe(
+      "The calling AI tool's name. Usually omit this — it is detected automatically from the MCP client.",
+    ),
   projectPath: z.string().trim().min(1).optional(),
   title: z.string().trim().min(1),
   originalPrompt: z.string().default(""),
-  problem: z.string().trim().min(1).describe("The user-visible SYMPTOM - what broke, what error appeared, or what was observed. The 'what happened', not the 'why'."),
-  mistake: z.string().trim().min(1).describe("The wrong assumption or approach in the code that caused the symptom - the flawed thinking, not just the line that changed."),
-  rootCause: z.string().trim().min(1).describe("WHY the mistake produced the symptom. Must add information beyond problem and mistake, not restate either of them."),
-  fixSummary: z.string().trim().min(1).describe("WHY the new code avoids the root cause - not just what code changed."),
-  takeaway: z.string().trim().min(1).describe("REQUIRED. One plain sentence the developer should memorize. Example: 'Always revoke object URLs when a component unmounts.'"),
-  mistakePattern: z.string().trim().min(1).optional().describe("STRONGLY RECOMMENDED. A 2–4 word reusable category. Examples: Missing cleanup, Stale closure, Off-by-one, Wrong event lifetime."),
-  whenNotApplicable: z.string().trim().min(1).describe("REQUIRED. When would this fix/advice NOT apply - a different framework version, a context where the same code is actually correct, or a case needing a different fix. Forces the lesson to state its scope, not just the one fix."),
+  problem: z
+    .string()
+    .trim()
+    .min(1)
+    .describe(
+      "The user-visible SYMPTOM - what broke, what error appeared, or what was observed. The 'what happened', not the 'why'.",
+    ),
+  mistake: z
+    .string()
+    .trim()
+    .min(1)
+    .describe(
+      "The wrong assumption or approach in the code that caused the symptom - the flawed thinking, not just the line that changed.",
+    ),
+  rootCause: z
+    .string()
+    .trim()
+    .min(1)
+    .describe(
+      "WHY the mistake produced the symptom. Must add information beyond problem and mistake, not restate either of them.",
+    ),
+  fixSummary: z
+    .string()
+    .trim()
+    .min(1)
+    .describe("WHY the new code avoids the root cause - not just what code changed."),
+  takeaway: z
+    .string()
+    .trim()
+    .min(1)
+    .describe(
+      "REQUIRED. One plain sentence the developer should memorize. Example: 'Always revoke object URLs when a component unmounts.'",
+    ),
+  mistakePattern: z
+    .string()
+    .trim()
+    .min(1)
+    .optional()
+    .describe(
+      "STRONGLY RECOMMENDED. A 2–4 word reusable category. Examples: Missing cleanup, Stale closure, Off-by-one, Wrong event lifetime.",
+    ),
+  whenNotApplicable: z
+    .string()
+    .trim()
+    .min(1)
+    .describe(
+      "REQUIRED. When would this fix/advice NOT apply - a different framework version, a context where the same code is actually correct, or a case needing a different fix. Forces the lesson to state its scope, not just the one fix.",
+    ),
   concepts: z.array(z.string().trim().min(1)).optional(),
   filesChanged: z.array(z.string().trim().min(1)).default([]),
   codeExample: z.string().optional(),
-  badCodeExample: z.string().optional().describe("STRONGLY RECOMMENDED when code is involved. A minimal snippet showing the mistake. Omit only for concept-only lessons with no code change."),
-  goodCodeExample: z.string().optional().describe("STRONGLY RECOMMENDED when code is involved. The corrected snippet. Must pair with badCodeExample."),
-  codeExplanation: z.string().optional().describe("A short explanation of the key difference between the broken and corrected examples."),
-  practiceTask: z.string().optional().describe("A small exercise the developer can do without copying the fix."),
+  badCodeExample: z
+    .string()
+    .optional()
+    .describe(
+      "STRONGLY RECOMMENDED when code is involved. A minimal snippet showing the mistake. Omit only for concept-only lessons with no code change.",
+    ),
+  goodCodeExample: z
+    .string()
+    .optional()
+    .describe(
+      "STRONGLY RECOMMENDED when code is involved. The corrected snippet. Must pair with badCodeExample.",
+    ),
+  codeExplanation: z
+    .string()
+    .optional()
+    .describe(
+      "A short explanation of the key difference between the broken and corrected examples.",
+    ),
+  practiceTask: z
+    .string()
+    .optional()
+    .describe("A small exercise the developer can do without copying the fix."),
   reviewQuestions: z.array(reviewQuestionSchema).min(1),
   understanding: z.enum(["understood", "partial", "copied_blindly", "unknown"]).default("unknown"),
   sourceDiff: z.string().optional(),
-  tags: z.array(z.object({
-    name: z.string().trim().min(1),
-    url: z.string().min(1).optional(),
-  })).default([]),
-  supersedesLessonId: z.string().trim().min(1).optional().describe(
-    "If this lesson corrects a PREVIOUS lesson you saved earlier in this conversation that turned out to be wrong or incomplete, set this to that lesson's id (from its 'Saved learning lesson <id>' response). The old lesson is marked superseded and hidden from future search/review, but kept in history.",
-  ),
-  supersedeReason: z.string().trim().min(1).optional().describe(
-    "Use together with supersedesLessonId. One sentence on what was wrong with the old lesson and why this one replaces it.",
-  ),
+  tags: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1),
+        url: z.string().min(1).optional(),
+      }),
+    )
+    .default([]),
+  supersedesLessonId: z
+    .string()
+    .trim()
+    .min(1)
+    .optional()
+    .describe(
+      "If this lesson corrects a PREVIOUS lesson you saved earlier in this conversation that turned out to be wrong or incomplete, set this to that lesson's id (from its 'Saved learning lesson <id>' response). The old lesson is marked superseded and hidden from future search/review, but kept in history.",
+    ),
+  supersedeReason: z
+    .string()
+    .trim()
+    .min(1)
+    .optional()
+    .describe(
+      "Use together with supersedesLessonId. One sentence on what was wrong with the old lesson and why this one replaces it.",
+    ),
 });
 
-export function createLearningLessonServer(
-  store: LessonStore = createLessonStore(),
-): { server: McpServer; close: () => void } {
+export function createLearningLessonServer(store: LessonStore = createLessonStore()): {
+  server: McpServer;
+  close: () => void;
+} {
   const captureMode = readConfig().captureMode;
   const server = new McpServer(
-    { name: "fixmind", version: "0.2.0" },
+    { name: "fixmind", version: readInstalledVersion() },
     { instructions: buildMcpInstructions(captureMode) },
   );
 
@@ -208,18 +311,22 @@ export function createLearningLessonServer(
           limit: arguments_.limit,
         });
         return {
-          content: [{
-            type: "text" as const,
-            text: formatMemoryResults(lessons),
-          }],
+          content: [
+            {
+              type: "text" as const,
+              text: formatMemoryResults(lessons),
+            },
+          ],
         };
       } catch (error) {
         return {
           isError: true,
-          content: [{
-            type: "text" as const,
-            text: error instanceof Error ? error.message : String(error),
-          }],
+          content: [
+            {
+              type: "text" as const,
+              text: error instanceof Error ? error.message : String(error),
+            },
+          ],
         };
       }
     },
@@ -243,12 +350,20 @@ export function createLearningLessonServer(
         const candidate = { ...arguments_ };
         candidate.tool ||= server.server.getClientVersion()?.name ?? "unknown-ai-tool";
         const projectPath = candidate.projectPath ?? process.cwd();
-        if (!candidate.sourceDiff || candidate.filesChanged.length === 0 || !candidate.mistakePattern || !candidate.codeExample || !candidate.concepts || candidate.concepts.length === 0) {
+        if (
+          !candidate.sourceDiff ||
+          candidate.filesChanged.length === 0 ||
+          !candidate.mistakePattern ||
+          !candidate.codeExample ||
+          !candidate.concepts ||
+          candidate.concepts.length === 0
+        ) {
           const git = readGitContext(projectPath);
           const autofill = buildGitAutofill(git);
           candidate.sourceDiff ||= git.sourceDiff;
           if (candidate.filesChanged.length === 0) candidate.filesChanged = autofill.filesChanged;
-          if (!candidate.concepts || candidate.concepts.length === 0) candidate.concepts = autofill.concepts;
+          if (!candidate.concepts || candidate.concepts.length === 0)
+            candidate.concepts = autofill.concepts;
           candidate.mistakePattern ||= autofill.mistakePattern;
           candidate.codeExample ||= autofill.codeExample;
         }
@@ -258,20 +373,24 @@ export function createLearningLessonServer(
         if (quality.errors.length > 0) {
           return {
             isError: true,
-            content: [{
-              type: "text" as const,
-              text: [
-                "This lesson was not saved - it doesn't look like a learning-worthy fix yet:",
-                ...quality.errors.map((message) => `- ${message}`),
-              ].join("\n"),
-            }],
+            content: [
+              {
+                type: "text" as const,
+                text: [
+                  "This lesson was not saved - it doesn't look like a learning-worthy fix yet:",
+                  ...quality.errors.map((message) => `- ${message}`),
+                ].join("\n"),
+              },
+            ],
           };
         }
 
-        const supersedeTarget = input.supersedesLessonId ? store.get(input.supersedesLessonId) : undefined;
+        const supersedeTarget = input.supersedesLessonId
+          ? store.get(input.supersedesLessonId)
+          : undefined;
         const saved = store.save(input);
-        const { autoPushAfterSave } = await import("./sync.js");
-        await autoPushAfterSave(store);
+        const { scheduleAutoPush } = await import("./sync.js");
+        scheduleAutoPush(store);
 
         const supersedeLines: string[] = [];
         if (input.supersedesLessonId) {
@@ -283,27 +402,31 @@ export function createLearningLessonServer(
         }
 
         return {
-          content: [{
-            type: "text" as const,
-            text: [
-              `Saved learning lesson ${saved.id}.`,
-              `Title: ${saved.title}`,
-              `Next review: ${saved.nextReviewAt}`,
-              `Database: ${databasePath()}`,
-              ...(supersedeLines.length ? ["", ...supersedeLines] : []),
-              ...(quality.warnings.length || quality.fieldHints.length
-                ? ["", ...formatLessonQualityFeedback(quality)]
-                : []),
-            ].join("\n"),
-          }],
+          content: [
+            {
+              type: "text" as const,
+              text: [
+                `Saved learning lesson ${saved.id}.`,
+                `Title: ${saved.title}`,
+                `Next review: ${saved.nextReviewAt}`,
+                `Database: ${databasePath()}`,
+                ...(supersedeLines.length ? ["", ...supersedeLines] : []),
+                ...(quality.warnings.length || quality.fieldHints.length
+                  ? ["", ...formatLessonQualityFeedback(quality)]
+                  : []),
+              ].join("\n"),
+            },
+          ],
         };
       } catch (error) {
         return {
           isError: true,
-          content: [{
-            type: "text" as const,
-            text: error instanceof Error ? error.message : String(error),
-          }],
+          content: [
+            {
+              type: "text" as const,
+              text: error instanceof Error ? error.message : String(error),
+            },
+          ],
         };
       }
     },

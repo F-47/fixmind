@@ -46,12 +46,11 @@ export function buildPracticeCard(
     expectedAnswer: lesson.takeaway ?? lesson.fixSummary,
     status: "unanswered" as const,
   };
-  const resolvedMode = mode === "mixed"
-    ? (lesson.reviewCount % 2 === 0 ? "free" : "mcq")
-    : mode;
-  const mcq = resolvedMode === "mcq"
-    ? buildMultipleChoiceOptions(question.expectedAnswer, lesson, lessons)
-    : null;
+  const resolvedMode = mode === "mixed" ? (lesson.reviewCount % 2 === 0 ? "free" : "mcq") : mode;
+  const mcq =
+    resolvedMode === "mcq"
+      ? buildMultipleChoiceOptions(question.expectedAnswer, lesson, lessons)
+      : null;
   const options = mcq?.options ?? [];
   const finalMode = resolvedMode === "mcq" && options.length >= 3 ? "mcq" : "free";
 
@@ -99,19 +98,30 @@ export function buildMultipleChoiceOptions(
     const passesRelative = bestScore === 0 || candidate.score >= bestScore * 0.7;
     return passesFloor && passesRelative;
   });
-  const rejectedCandidates = scoredCandidates.filter((candidate) => !acceptedCandidates.includes(candidate));
+  const rejectedCandidates = scoredCandidates.filter(
+    (candidate) => !acceptedCandidates.includes(candidate),
+  );
   const distractors = acceptedCandidates.slice(0, Math.max(0, maxOptions - 1));
-  const fallbackReasons = distractors.length < 2
-    ? buildFallbackReasons(scoredCandidates, acceptedCandidates, adaptiveFloor, bestScore)
-    : [];
+  const fallbackReasons =
+    distractors.length < 2
+      ? buildFallbackReasons(scoredCandidates, acceptedCandidates, adaptiveFloor, bestScore)
+      : [];
 
   if (distractors.length < 2) {
     return {
       options: [],
       distractors: [],
       generatedAt,
-      acceptedCandidates: acceptedCandidates.map(({ answer, score, reasons }) => ({ answer, score, reasons })),
-      rejectedCandidates: rejectedCandidates.map(({ answer, score, reasons }) => ({ answer, score, reasons })),
+      acceptedCandidates: acceptedCandidates.map(({ answer, score, reasons }) => ({
+        answer,
+        score,
+        reasons,
+      })),
+      rejectedCandidates: rejectedCandidates.map(({ answer, score, reasons }) => ({
+        answer,
+        score,
+        reasons,
+      })),
       fallbackReasons,
     };
   }
@@ -124,8 +134,16 @@ export function buildMultipleChoiceOptions(
     options,
     distractors: distractors.map(({ answer, score, reasons }) => ({ answer, score, reasons })),
     generatedAt,
-    acceptedCandidates: acceptedCandidates.map(({ answer, score, reasons }) => ({ answer, score, reasons })),
-    rejectedCandidates: rejectedCandidates.map(({ answer, score, reasons }) => ({ answer, score, reasons })),
+    acceptedCandidates: acceptedCandidates.map(({ answer, score, reasons }) => ({
+      answer,
+      score,
+      reasons,
+    })),
+    rejectedCandidates: rejectedCandidates.map(({ answer, score, reasons }) => ({
+      answer,
+      score,
+      reasons,
+    })),
     fallbackReasons,
   };
 }
@@ -138,12 +156,17 @@ export function scorePracticeResult(
   const normalizedCorrect = normalizeOption(correctAnswer);
   if (!normalizedSelected) return "copied_blindly";
   if (normalizedSelected === normalizedCorrect) return "understood";
-  if (overlapCount(significantWords(normalizedSelected), significantWords(normalizedCorrect)) >= 2) return "partial";
+  if (overlapCount(significantWords(normalizedSelected), significantWords(normalizedCorrect)) >= 2)
+    return "partial";
   return "copied_blindly";
 }
 
 function byDueDate(a: DashboardLesson, b: DashboardLesson): number {
-  return Date.parse(a.nextReviewAt) - Date.parse(b.nextReviewAt) || b.reviewCount - a.reviewCount || a.title.localeCompare(b.title);
+  return (
+    Date.parse(a.nextReviewAt) - Date.parse(b.nextReviewAt) ||
+    b.reviewCount - a.reviewCount ||
+    a.title.localeCompare(b.title)
+  );
 }
 
 interface ScoredDistractor {
@@ -163,10 +186,12 @@ function scoreDistractorCandidates(
 
   const scored = lessons
     .filter((candidate) => candidate.id !== lesson.id && candidate.status === "active")
-    .flatMap((candidate) => candidate.reviewQuestions.map((question) => ({
-      candidate,
-      answer: candidateAnswer(candidate, question.expectedAnswer),
-    })))
+    .flatMap((candidate) =>
+      candidate.reviewQuestions.map((question) => ({
+        candidate,
+        answer: candidateAnswer(candidate, question.expectedAnswer),
+      })),
+    )
     .filter(({ answer }) => Boolean(answer))
     .map(({ candidate, answer }) => {
       const normalized = normalizeOption(answer);
@@ -186,7 +211,9 @@ function scoreDistractorCandidates(
     .filter((item): item is ScoredDistractor => item !== null)
     .filter((item, index, items) => {
       const normalized = normalizeOption(item.answer);
-      return items.findIndex((candidate) => normalizeOption(candidate.answer) === normalized) === index;
+      return (
+        items.findIndex((candidate) => normalizeOption(candidate.answer) === normalized) === index
+      );
     });
 
   return scored.sort((a, b) => b.score - a.score || a.answer.localeCompare(b.answer));
@@ -202,19 +229,28 @@ function buildPracticePrompt(
 }
 
 function normalizeOption(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 function candidateAnswer(lesson: DashboardLesson, fallback: string): string {
-  return lesson.reviewQuestions[0]?.expectedAnswer?.trim()
-    || lesson.takeaway?.trim()
-    || lesson.fixSummary.trim()
-    || fallback.trim();
+  return (
+    lesson.reviewQuestions[0]?.expectedAnswer?.trim() ||
+    lesson.takeaway?.trim() ||
+    lesson.fixSummary.trim() ||
+    fallback.trim()
+  );
 }
 
 function scoreLessonAffinity(current: DashboardLesson, candidate: DashboardLesson): number {
   let score = 0;
-  if (normalizeOption(candidate.mistakePattern ?? "") === normalizeOption(current.mistakePattern ?? "")) score += 60;
+  if (
+    normalizeOption(candidate.mistakePattern ?? "") ===
+    normalizeOption(current.mistakePattern ?? "")
+  )
+    score += 60;
   score += sharedConcepts(current.concepts, candidate.concepts) * 20;
   if (candidate.tool === current.tool) score += 5;
   score += sharedFileFamilies(current.filesChanged, candidate.filesChanged) * 12;
@@ -254,7 +290,10 @@ function buildDistractorReasons(
   candidateAnswerText: string,
 ): string[] {
   const reasons: string[] = [];
-  if (normalizeOption(candidate.mistakePattern ?? "") === normalizeOption(current.mistakePattern ?? "")) {
+  if (
+    normalizeOption(candidate.mistakePattern ?? "") ===
+    normalizeOption(current.mistakePattern ?? "")
+  ) {
     reasons.push("same mistakePattern");
   }
 

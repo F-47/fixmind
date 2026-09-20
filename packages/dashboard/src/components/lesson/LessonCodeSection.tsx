@@ -2,8 +2,7 @@ import { CodeBlock } from "@/components/shared/CodeBlock";
 import type { DashboardLesson } from "@/lib/types";
 
 export function LessonCodeSection({ lesson }: { lesson: DashboardLesson }) {
-  const broken =
-    lesson.badCodeExample ?? "A broken example was not captured for this lesson.";
+  const broken = lesson.badCodeExample ?? "A broken example was not captured for this lesson.";
   const corrected =
     lesson.goodCodeExample ??
     lesson.codeExample ??
@@ -41,9 +40,7 @@ export function LessonCodeSection({ lesson }: { lesson: DashboardLesson }) {
               <div className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
                 Key difference
               </div>
-              <p className="mt-2 text-sm leading-relaxed">
-                {lesson.codeExplanation}
-              </p>
+              <p className="mt-2 text-sm leading-relaxed">{lesson.codeExplanation}</p>
             </div>
           )}
         </>

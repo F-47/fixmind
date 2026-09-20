@@ -1,16 +1,12 @@
 "use client";
 
-import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DOCS, extractDocOutline, searchDocs } from "@/components/docs/docs-data";
 import { cn } from "@/lib/cn";
 import { trackUmamiEvent } from "@/lib/umami";
-import {
-  DOCS,
-  extractDocOutline,
-  searchDocs,
-} from "@/components/docs/docs-data";
 
 const DocContent = lazy(() =>
   import("@/components/docs/DocContent").then((module) => ({
@@ -63,6 +59,7 @@ export default function Docs({ initialDocId }: DocsPageProps) {
     return DOCS.find((entry) => entry.id === docId) ?? DOCS[0];
   }, [initialDocId, pathname]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: rerun hash scrolling after the active document changes
   useEffect(() => {
     if (!hash) return;
 
@@ -75,62 +72,55 @@ export default function Docs({ initialDocId }: DocsPageProps) {
     const timeout = window.setTimeout(() => {
       scrollToHash();
       window.requestAnimationFrame(scrollToHash);
-      window.requestAnimationFrame(() =>
-        window.requestAnimationFrame(scrollToHash),
-      );
+      window.requestAnimationFrame(() => window.requestAnimationFrame(scrollToHash));
     }, 0);
 
     return () => window.clearTimeout(timeout);
-  }, [activeDoc.id, hash]);
+  }, [hash, activeDoc.id]);
 
-  const searchResults = useMemo(
-    () => searchDocs(debouncedQuery),
-    [debouncedQuery],
-  );
+  const searchResults = useMemo(() => searchDocs(debouncedQuery), [debouncedQuery]);
   const highlightedQuery = useMemo(() => {
     const query = searchParams?.get("q")?.trim() ?? "";
     return query;
   }, [searchParams]);
-  const outline = useMemo(
-    () => extractDocOutline(activeDoc.content),
-    [activeDoc.content],
-  );
+  const outline = useMemo(() => extractDocOutline(activeDoc.content), [activeDoc.content]);
   const showOutline = outline.length > 0 && outline.length <= 8;
 
-  const openSearch = () => {
+  const openSearch = useCallback(() => {
     trackUmamiEvent("docs_search_open", { doc: activeDoc.id });
     setSearchQuery("");
     setDebouncedQuery("");
     setIsSearchOpen(true);
     setSelectedIndex(0);
     requestAnimationFrame(() => searchInputRef.current?.focus());
-  };
+  }, [activeDoc.id]);
 
-  const closeSearch = () => {
+  const closeSearch = useCallback(() => {
     setIsSearchOpen(false);
     setSearchQuery("");
     setDebouncedQuery("");
-  };
+  }, []);
 
-  const goToSearchResult = (docId: string, sectionId: string) => {
-    const query = searchQuery.trim();
-    const searchSuffix = query ? `?q=${encodeURIComponent(query)}` : "";
-    trackUmamiEvent("docs_search_select", {
-      doc: docId,
-      section: sectionId,
-      query: query || undefined,
-    });
-    router.push(`/docs/${docId}${searchSuffix}#${sectionId}`);
-    closeSearch();
-  };
+  const goToSearchResult = useCallback(
+    (docId: string, sectionId: string) => {
+      const query = searchQuery.trim();
+      const searchSuffix = query ? `?q=${encodeURIComponent(query)}` : "";
+      trackUmamiEvent("docs_search_select", {
+        doc: docId,
+        section: sectionId,
+        query: query || undefined,
+      });
+      router.push(`/docs/${docId}${searchSuffix}#${sectionId}`);
+      closeSearch();
+    },
+    [closeSearch, router, searchQuery],
+  );
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const isTypingTarget =
-        target?.tagName === "INPUT" ||
-        target?.tagName === "TEXTAREA" ||
-        target?.isContentEditable;
+        target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable;
 
       if (
         event.key === "/" &&
@@ -157,8 +147,7 @@ export default function Docs({ initialDocId }: DocsPageProps) {
         if (event.key === "ArrowUp") {
           event.preventDefault();
           setSelectedIndex(
-            (current) =>
-              (current - 1 + searchResults.length) % searchResults.length,
+            (current) => (current - 1 + searchResults.length) % searchResults.length,
           );
         }
 
@@ -178,7 +167,7 @@ export default function Docs({ initialDocId }: DocsPageProps) {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isSearchOpen, router, searchResults, searchQuery, selectedIndex]);
+  }, [isSearchOpen, searchResults, selectedIndex, openSearch, goToSearchResult, closeSearch]);
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -189,10 +178,11 @@ export default function Docs({ initialDocId }: DocsPageProps) {
     };
   }, [isSearchOpen]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: reset selection whenever the debounced result set changes
   useEffect(() => {
     if (!isSearchOpen) return;
     setSelectedIndex(0);
-  }, [debouncedQuery, isSearchOpen]);
+  }, [debouncedQuery]);
 
   return (
     <div className="flex flex-col gap-10 px-6 py-12 md:flex-row md:items-start md:py-20">
@@ -239,10 +229,7 @@ export default function Docs({ initialDocId }: DocsPageProps) {
 
       <article className="min-w-0 flex-1">
         {showOutline && (
-          <details
-            className="mb-6 rounded-2xl border border-line bg-surface p-4 xl:hidden"
-            open
-          >
+          <details className="mb-6 rounded-2xl border border-line bg-surface p-4 xl:hidden" open>
             <summary className="cursor-pointer list-none font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
               On this page
               <span className="ml-2 text-accent">({outline.length})</span>

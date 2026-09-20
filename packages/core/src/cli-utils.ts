@@ -2,8 +2,8 @@ import { stdin, stdout } from "node:process";
 import { parseArgs as nodeParseArgs } from "node:util";
 import {
   cancel,
-  isCancel,
   intro,
+  isCancel,
   log,
   multiselect,
   note,
@@ -40,7 +40,8 @@ export function optionString(value: string | boolean | undefined): string | unde
 export function numberOption(value: string | boolean | undefined, fallback: number): number {
   if (value === undefined) return fallback;
   const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed <= 0) throw new Error("--limit must be a positive integer.");
+  if (!Number.isInteger(parsed) || parsed <= 0)
+    throw new Error("--limit must be a positive integer.");
   return parsed;
 }
 
@@ -54,7 +55,12 @@ export function optionalPort(value: string | boolean | undefined): number | unde
 }
 
 export function parseList(value?: string): string[] {
-  return value?.split(",").map((item) => item.trim()).filter(Boolean) ?? [];
+  return (
+    value
+      ?.split(",")
+      .map((item) => item.trim())
+      .filter(Boolean) ?? []
+  );
 }
 
 export function formatDate(value: string): string {
@@ -88,7 +94,8 @@ export function supportedClientOptions(
 }
 
 export function validateScope(value: string): "user" | "project" {
-  if (value !== "user" && value !== "project") throw new Error(`Unsupported scope: ${value}. Use user or project.`);
+  if (value !== "user" && value !== "project")
+    throw new Error(`Unsupported scope: ${value}. Use user or project.`);
   return value;
 }
 
@@ -133,18 +140,58 @@ export function parseArgs(argv: string[]) {
     allowPositionals: true,
     strict: false,
     options: {
-      title: S, "original-prompt": S, problem: S, mistake: S, "root-cause": S,
-      "fix-summary": S, takeaway: S, "mistake-pattern": S, "when-not-applicable": S,
-      concepts: S, "files-changed": S, "code-example": S, "bad-code-example": S,
-      "good-code-example": S, "code-explanation": S, "practice-task": S,
-      "review-question": S, "expected-answer": S, tool: S, understanding: S,
-      tags: S, file: S, format: S, output: S, id: S, limit: S, port: S,
-      client: S, scope: S, reason: S, url: S, key: S, email: S, password: S,
-      passphrase: S, yes: { ...B, short: "y" }, "include-superseded": B, "no-open": B,
-      "dry-run": B, help: B, version: { ...B, short: "v" }, "password-login": B,
+      title: S,
+      "original-prompt": S,
+      problem: S,
+      mistake: S,
+      "root-cause": S,
+      "fix-summary": S,
+      takeaway: S,
+      "mistake-pattern": S,
+      "when-not-applicable": S,
+      concepts: S,
+      "files-changed": S,
+      "code-example": S,
+      "bad-code-example": S,
+      "good-code-example": S,
+      "code-explanation": S,
+      "practice-task": S,
+      "review-question": S,
+      "expected-answer": S,
+      tool: S,
+      understanding: S,
+      tags: S,
+      file: S,
+      format: S,
+      output: S,
+      id: S,
+      limit: S,
+      port: S,
+      client: S,
+      scope: S,
+      reason: S,
+      url: S,
+      key: S,
+      email: S,
+      password: S,
+      passphrase: S,
+      yes: { ...B, short: "y" },
+      "include-superseded": B,
+      "no-open": B,
+      "dry-run": B,
+      help: B,
+      version: { ...B, short: "v" },
+      "password-login": B,
       "capture-mode": S,
+      weekly: B,
+      "starter-pack": B,
+      "session-start-hook": B,
     },
   });
   const command = positionals[0];
-  return { command, positionals: positionals.slice(1), options: values as Record<string, string | boolean> };
+  return {
+    command,
+    positionals: positionals.slice(1),
+    options: values as Record<string, string | boolean>,
+  };
 }

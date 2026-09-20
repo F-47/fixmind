@@ -1,11 +1,12 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { detectClients } from "./setup.js";
-import { buildGitAutofill } from "./git-autofill.js";
-import { readGitContext } from "./git.js";
-import { configPath } from "./paths.js";
 import { readConfig } from "./config.js";
+import { readGitContext } from "./git.js";
+import { buildGitAutofill } from "./git-autofill.js";
+import { configPath } from "./paths.js";
+import { detectClients } from "./setup.js";
+import { isRecord } from "./utils.js";
 
 const FIXMIND_SAVE_TOOL = "mcp__fixmind__save_lesson";
 
@@ -17,7 +18,10 @@ interface SetupScopeStatus {
   claudePermission: "enabled" | "missing" | "invalid";
 }
 
-export function buildDiagnosticsReport(cwd = process.cwd(), homeDirectory = os.homedir()): string[] {
+export function buildDiagnosticsReport(
+  cwd = process.cwd(),
+  homeDirectory = os.homedir(),
+): string[] {
   const git = readGitContext(cwd);
   const autofill = git.isRepo ? buildGitAutofill(git) : undefined;
   const configFile = configPath();
@@ -40,22 +44,31 @@ export function buildDiagnosticsReport(cwd = process.cwd(), homeDirectory = os.h
         : "Current diff: clean working tree",
     );
     lines.push(
-      `Git autofill: filesChanged=${git.filesChanged.length > 0 ? "yes" : "no"}, concepts=${Boolean(autofill?.concepts.length) ? "yes" : "no"}, mistakePattern=${Boolean(autofill?.mistakePattern) ? "yes" : "no"}, codeExample=${Boolean(autofill?.codeExample) ? "yes" : "no"}`,
+      `Git autofill: filesChanged=${git.filesChanged.length > 0 ? "yes" : "no"}, concepts=${autofill?.concepts.length ? "yes" : "no"}, mistakePattern=${autofill?.mistakePattern ? "yes" : "no"}, codeExample=${autofill?.codeExample ? "yes" : "no"}`,
     );
   } else {
     lines.push("Current diff: unavailable because this directory is not inside a Git repository.");
   }
 
   lines.push(`Capture mode: ${config.captureMode}`);
-  lines.push(`Config file: ${fs.existsSync(configFile) ? configFile : `${configFile} (missing, using defaults)`}`);
+  lines.push(
+    `Config file: ${fs.existsSync(configFile) ? configFile : `${configFile} (missing, using defaults)`}`,
+  );
   lines.push(formatScopeStatus("User scope", userScope));
   lines.push(formatScopeStatus("Project scope", projectScope));
   lines.push("");
   lines.push("Likely reasons a lesson did not save:");
 
-  const blockers = collectBlockers(git.isRepo, git.filesChanged.length > 0, userScope, projectScope);
+  const blockers = collectBlockers(
+    git.isRepo,
+    git.filesChanged.length > 0,
+    userScope,
+    projectScope,
+  );
   if (blockers.length === 0) {
-    lines.push("- No obvious local blocker found. The agent may have rejected the lesson during the quality gate.");
+    lines.push(
+      "- No obvious local blocker found. The agent may have rejected the lesson during the quality gate.",
+    );
   } else {
     for (const blocker of blockers) lines.push(`- ${blocker}`);
   }
@@ -64,10 +77,19 @@ export function buildDiagnosticsReport(cwd = process.cwd(), homeDirectory = os.h
 }
 
 function inspectSetupScope(scopeDirectory: string): SetupScopeStatus {
-  const claudeInstructions = hasFixmindMarker(path.join(scopeDirectory, ".claude", "CLAUDE.md"), "fixmind:instructions:start")
-    || hasFixmindMarker(path.join(scopeDirectory, "CLAUDE.md"), "fixmind:instructions:start");
-  const codexInstructions = hasFixmindMarker(path.join(scopeDirectory, "AGENTS.md"), "fixmind:instructions:start");
-  const cursorInstructions = hasFixmindMarker(path.join(scopeDirectory, ".cursor", "rules", "fixmind.mdc"), "alwaysApply: true");
+  const claudeInstructions =
+    hasFixmindMarker(
+      path.join(scopeDirectory, ".claude", "CLAUDE.md"),
+      "fixmind:instructions:start",
+    ) || hasFixmindMarker(path.join(scopeDirectory, "CLAUDE.md"), "fixmind:instructions:start");
+  const codexInstructions = hasFixmindMarker(
+    path.join(scopeDirectory, "AGENTS.md"),
+    "fixmind:instructions:start",
+  );
+  const cursorInstructions = hasFixmindMarker(
+    path.join(scopeDirectory, ".cursor", "rules", "fixmind.mdc"),
+    "alwaysApply: true",
+  );
   return {
     anyInstructions: claudeInstructions || codexInstructions || cursorInstructions,
     claudeInstructions,
@@ -119,7 +141,9 @@ function collectBlockers(
   const blockers: string[] = [];
 
   if (!gitRepo) {
-    blockers.push("No Git repository is available at the current path, so Fixmind cannot mine the diff for autofill.");
+    blockers.push(
+      "No Git repository is available at the current path, so Fixmind cannot mine the diff for autofill.",
+    );
   } else if (!hasChanges) {
     blockers.push("The working tree is clean, so there is no diff to capture.");
   }
@@ -133,12 +157,10 @@ function collectBlockers(
     userScope.claudePermission !== "enabled" &&
     projectScope.claudePermission !== "enabled"
   ) {
-    blockers.push("Claude Code does not appear to allow the mcp__fixmind__save_lesson tool in this scope.");
+    blockers.push(
+      "Claude Code does not appear to allow the mcp__fixmind__save_lesson tool in this scope.",
+    );
   }
 
   return blockers;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }

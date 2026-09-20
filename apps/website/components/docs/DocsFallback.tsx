@@ -4,11 +4,8 @@ export function DocsFallback() {
       <aside className="w-full shrink-0 md:sticky md:top-24 md:w-64">
         <div className="h-12 w-full animate-pulse rounded-xl bg-surface-2" />
         <div className="mt-5 space-y-2">
-          {Array.from({ length: 7 }).map((_, index) => (
-            <div
-              key={index}
-              className="h-10 w-full animate-pulse rounded-lg bg-surface-2"
-            />
+          {Array.from({ length: 7 }, (_, position) => `doc-${position}`).map((key) => (
+            <div key={key} className="h-10 w-full animate-pulse rounded-lg bg-surface-2" />
           ))}
         </div>
       </aside>
@@ -27,11 +24,8 @@ export function DocsFallback() {
         <div className="rounded-2xl border border-line bg-surface p-4">
           <div className="h-4 w-24 animate-pulse rounded bg-surface-2" />
           <div className="mt-4 space-y-2">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-9 w-full animate-pulse rounded bg-surface-2"
-              />
+            {Array.from({ length: 4 }, (_, position) => `outline-${position}`).map((key) => (
+              <div key={key} className="h-9 w-full animate-pulse rounded bg-surface-2" />
             ))}
           </div>
         </div>

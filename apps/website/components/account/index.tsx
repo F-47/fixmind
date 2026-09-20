@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AuthForm } from "@/components/account/AuthForm";
+import { useEffect } from "react";
 import { AccountStatus } from "@/components/account/AccountStatus";
-import { useSessionQuery } from "@/services/queries";
+import { AuthForm } from "@/components/account/AuthForm";
 import { supabaseConfigured } from "@/lib/supabase";
+import { useSessionQuery } from "@/services/queries";
 
 const POST_LOGIN_PATH_KEY = "fixmind:post-login-path";
 
 function safeNextPath(searchParams: URLSearchParams): string | null {
   const next = searchParams.get("next");
-  if (!next || !next.startsWith("/") || next.startsWith("//")) return null;
+  if (!next?.startsWith("/") || next.startsWith("//")) return null;
   if (next === "/account" || next.startsWith("/account?")) return null;
   return next;
 }
@@ -47,9 +47,7 @@ export default function Account() {
         />
         <div className="relative mx-auto max-w-6xl px-6 py-16 md:py-24">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
-              Account
-            </p>
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">Account</p>
             <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
               Sign in
             </h1>
@@ -79,9 +77,7 @@ export default function Account() {
                     <div className="h-20 rounded-xl bg-surface-2" />
                   </div>
                 </div>
-                <p className="mt-5 text-center text-sm text-muted">
-                  Loading your account...
-                </p>
+                <p className="mt-5 text-center text-sm text-muted">Loading your account...</p>
               </div>
             ) : session ? (
               <div className="mx-auto max-w-5xl">

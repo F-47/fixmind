@@ -1,6 +1,6 @@
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { MarkdownText } from "@/components/shared/MarkdownText";
 import { cn } from "@/components/shared/cn";
+import { MarkdownText } from "@/components/shared/MarkdownText";
 import type { PracticeCard } from "@/lib/practice";
 import type { Understanding } from "@/lib/types";
 
@@ -75,8 +75,7 @@ export function PracticePromptCard({
             {card.options.map((option, index) => {
               const selected = selectedChoice === option;
               const isCorrectAnswer =
-                normalizeText(option) ===
-                normalizeText(card.question.expectedAnswer);
+                normalizeText(option) === normalizeText(card.question.expectedAnswer);
               const isWrongSelection = mcqFeedback === "wrong" && selected;
               const isCorrectSelection = mcqFeedback === "correct" && selected;
               const isRevealedAnswer = mcqFeedback !== null && isCorrectAnswer;

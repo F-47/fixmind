@@ -14,27 +14,34 @@ function requiredString(value: unknown, field: string): string {
   return value.trim();
 }
 
-const REFACTOR_PATTERN = /\b(mov(e|ing|ed)|extract(ed|ing)?|split(ting)?|rename(d|ing)?|refactor(ed|ing)?|reorganiz(e|ed|ing)|relocat(e|ed|ing))\b/i;
+const REFACTOR_PATTERN =
+  /\b(mov(e|ing|ed)|extract(ed|ing)?|split(ting)?|rename(d|ing)?|refactor(ed|ing)?|reorganiz(e|ed|ing)|relocat(e|ed|ing))\b/i;
 
 // Visual/styling vocabulary with no behavior implication on its own.
-const UI_ONLY_PATTERN = /\b(css|class ?name|styles?|styling|padding|margins?|colou?rs?|fonts?|spacing|alignment|border-radius|background|hover state|theme colou?r|pixels?|px)\b/i;
+const UI_ONLY_PATTERN =
+  /\b(css|class ?name|styles?|styling|padding|margins?|colou?rs?|fonts?|spacing|alignment|border-radius|background|hover state|theme colou?r|pixels?|px)\b/i;
 
 // Words that indicate a real behavior/runtime symptom was involved, even if
 // styling vocabulary also appears (e.g. "the overflow caused a crash").
-const BEHAVIOR_SIGNAL_PATTERN = /\b(crash(es|ed|ing)?|error|exception|throws?|thrown|undefined|null|nan|infinite|leak(s|ed|ing)?|race condition|stale|wrong|incorrect|fail(s|ed|ure|ing)?|broke|broken|bug|freeze[sd]?|hangs?|timeout|data loss|security|injection|overflow|deadlock|duplicate|missing|404|500|memory|unresponsive|crashes|unclickable|inaccessible|non-interactive)\b/i;
+const BEHAVIOR_SIGNAL_PATTERN =
+  /\b(crash(es|ed|ing)?|error|exception|throws?|thrown|undefined|null|nan|infinite|leak(s|ed|ing)?|race condition|stale|wrong|incorrect|fail(s|ed|ure|ing)?|broke|broken|bug|freeze[sd]?|hangs?|timeout|data loss|security|injection|overflow|deadlock|duplicate|missing|404|500|memory|unresponsive|crashes|unclickable|inaccessible|non-interactive)\b/i;
 
 // Boilerplate that describes "a fix happened" without saying anything
 // specific about what was wrong or why.
-const GENERIC_PHRASE_PATTERN = /\b(the code was wrong|there was a bug|fixed (?:the|a|an) (?:bug|issue|problem)|something was (?:wrong|broken)|made it work|resolved the issue|improved the code|cleaned up the code|general improvement|did ?n't work(?: correctly| properly)?|wasn'?t working|not working (?:correctly|properly)?)\b/i;
+const GENERIC_PHRASE_PATTERN =
+  /\b(the code was wrong|there was a bug|fixed (?:the|a|an) (?:bug|issue|problem)|something was (?:wrong|broken)|made it work|resolved the issue|improved the code|cleaned up the code|general improvement|did ?n't work(?: correctly| properly)?|wasn'?t working|not working (?:correctly|properly)?)\b/i;
 
 // Review questions that only ask the reader to recall/describe the diff,
 // with no transfer to a different situation.
-const RECALL_ONLY_QUESTION_PATTERN = /\b(what did you change|what (?:was|did) the (?:fix|change)|summari[sz]e (?:the|your) fix|describe (?:the|your) (?:fix|change)|what changed|how did you fix (?:it|this|the bug|the issue|the problem)|what was the fix)\b/i;
+const RECALL_ONLY_QUESTION_PATTERN =
+  /\b(what did you change|what (?:was|did) the (?:fix|change)|summari[sz]e (?:the|your) fix|describe (?:the|your) (?:fix|change)|what changed|how did you fix (?:it|this|the bug|the issue|the problem)|what was the fix)\b/i;
 
 // fixSummary that starts by describing the edit itself ("Added a null
 // check...") rather than why that edit fixes the root cause.
-const PATCH_VERB_PATTERN = /^(added|removed|changed|replaced|updated|renamed|set|used|called|wrapped|switched|introduced|deleted|inserted|moved|extracted)\b/i;
-const WHY_INDICATOR_PATTERN = /\b(because|since|so that|which means|this ensures|no longer|instead of|rather than|avoids?|prevents?|ensures?|so it|so the|guarantees?|means that|to avoid|to prevent)\b/i;
+const PATCH_VERB_PATTERN =
+  /^(added|removed|changed|replaced|updated|renamed|set|used|called|wrapped|switched|introduced|deleted|inserted|moved|extracted)\b/i;
+const WHY_INDICATOR_PATTERN =
+  /\b(because|since|so that|which means|this ensures|no longer|instead of|rather than|avoids?|prevents?|ensures?|so it|so the|guarantees?|means that|to avoid|to prevent)\b/i;
 
 export type LessonQualityField =
   | "problem"
@@ -57,13 +64,20 @@ export interface LessonQualityHint {
 }
 
 function normalizeForComparison(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 // Words longer than 3 characters carry most of the meaning of a sentence;
 // short connectors (the, and, was, for...) inflate overlap artificially.
 function significantWords(value: string): Set<string> {
-  return new Set(normalizeForComparison(value).split(" ").filter((word) => word.length > 3));
+  return new Set(
+    normalizeForComparison(value)
+      .split(" ")
+      .filter((word) => word.length > 3),
+  );
 }
 
 // Fraction of `a`'s significant words that also appear in `b` - high values
@@ -138,7 +152,8 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
     addHint({
       field: "codeExamples",
       issue: "This looks like a mechanical edit with no broken-vs-corrected comparison.",
-      suggestion: "Show the behavior difference with badCodeExample and goodCodeExample so the lesson captures the actual bug.",
+      suggestion:
+        "Show the behavior difference with badCodeExample and goodCodeExample so the lesson captures the actual bug.",
     });
   }
 
@@ -193,7 +208,8 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
     addHint({
       field: "rootCause",
       issue: "rootCause is too close to mistake.",
-      suggestion: "Describe the underlying mechanism: what runtime assumption failed, and why that produced the symptom.",
+      suggestion:
+        "Describe the underlying mechanism: what runtime assumption failed, and why that produced the symptom.",
     });
   }
 
@@ -202,11 +218,14 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
       "fixSummary just repeats mistake word-for-word. fixSummary must explain WHY the fix resolves the root " +
         "cause, not restate the mistake.",
     );
-  } else if (PATCH_VERB_PATTERN.test(input.fixSummary.trim()) && !WHY_INDICATOR_PATTERN.test(input.fixSummary)) {
+  } else if (
+    PATCH_VERB_PATTERN.test(input.fixSummary.trim()) &&
+    !WHY_INDICATOR_PATTERN.test(input.fixSummary)
+  ) {
     warnings.push(
-      "Quality notice: fixSummary reads like a description of the patch (\"Added/Changed/Replaced ...\") " +
-        "without saying why that change fixes the root cause. Add the reason, e.g. \"... because ...\" or " +
-        "\"... so that ...\".",
+      'Quality notice: fixSummary reads like a description of the patch ("Added/Changed/Replaced ...") ' +
+        'without saying why that change fixes the root cause. Add the reason, e.g. "... because ..." or ' +
+        '"... so that ...".',
     );
     addHint({
       field: "fixSummary",
@@ -220,15 +239,17 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
     input.reviewQuestions.every((question) => RECALL_ONLY_QUESTION_PATTERN.test(question.question))
   ) {
     errors.push(
-      "Every review question just asks the reader to recall or describe the fix (e.g. \"what did you change\"). " +
+      'Every review question just asks the reader to recall or describe the fix (e.g. "what did you change"). ' +
         "At least one review question must be a TRANSFER question: apply the lesson to a different situation, " +
         "spot the same mistake in different code, or predict an outcome under different conditions.",
     );
     addHint({
       field: "reviewQuestions",
       issue: "The questions only ask for recall.",
-      suggestion: "Rewrite one question to transfer the rule to a different code path or predict what happens under changed conditions.",
-      autofill: "A teammate uses the same pattern in a different component. What happens, and how should they adapt it?",
+      suggestion:
+        "Rewrite one question to transfer the rule to a different code path or predict what happens under changed conditions.",
+      autofill:
+        "A teammate uses the same pattern in a different component. What happens, and how should they adapt it?",
     });
   }
 
@@ -259,7 +280,8 @@ export function assessLessonQuality(input: LessonInput): LessonQualityResult {
     addHint({
       field: "mistakePattern",
       issue: "A reusable mistake pattern looks inferable from the lesson text.",
-      suggestion: "Consider adding a short reusable label so similar lessons are easier to spot later.",
+      suggestion:
+        "Consider adding a short reusable label so similar lessons are easier to spot later.",
       autofill: inferredPattern,
     });
   }
@@ -282,22 +304,14 @@ export function assertRealLineBreaks(value: string, field: string): void {
   );
 }
 
-function stringArray(
-  value: unknown,
-  field: string,
-  required = false,
-): string[] {
+function stringArray(value: unknown, field: string, required = false): string[] {
   if (value === undefined && !required) return [];
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
-    throw new Error(
-      `Invalid lesson: ${field} must be an array of strings.`,
-    );
+    throw new Error(`Invalid lesson: ${field} must be an array of strings.`);
   }
   const result = value.map((item) => item.trim()).filter(Boolean);
   if (required && result.length === 0) {
-    throw new Error(
-      `Invalid lesson: ${field} must contain at least one value.`,
-    );
+    throw new Error(`Invalid lesson: ${field} must contain at least one value.`);
   }
   return result;
 }
@@ -322,12 +336,15 @@ function parseTags(value: unknown): Tag[] {
 }
 
 function inferMistakePattern(input: LessonInput): string | undefined {
-  const text = `${input.title} ${input.problem} ${input.mistake} ${input.rootCause} ${input.fixSummary}`.toLowerCase();
-  if (/(hydration|localstorage|server-side rendering|browser-only)/i.test(text)) return "Hydration timing";
+  const text =
+    `${input.title} ${input.problem} ${input.mistake} ${input.rootCause} ${input.fixSummary}`.toLowerCase();
+  if (/(hydration|localstorage|server-side rendering|browser-only)/i.test(text))
+    return "Hydration timing";
   if (/(slice|pagination|page size|off-by-one)/i.test(text)) return "Off-by-one";
   if (/(null|undefined|optional|maybe undefined|avatar)/i.test(text)) return "Null guard";
   if (/(stale closure|latest value|effect|dependency array)/i.test(text)) return "Stale closure";
-  if (/(overlay|z-index|stacking context|pointer events|unclickable)/i.test(text)) return "Stacking context";
+  if (/(overlay|z-index|stacking context|pointer events|unclickable)/i.test(text))
+    return "Stacking context";
   if (/(async|race condition|timing|await|promise)/i.test(text)) return "Async timing";
   return undefined;
 }
@@ -362,36 +379,23 @@ export function validateLessonInput(value: unknown): LessonInput {
   }
 
   const understanding = input.understanding ?? "unknown";
-  if (
-    typeof understanding !== "string" ||
-    !UNDERSTANDING.has(understanding as Understanding)
-  ) {
+  if (typeof understanding !== "string" || !UNDERSTANDING.has(understanding as Understanding)) {
     throw new Error(
       "Invalid lesson: understanding must be understood, partial, copied_blindly, or unknown.",
     );
   }
 
-  if (
-    !Array.isArray(input.reviewQuestions) ||
-    input.reviewQuestions.length === 0
-  ) {
-    throw new Error(
-      "Invalid lesson: at least one review question is required.",
-    );
+  if (!Array.isArray(input.reviewQuestions) || input.reviewQuestions.length === 0) {
+    throw new Error("Invalid lesson: at least one review question is required.");
   }
 
   const reviewQuestions = input.reviewQuestions.map((item, index) => {
     if (!item || typeof item !== "object" || Array.isArray(item)) {
-      throw new Error(
-        `Invalid lesson: reviewQuestions[${index}] must be an object.`,
-      );
+      throw new Error(`Invalid lesson: reviewQuestions[${index}] must be an object.`);
     }
     const question = item as Record<string, unknown>;
     return {
-      question: requiredString(
-        question.question,
-        `reviewQuestions[${index}].question`,
-      ),
+      question: requiredString(question.question, `reviewQuestions[${index}].question`),
       expectedAnswer: requiredString(
         question.expectedAnswer,
         `reviewQuestions[${index}].expectedAnswer`,
@@ -407,8 +411,7 @@ export function validateLessonInput(value: unknown): LessonInput {
     throw new Error("Invalid lesson: nextReviewAt must be a valid date.");
   }
 
-  const codeExample =
-    typeof input.codeExample === "string" ? input.codeExample.trim() : undefined;
+  const codeExample = typeof input.codeExample === "string" ? input.codeExample.trim() : undefined;
   const badCodeExample =
     typeof input.badCodeExample === "string" ? input.badCodeExample.trim() : undefined;
   const goodCodeExample =
@@ -420,22 +423,16 @@ export function validateLessonInput(value: unknown): LessonInput {
 
   return {
     tool: tool.trim(),
-    projectPath:
-      typeof input.projectPath === "string" ? input.projectPath : undefined,
+    projectPath: typeof input.projectPath === "string" ? input.projectPath : undefined,
     title: requiredString(input.title, "title"),
-    originalPrompt:
-      typeof input.originalPrompt === "string"
-        ? input.originalPrompt.trim()
-        : "",
+    originalPrompt: typeof input.originalPrompt === "string" ? input.originalPrompt.trim() : "",
     problem: requiredString(input.problem, "problem"),
     mistake: requiredString(input.mistake, "mistake"),
     rootCause: requiredString(input.rootCause, "rootCause"),
     fixSummary: requiredString(input.fixSummary, "fixSummary"),
     takeaway: requiredString(input.takeaway, "takeaway"),
     mistakePattern:
-      typeof input.mistakePattern === "string"
-        ? input.mistakePattern.trim()
-        : undefined,
+      typeof input.mistakePattern === "string" ? input.mistakePattern.trim() : undefined,
     whenNotApplicable: requiredString(input.whenNotApplicable, "whenNotApplicable"),
     concepts: stringArray(input.concepts, "concepts", true),
     filesChanged: stringArray(input.filesChanged, "filesChanged"),
@@ -443,18 +440,12 @@ export function validateLessonInput(value: unknown): LessonInput {
     badCodeExample,
     goodCodeExample,
     codeExplanation:
-      typeof input.codeExplanation === "string"
-        ? input.codeExplanation.trim()
-        : undefined,
-    practiceTask:
-      typeof input.practiceTask === "string"
-        ? input.practiceTask.trim()
-        : undefined,
+      typeof input.codeExplanation === "string" ? input.codeExplanation.trim() : undefined,
+    practiceTask: typeof input.practiceTask === "string" ? input.practiceTask.trim() : undefined,
     reviewQuestions,
     understanding: understanding as Understanding,
     nextReviewAt,
-    sourceDiff:
-      typeof input.sourceDiff === "string" ? input.sourceDiff : undefined,
+    sourceDiff: typeof input.sourceDiff === "string" ? input.sourceDiff : undefined,
     tags: parseTags(input.tags),
     supersedesLessonId:
       typeof input.supersedesLessonId === "string" && input.supersedesLessonId.trim()

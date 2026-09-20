@@ -52,20 +52,13 @@ export function AdvancedFilters({
           More filters
         </span>
         {hasActiveFilters ? (
-          <span className="inline-flex items-center gap-1.5 text-accent">
-            Active
-          </span>
+          <span className="inline-flex items-center gap-1.5 text-accent">Active</span>
         ) : (
           <span>Optional</span>
         )}
       </summary>
 
-      <div
-        className={cn(
-          "mt-4 grid gap-3 md:grid-cols-2",
-          "xl:grid-cols-5",
-        )}
-      >
+      <div className={cn("mt-4 grid gap-3 md:grid-cols-2", "xl:grid-cols-5")}>
         <FilterSelect
           label="Model"
           value={state.client}
@@ -75,7 +68,12 @@ export function AdvancedFilters({
         <FilterSelect
           label="Learning state"
           value={state.learningState}
-          onChange={(value) => setState((prev) => ({ ...prev, learningState: value as LessonFilterState["learningState"] }))}
+          onChange={(value) =>
+            setState((prev) => ({
+              ...prev,
+              learningState: value as LessonFilterState["learningState"],
+            }))
+          }
           options={[
             ["all", "All states"],
             ["learning", "Not learned"],
@@ -99,9 +97,7 @@ export function AdvancedFilters({
         <FilterSelect
           label="Date"
           value={state.date}
-          onChange={(value) =>
-            setState((prev) => ({ ...prev, date: value as DateFilter }))
-          }
+          onChange={(value) => setState((prev) => ({ ...prev, date: value as DateFilter }))}
           options={[
             ["all", "Any time"],
             ["7d", "Last 7 days"],
@@ -189,9 +185,7 @@ function FieldInput({
 }) {
   return (
     <label className="group grid gap-1.5">
-      <span className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-        {label}
-      </span>
+      <span className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">{label}</span>
       <input
         list={listId}
         className="rounded-xl border border-line bg-page/70 px-3 py-2.5 text-sm text-ink outline-none transition focus:border-accent/50"
@@ -221,9 +215,7 @@ function FilterSelect({
 
   return (
     <label className="group grid gap-1.5">
-      <span className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-        {label}
-      </span>
+      <span className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">{label}</span>
       <div className="relative">
         <select
           value={value}
@@ -248,9 +240,7 @@ function FilterSelect({
           )}
         />
       </div>
-      <span className="text-[11px] leading-relaxed text-muted">
-        Selected: {selectedLabel}
-      </span>
+      <span className="text-[11px] leading-relaxed text-muted">Selected: {selectedLabel}</span>
     </label>
   );
 }

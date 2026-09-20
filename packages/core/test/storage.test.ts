@@ -16,13 +16,16 @@ function input(overrides: Record<string, unknown> = {}) {
     rootCause: "Browser APIs are unavailable during SSR",
     fixSummary: "Read localStorage after hydration",
     takeaway: "Keep server and browser output identical until hydration finishes.",
-    whenNotApplicable: "Does not apply to values that are identical on server and client, like static config.",
+    whenNotApplicable:
+      "Does not apply to values that are identical on server and client, like static config.",
     concepts: ["Next.js hydration", "SSR/browser APIs"],
     filesChanged: ["app/theme.tsx"],
-    reviewQuestions: [{
-      question: "Why did hydration fail?",
-      expectedAnswer: "The initial renders differed",
-    }],
+    reviewQuestions: [
+      {
+        question: "Why did hydration fail?",
+        expectedAnswer: "The initial renders differed",
+      },
+    ],
     understanding: "unknown",
     tags: [{ name: "nextjs" }],
     ...overrides,
@@ -50,16 +53,41 @@ test("saves, lists, and searches lessons", () => {
   });
 });
 
+test("two store owners can share one database without losing writes", () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-shared-store-"));
+  const filePath = path.join(directory, "learning.db");
+  const first = createLessonStore(filePath);
+  const second = createLessonStore(filePath);
+
+  try {
+    for (let index = 0; index < 10; index += 1) {
+      first.save(input({ title: `CLI lesson ${index}` }));
+      second.save(input({ title: `Desktop lesson ${index}` }));
+    }
+
+    assert.equal(first.list(Number.MAX_SAFE_INTEGER).length, 20);
+    assert.equal(second.list(Number.MAX_SAFE_INTEGER).length, 20);
+  } finally {
+    first.close();
+    second.close();
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("persists takeaway and whenNotApplicable", () => {
   withStore((store) => {
     const saved = store.save(input());
-    assert.equal(saved.takeaway, "Keep server and browser output identical until hydration finishes.");
+    assert.equal(
+      saved.takeaway,
+      "Keep server and browser output identical until hydration finishes.",
+    );
     assert.equal(
       saved.whenNotApplicable,
       "Does not apply to values that are identical on server and client, like static config.",
     );
 
-    const reloaded = store.get(saved.id)!;
+    const reloaded = store.get(saved.id);
+    assert.ok(reloaded);
     assert.equal(reloaded.takeaway, saved.takeaway);
     assert.equal(reloaded.whenNotApplicable, saved.whenNotApplicable);
   });
@@ -98,11 +126,13 @@ test("aggregates repeated concepts and mistakes", () => {
   withStore((store) => {
     store.save(input());
     store.save(input({ title: "Second occurrence" }));
-    store.save(input({
-      title: "Type narrowing",
-      mistake: "Used an unchecked union value",
-      concepts: ["TypeScript narrowing"],
-    }));
+    store.save(
+      input({
+        title: "Type narrowing",
+        mistake: "Used an unchecked union value",
+        concepts: ["TypeScript narrowing"],
+      }),
+    );
 
     assert.deepEqual(store.conceptStats()[0], { name: "Next.js hydration", count: 2 });
     assert.deepEqual(store.mistakeStats()[0], {
@@ -154,18 +184,9 @@ test("rejects incomplete lesson input", () => {
     () => validateLessonInput({ title: "Incomplete" }),
     /at least one review question is required/,
   );
-  assert.throws(
-    () => input({ concepts: [] }),
-    /concepts must contain at least one value/,
-  );
-  assert.throws(
-    () => input({ takeaway: "" }),
-    /takeaway is required/,
-  );
-  assert.throws(
-    () => input({ whenNotApplicable: "" }),
-    /whenNotApplicable is required/,
-  );
+  assert.throws(() => input({ concepts: [] }), /concepts must contain at least one value/);
+  assert.throws(() => input({ takeaway: "" }), /takeaway is required/);
+  assert.throws(() => input({ whenNotApplicable: "" }), /whenNotApplicable is required/);
 });
 
 test("new lessons default to active status", () => {
@@ -181,13 +202,16 @@ test("new lessons default to active status", () => {
 test("save with supersedesLessonId links and supersedes the old lesson", () => {
   withStore((store) => {
     const oldLesson = store.save(input({ title: "Wrong fix" }));
-    const newLesson = store.save(input({
-      title: "Correct fix",
-      supersedesLessonId: oldLesson.id,
-      supersedeReason: "The first fix did not actually resolve the bug.",
-    }));
+    const newLesson = store.save(
+      input({
+        title: "Correct fix",
+        supersedesLessonId: oldLesson.id,
+        supersedeReason: "The first fix did not actually resolve the bug.",
+      }),
+    );
 
-    const reloadedOld = store.get(oldLesson.id)!;
+    const reloadedOld = store.get(oldLesson.id);
+    assert.ok(reloadedOld);
     assert.equal(reloadedOld.status, "superseded");
     assert.equal(reloadedOld.supersededBy, newLesson.id);
     assert.equal(reloadedOld.supersedeReason, "The first fix did not actually resolve the bug.");
@@ -200,10 +224,12 @@ test("save with supersedesLessonId links and supersedes the old lesson", () => {
 
 test("search and due exclude superseded lessons by default", () => {
   withStore((store) => {
-    const oldLesson = store.save(input({
-      title: "Wrong fix",
-      nextReviewAt: "2020-01-01T00:00:00.000Z",
-    }));
+    const oldLesson = store.save(
+      input({
+        title: "Wrong fix",
+        nextReviewAt: "2020-01-01T00:00:00.000Z",
+      }),
+    );
     store.save(input({ title: "Correct fix", supersedesLessonId: oldLesson.id }));
 
     assert.deepEqual(store.search("Wrong fix"), []);
@@ -253,11 +279,13 @@ test("list and get still return superseded lessons", () => {
 test("conceptStats and mistakeStats exclude superseded lessons", () => {
   withStore((store) => {
     const oldLesson = store.save(input());
-    store.save(input({
-      title: "Correct fix",
-      supersedesLessonId: oldLesson.id,
-      concepts: ["Next.js hydration"],
-    }));
+    store.save(
+      input({
+        title: "Correct fix",
+        supersedesLessonId: oldLesson.id,
+        concepts: ["Next.js hydration"],
+      }),
+    );
 
     assert.deepEqual(store.conceptStats()[0], { name: "Next.js hydration", count: 1 });
     assert.deepEqual(store.mistakeStats()[0], {

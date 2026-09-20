@@ -27,12 +27,38 @@
       }
     ]
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": []
+    }
+  },
   "bundle": {
     "active": true,
-    "targets": "all",
-    "icon": [
-      "icons/icon.ico",
-      "icons/icon.png"
-    ]
+    "targets": ["nsis"],
+    "publisher": "F-47",
+    "homepage": "https://fixmind.dev",
+    "shortDescription": "Local-first learning lessons for developers",
+    "longDescription": "Fixmind captures durable lessons from real development work and keeps them available locally.",
+    "copyright": "Copyright © 2026 F-47",
+    "icon": ["icons/icon.ico", "icons/icon.png"],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "offlineInstaller",
+        "silent": true
+      },
+      "allowDowngrades": false,
+      "nsis": {
+        "installMode": "currentUser",
+        "startMenuFolder": "Fixmind",
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "uninstallerIcon": "icons/icon.ico"
+      }
+    },
+    "externalBin": ["binaries/fixmind-server"],
+    "resources": {
+      "resources/dashboard/": "dashboard/"
+    }
   }
 }

@@ -9,6 +9,7 @@ export function DashboardNavbar() {
     <header className="sticky top-0 z-30 border-b border-line/80 bg-page/90 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 py-4 sm:px-6 lg:px-8">
         <Link to="/" className="group flex items-center gap-3">
+          {/* biome-ignore lint/performance/noImgElement: this Vite app does not provide Next.js image optimization */}
           <img
             alt=""
             aria-hidden="true"
@@ -16,9 +17,7 @@ export function DashboardNavbar() {
             src="/fixmind-logo.png"
           />
           <div className="flex flex-col leading-none">
-            <span className="font-serif text-lg font-bold tracking-tight text-ink">
-              Fixmind
-            </span>
+            <span className="font-serif text-lg font-bold tracking-tight text-ink">Fixmind</span>
             <span className="font-mono text-[10px] uppercase tracking-[.24em] text-muted">
               Fixes into lessons
             </span>

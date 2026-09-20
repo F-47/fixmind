@@ -1,12 +1,12 @@
 import {
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from "react";
 import {
   deleteLesson,
@@ -93,22 +93,28 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     return synced;
   }, [loadDashboardData]);
 
-  const submitReview = useCallback(async (
-    lessonId: string,
-    answers: Record<string, string>,
-    understanding: Understanding,
-  ): Promise<void> => {
-    await saveReview(lessonId, answers, understanding);
-    await loadDashboardData();
-    setSaved(true);
-    if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
-    savedTimerRef.current = window.setTimeout(() => setSaved(false), 1800);
-  }, [loadDashboardData]);
+  const submitReview = useCallback(
+    async (
+      lessonId: string,
+      answers: Record<string, string>,
+      understanding: Understanding,
+    ): Promise<void> => {
+      await saveReview(lessonId, answers, understanding);
+      await loadDashboardData();
+      setSaved(true);
+      if (savedTimerRef.current) window.clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = window.setTimeout(() => setSaved(false), 1800);
+    },
+    [loadDashboardData],
+  );
 
-  const removeLesson = useCallback(async (lessonId: string): Promise<void> => {
-    await deleteLesson(lessonId);
-    await loadDashboardData();
-  }, [loadDashboardData]);
+  const removeLesson = useCallback(
+    async (lessonId: string): Promise<void> => {
+      await deleteLesson(lessonId);
+      await loadDashboardData();
+    },
+    [loadDashboardData],
+  );
 
   const resetAll = useCallback(async (): Promise<void> => {
     await resetAllLessons();
@@ -154,11 +160,7 @@ export function DashboardDataProvider({ children }: { children: ReactNode }) {
     ],
   );
 
-  return (
-    <DashboardDataContext.Provider value={value}>
-      {children}
-    </DashboardDataContext.Provider>
-  );
+  return <DashboardDataContext.Provider value={value}>{children}</DashboardDataContext.Provider>;
 }
 
 export function useDashboardData() {

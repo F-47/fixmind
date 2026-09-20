@@ -1,5 +1,5 @@
-import { type ReactNode } from "react";
 import { Check, ChevronDown, Minus, X } from "lucide-react";
+import type { ReactNode } from "react";
 import { cn } from "@/components/shared/cn";
 import { recallCoverage } from "@/lib/recall";
 
@@ -12,26 +12,25 @@ export function LessonSelfCheckButtons({
   value?: SelfCheck;
   onChange(value: SelfCheck): void;
 }) {
-  const base =
-    "flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 transition";
+  const base = "flex cursor-pointer items-center gap-1.5 border-0 bg-transparent p-0 transition";
   return (
     <div className="mt-3 mb-1 flex gap-5 font-mono text-[10px] uppercase tracking-[.2em]">
       <button
+        type="button"
         className={cn(base, value === "got" ? "text-positive" : "text-muted hover:text-ink")}
         onClick={() => onChange("got")}
       >
         <Check className="size-3" /> Nailed it
       </button>
       <button
-        className={cn(
-          base,
-          value === "partial" ? "text-accent" : "text-muted hover:text-ink",
-        )}
+        type="button"
+        className={cn(base, value === "partial" ? "text-accent" : "text-muted hover:text-ink")}
         onClick={() => onChange("partial")}
       >
         <Minus className="size-3" /> Partly
       </button>
       <button
+        type="button"
         className={cn(base, value === "missed" ? "text-danger" : "text-muted hover:text-ink")}
         onClick={() => onChange("missed")}
       >
@@ -66,8 +65,8 @@ export function LessonExplanationCoverageHint({
   return (
     <p className="mt-3 text-sm leading-relaxed text-muted italic">
       Your answer may not cover: {missingTerms.slice(0, 4).join(", ")}. Re-read the explanation
-      above - if your reasoning gets to the same idea in different words, "Nailed it" is still
-      fair, but if it doesn&rsquo;t, mark this "Partly" or "Missed it" instead.
+      above - if your reasoning gets to the same idea in different words, "Nailed it" is still fair,
+      but if it doesn&rsquo;t, mark this "Partly" or "Missed it" instead.
     </p>
   );
 }
@@ -124,12 +123,11 @@ export function LessonRecallBlock({
           placeholder="Answer in your own words before revealing"
         />
         <button
+          type="button"
           className="mt-3 flex cursor-pointer items-center gap-2 border-0 bg-transparent p-0 font-mono text-[10px] uppercase tracking-[.2em] text-muted transition hover:text-accent"
           onClick={onToggleReveal}
         >
-          <ChevronDown
-            className={cn("size-3 transition-transform", revealed && "rotate-180")}
-          />
+          <ChevronDown className={cn("size-3 transition-transform", revealed && "rotate-180")} />
           {revealed ? "Hide" : "Reveal"}
         </button>
         <div

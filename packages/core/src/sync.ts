@@ -1,11 +1,23 @@
 import fs from "node:fs";
 import path from "node:path";
-import { dataDirectory } from "./paths.js";
 import { decrypt, deriveKey, encrypt, generateSalt } from "./crypto.js";
+import { dataDirectory } from "./paths.js";
 import type { LessonStore } from "./storage.js";
+import {
+  createSupabaseBackend,
+  type SessionTokens,
+  type SyncBackend,
+  type SyncRow,
+} from "./sync-backend.js";
 import type { Lesson } from "./types.js";
-import { createSupabaseBackend, type Entitlement, type SessionTokens, type SyncBackend, type SyncRow, type SyncUserRecord } from "./sync-backend.js";
-export type { Entitlement, SessionTokens, SyncBackend, SyncRow, SyncUserRecord } from "./sync-backend.js";
+
+export type {
+  Entitlement,
+  SessionTokens,
+  SyncBackend,
+  SyncRow,
+  SyncUserRecord,
+} from "./sync-backend.js";
 
 const VERIFIER_PLAINTEXT = "fixmind-sync-verify";
 const EPOCH = "1970-01-01T00:00:00.000Z";
@@ -56,9 +68,26 @@ export interface GithubLoginResult {
 }
 
 export interface SyncEngine {
-  login(params: { supabaseUrl: string; supabaseAnonKey: string; email: string; password: string; passphrase: string }): Promise<LoginResult>;
-  loginWithGithub(params: { supabaseUrl: string; supabaseAnonKey: string; onAuthUrl?: (url: string) => void }): Promise<GithubLoginResult>;
-  completeGithubLogin(params: { supabaseUrl: string; supabaseAnonKey: string; email: string; userId: string; session: SessionTokens; passphrase: string }): Promise<LoginResult>;
+  login(params: {
+    supabaseUrl: string;
+    supabaseAnonKey: string;
+    email: string;
+    password: string;
+    passphrase: string;
+  }): Promise<LoginResult>;
+  loginWithGithub(params: {
+    supabaseUrl: string;
+    supabaseAnonKey: string;
+    onAuthUrl?: (url: string) => void;
+  }): Promise<GithubLoginResult>;
+  completeGithubLogin(params: {
+    supabaseUrl: string;
+    supabaseAnonKey: string;
+    email: string;
+    userId: string;
+    session: SessionTokens;
+    passphrase: string;
+  }): Promise<LoginResult>;
   logout(): void;
   status(): Promise<SyncStatus>;
   push(): Promise<{ pushed: number }>;
@@ -80,6 +109,7 @@ export interface SyncStatus {
 }
 
 const AUTO_SYNC_TIMEOUT_MS = 10_000;
+const AUTO_PUSH_DEBOUNCE_MS = 2_000;
 
 async function withTimeout<T>(promise: Promise<T>): Promise<T> {
   return Promise.race([
@@ -90,10 +120,10 @@ async function withTimeout<T>(promise: Promise<T>): Promise<T> {
   ]);
 }
 
-export async function autoPushAfterSave(store: LessonStore): Promise<void> {
+export async function autoPushAfterSave(store: LessonStore, backend?: SyncBackend): Promise<void> {
   const config = readSyncConfig();
   if (config?.entitled !== true) return;
-  const engine = createSyncEngine(store);
+  const engine = createSyncEngine(store, backend);
   if (!(await engine.status()).syncEnabled) return;
   try {
     await withTimeout(engine.push());
@@ -118,6 +148,43 @@ export async function autoPullOnStart(store: LessonStore): Promise<void> {
   }
 }
 
+export interface AutoPushHandle {
+  flushed: Promise<void>;
+}
+
+let autoPushTimer: NodeJS.Timeout | undefined;
+let autoPushChain: Promise<void> = Promise.resolve();
+let scheduledFlush: Promise<void> = Promise.resolve();
+
+export function scheduleAutoPush(
+  store: LessonStore,
+  options: { backend?: SyncBackend; debounceMs?: number } = {},
+): AutoPushHandle {
+  const config = readSyncConfig();
+  if (config?.entitled !== true) return { flushed: Promise.resolve() };
+
+  if (autoPushTimer === undefined) {
+    const debounceMs = options.debounceMs ?? AUTO_PUSH_DEBOUNCE_MS;
+    let resolveScheduled: () => void;
+    scheduledFlush = new Promise<void>((resolve) => {
+      resolveScheduled = resolve;
+    });
+    autoPushTimer = setTimeout(() => {
+      autoPushTimer = undefined;
+      autoPushChain = autoPushChain
+        .then(() => autoPushAfterSave(store, options.backend))
+        .catch((error: unknown) => {
+          console.error(
+            `fixmind: background auto-push failed unexpectedly: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        })
+        .then(() => resolveScheduled());
+    }, debounceMs);
+    autoPushTimer.unref();
+  }
+  return { flushed: scheduledFlush };
+}
+
 export function createSyncEngine(store: LessonStore, backend?: SyncBackend): SyncEngine {
   function requireConfig(): SyncConfig {
     const config = readSyncConfig();
@@ -127,7 +194,9 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
 
   function isAuthError(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
-    return /invalid refresh token|refresh token not found|jwt expired|session not found/i.test(message);
+    return /invalid refresh token|refresh token not found|jwt expired|session not found/i.test(
+      message,
+    );
   }
 
   function backendFor(config: SyncConfig): SyncBackend {
@@ -149,7 +218,10 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
     });
     await activeBackend.upsertLessons(config.userId, session, rows);
 
-    const newest = lessons.reduce((max, lesson) => (lesson.updatedAt > max ? lesson.updatedAt : max), config.lastPushedAt ?? EPOCH);
+    const newest = lessons.reduce(
+      (max, lesson) => (lesson.updatedAt > max ? lesson.updatedAt : max),
+      config.lastPushedAt ?? EPOCH,
+    );
     const nextSnapshots = { ...(config.remoteSnapshots ?? {}) };
     for (const lesson of lessons) delete nextSnapshots[lesson.id];
     writeSyncConfig({
@@ -188,9 +260,9 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
 
   function pendingLessons(config: SyncConfig): Lesson[] {
     const remoteSnapshots = config.remoteSnapshots ?? {};
-    return store.updatedSince(config.lastPushedAt ?? EPOCH).filter((lesson) =>
-      remoteSnapshots[lesson.id] !== lesson.updatedAt
-    );
+    return store
+      .updatedSince(config.lastPushedAt ?? EPOCH)
+      .filter((lesson) => remoteSnapshots[lesson.id] !== lesson.updatedAt);
   }
 
   async function establishKey(
@@ -208,7 +280,8 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       } catch {
         throw new Error("Incorrect passphrase for this sync account.");
       }
-      if (verified !== VERIFIER_PLAINTEXT) throw new Error("Incorrect passphrase for this sync account.");
+      if (verified !== VERIFIER_PLAINTEXT)
+        throw new Error("Incorrect passphrase for this sync account.");
       return { key, salt: record.salt };
     }
 
@@ -223,22 +296,23 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
     return { key, salt };
   }
 
-  async function isEntitled(activeBackend: SyncBackend, sessionTokens: SessionTokens): Promise<boolean> {
+  async function isEntitled(
+    activeBackend: SyncBackend,
+    sessionTokens: SessionTokens,
+  ): Promise<boolean> {
     const entitlement = await activeBackend.getEntitlement(sessionTokens);
     return Boolean(entitlement && entitlement.status === "active");
   }
 
-  async function requireEntitlement(activeBackend: SyncBackend, sessionTokens: SessionTokens): Promise<void> {
+  async function requireEntitlement(
+    activeBackend: SyncBackend,
+    sessionTokens: SessionTokens,
+  ): Promise<void> {
     if (!(await isEntitled(activeBackend, sessionTokens))) {
       throw new Error(
         `Fixmind sync requires an active Pro or Team plan. Subscribe at ${PRICING_URL}, then run \`npx fixmind sync push\` (or \`pull\`) again.`,
       );
     }
-  }
-
-  function isIncorrectPassphraseError(error: unknown): boolean {
-    const message = error instanceof Error ? error.message : String(error);
-    return /Incorrect passphrase for this sync account/i.test(message);
   }
 
   async function completeLogin(params: {
@@ -249,9 +323,15 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
     session: SessionTokens;
     passphrase: string;
   }): Promise<LoginResult> {
-    const activeBackend = backend ?? createSupabaseBackend(params.supabaseUrl, params.supabaseAnonKey);
+    const activeBackend =
+      backend ?? createSupabaseBackend(params.supabaseUrl, params.supabaseAnonKey);
     const entitled = await isEntitled(activeBackend, params.session);
-    const { key, salt } = await establishKey(activeBackend, params.userId, params.session, params.passphrase);
+    const { key, salt } = await establishKey(
+      activeBackend,
+      params.userId,
+      params.session,
+      params.passphrase,
+    );
 
     writeSyncConfig({
       supabaseUrl: params.supabaseUrl,
@@ -268,7 +348,8 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
     if (entitled) {
       try {
         const config = readSyncConfig();
-        if (config) await withTimeout(pushPendingLessons(config, activeBackend, params.session, key));
+        if (config)
+          await withTimeout(pushPendingLessons(config, activeBackend, params.session, key));
       } catch (error) {
         console.error(
           `fixmind: initial sync push after login failed (run \`npx fixmind sync push\` manually): ${error instanceof Error ? error.message : String(error)}`,
@@ -288,22 +369,46 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       } catch {
         session = await activeBackend.signUp(email, password);
       }
-      const sessionTokens: SessionTokens = { accessToken: session.accessToken, refreshToken: session.refreshToken };
-      return await completeLogin({ supabaseUrl, supabaseAnonKey, email, userId: session.userId, session: sessionTokens, passphrase });
+      const sessionTokens: SessionTokens = {
+        accessToken: session.accessToken,
+        refreshToken: session.refreshToken,
+      };
+      return await completeLogin({
+        supabaseUrl,
+        supabaseAnonKey,
+        email,
+        userId: session.userId,
+        session: sessionTokens,
+        passphrase,
+      });
     },
 
     async loginWithGithub({ supabaseUrl, supabaseAnonKey, onAuthUrl }) {
       const activeBackend = backend ?? createSupabaseBackend(supabaseUrl, supabaseAnonKey);
       const session = await activeBackend.signInWithGithub(onAuthUrl);
-      return { email: session.email, userId: session.userId, session: { accessToken: session.accessToken, refreshToken: session.refreshToken } };
+      return {
+        email: session.email,
+        userId: session.userId,
+        session: { accessToken: session.accessToken, refreshToken: session.refreshToken },
+      };
     },
 
-    async completeGithubLogin({ supabaseUrl, supabaseAnonKey, email, userId, session, passphrase }) {
-      try {
-        return await completeLogin({ supabaseUrl, supabaseAnonKey, email, userId, session, passphrase });
-      } catch (error) {
-        throw error;
-      }
+    async completeGithubLogin({
+      supabaseUrl,
+      supabaseAnonKey,
+      email,
+      userId,
+      session,
+      passphrase,
+    }) {
+      return completeLogin({
+        supabaseUrl,
+        supabaseAnonKey,
+        email,
+        userId,
+        session,
+        passphrase,
+      });
     },
 
     logout() {
@@ -313,9 +418,13 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
 
     async status() {
       const config = readSyncConfig();
-      if (!config) return { loggedIn: false, syncEnabled: false, pendingPushCount: 0, conflictCount: 0 };
+      if (!config)
+        return { loggedIn: false, syncEnabled: false, pendingPushCount: 0, conflictCount: 0 };
       const activeBackend = backendFor(config);
-      const session: SessionTokens = { accessToken: config.accessToken, refreshToken: config.refreshToken };
+      const session: SessionTokens = {
+        accessToken: config.accessToken,
+        refreshToken: config.refreshToken,
+      };
       try {
         await activeBackend.verifySession(session);
       } catch (error) {
@@ -363,7 +472,10 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       const config = requireConfig();
       const activeBackend = backendFor(config);
       const key = Buffer.from(config.keyBase64, "base64");
-      const session: SessionTokens = { accessToken: config.accessToken, refreshToken: config.refreshToken };
+      const session: SessionTokens = {
+        accessToken: config.accessToken,
+        refreshToken: config.refreshToken,
+      };
       try {
         await requireEntitlement(activeBackend, session);
         const pushed = await pushPendingLessons(config, activeBackend, session, key);
@@ -379,11 +491,18 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       const config = requireConfig();
       const activeBackend = backendFor(config);
       const key = Buffer.from(config.keyBase64, "base64");
-      const session: SessionTokens = { accessToken: config.accessToken, refreshToken: config.refreshToken };
+      const session: SessionTokens = {
+        accessToken: config.accessToken,
+        refreshToken: config.refreshToken,
+      };
       try {
         await requireEntitlement(activeBackend, session);
 
-        const rows = await activeBackend.fetchLessonsSince(config.userId, session, config.lastPulledAt ?? EPOCH);
+        const rows = await activeBackend.fetchLessonsSince(
+          config.userId,
+          session,
+          config.lastPulledAt ?? EPOCH,
+        );
         if (rows.length === 0) {
           markSyncSuccess();
           return { pulled: 0, applied: 0 };
@@ -393,7 +512,9 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
         let newest = config.lastPulledAt ?? EPOCH;
         const remoteSnapshots = { ...(config.remoteSnapshots ?? {}) };
         for (const row of rows) {
-          const lesson = JSON.parse(decrypt({ iv: row.iv, ciphertext: row.ciphertext }, key)) as Lesson;
+          const lesson = JSON.parse(
+            decrypt({ iv: row.iv, ciphertext: row.ciphertext }, key),
+          ) as Lesson;
           const local = store.get(lesson.id);
           if (!local || lesson.updatedAt > local.updatedAt) {
             store.upsertFromRemote(lesson);

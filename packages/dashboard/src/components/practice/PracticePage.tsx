@@ -4,18 +4,14 @@ import { useNavigate } from "react-router-dom";
 import { PracticeEmptyState } from "@/components/practice/PracticeEmptyState";
 import { PracticeModeSelector } from "@/components/practice/PracticeModeSelector";
 import {
-  PracticePromptCard,
   type PracticeMcqFeedback,
+  PracticePromptCard,
 } from "@/components/practice/PracticePromptCard";
 import { PracticeRelatedLessons } from "@/components/practice/PracticeRelatedLessons";
 import { PracticeSessionComplete } from "@/components/practice/PracticeSessionComplete";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { buildPracticeCard, getPracticeLessons, scorePracticeResult } from "@/lib/practice";
 import { findProactiveMemoryMatches } from "@/lib/proactive-memory";
-import {
-  buildPracticeCard,
-  getPracticeLessons,
-  scorePracticeResult,
-} from "@/lib/practice";
 import type { PracticeMode, Understanding } from "@/lib/types";
 
 export function PracticePage() {
@@ -43,6 +39,7 @@ export function PracticePage() {
     }
   }, [data, loadDashboardData]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: switching practice modes starts a new session
   useEffect(() => {
     setSessionLessonIds([]);
     setSessionTotal(0);
@@ -57,6 +54,7 @@ export function PracticePage() {
     setSessionSeed((value) => value + 1);
   }, [mode]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the seed intentionally rebuilds a completed session
   useEffect(() => {
     if (!data) return;
 
@@ -78,23 +76,16 @@ export function PracticePage() {
   const currentLesson = useMemo(
     () =>
       data && sessionLessonIds.length > 0
-        ? (data.lessons.find((lesson) => lesson.id === sessionLessonIds[0]) ??
-          null)
+        ? (data.lessons.find((lesson) => lesson.id === sessionLessonIds[0]) ?? null)
         : null,
     [data, sessionLessonIds],
   );
   const card = useMemo(
-    () =>
-      data && currentLesson
-        ? buildPracticeCard(currentLesson, data.lessons, mode)
-        : null,
+    () => (data && currentLesson ? buildPracticeCard(currentLesson, data.lessons, mode) : null),
     [data, currentLesson, mode],
   );
   const relatedLessons = useMemo(
-    () =>
-      data && currentLesson
-        ? findProactiveMemoryMatches(currentLesson, data.lessons)
-        : [],
+    () => (data && currentLesson ? findProactiveMemoryMatches(currentLesson, data.lessons) : []),
     [data, currentLesson],
   );
   const progress =
@@ -102,6 +93,7 @@ export function PracticePage() {
       ? 0
       : sessionTotal - sessionLessonIds.length + 1;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each card starts with fresh answer state
   useEffect(() => {
     setRevealed(false);
     setAnswer("");
@@ -128,11 +120,7 @@ export function PracticePage() {
     setSaving(true);
     setSessionError("");
     try {
-      await submitReview(
-        card.lesson.id,
-        { [card.question.id]: submittedAnswer },
-        result,
-      );
+      await submitReview(card.lesson.id, { [card.question.id]: submittedAnswer }, result);
       if (card.mode === "free") {
         setSessionLessonIds((current) => current.slice(1));
         setAnswer("");
@@ -143,9 +131,7 @@ export function PracticePage() {
       }
       return true;
     } catch (caught) {
-      setSessionError(
-        caught instanceof Error ? caught.message : String(caught),
-      );
+      setSessionError(caught instanceof Error ? caught.message : String(caught));
       return false;
     } finally {
       setSaving(false);
@@ -153,7 +139,7 @@ export function PracticePage() {
   }
 
   function chooseMcqOption(option: string): void {
-    if (!card || card.mode !== "mcq" || saving || mcqFeedback) return;
+    if (card?.mode !== "mcq" || saving || mcqFeedback) return;
 
     setSelectedChoice(option);
     setRevealed(true);
@@ -164,7 +150,7 @@ export function PracticePage() {
   }
 
   async function advanceMcqCard(): Promise<void> {
-    if (!card || card.mode !== "mcq" || !pendingMcqSubmission || saving) return;
+    if (card?.mode !== "mcq" || !pendingMcqSubmission || saving) return;
 
     const saved = await savePracticeResult(
       pendingMcqSubmission.result,
@@ -230,9 +216,8 @@ export function PracticePage() {
               Quick practice from your due lessons
             </h1>
             <p className="max-w-2xl text-sm leading-relaxed text-muted">
-              Pick an answer, review the feedback, then move on. MCQ shows right
-              or wrong instantly, while free response lets you think it through
-              first.
+              Pick an answer, review the feedback, then move on. MCQ shows right or wrong instantly,
+              while free response lets you think it through first.
             </p>
             <div className="flex flex-wrap items-center gap-2">
               <span className="border border-line px-2 py-0.5 font-mono text-[10px] text-ink">
@@ -259,17 +244,13 @@ export function PracticePage() {
           onAnswerChange={setAnswer}
           onReveal={() => setRevealed(true)}
           onSelectChoice={chooseMcqOption}
-          onSaveUnderstanding={(result) =>
-            void savePracticeResult(result, answer)
-          }
+          onSaveUnderstanding={(result) => void savePracticeResult(result, answer)}
           onAdvanceMcq={advanceMcqCard}
         />
 
         <PracticeRelatedLessons
           matches={relatedLessons}
-          onOpenLesson={(lessonId) =>
-            navigate(`/lessons/${encodeURIComponent(lessonId)}`)
-          }
+          onOpenLesson={(lessonId) => navigate(`/lessons/${encodeURIComponent(lessonId)}`)}
         />
       </div>
     </main>

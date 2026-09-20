@@ -29,10 +29,9 @@ export function DocSearchModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/65 px-4 py-10"
-      onClick={onClose}
-    >
+    // biome-ignore lint/a11y: backdrop click supplements the keyboard-accessible close control
+    <div className="fixed inset-0 z-50 bg-black/65 px-4 py-10" onClick={onClose}>
+      {/* biome-ignore lint/a11y: propagation control is not an interactive action */}
       <div
         className="mx-auto mt-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-line bg-bg shadow-xl"
         onClick={(event) => event.stopPropagation()}
@@ -63,9 +62,7 @@ export function DocSearchModal({
         {resultsQuery.trim().length > 0 ? (
           <div className="max-h-[60vh] overflow-y-auto overscroll-contain p-2">
             {results.length === 0 ? (
-              <div className="px-3 py-8 text-sm text-muted">
-                No matching results found.
-              </div>
+              <div className="px-3 py-8 text-sm text-muted">No matching results found.</div>
             ) : (
               <div className="space-y-1">
                 {results.map((result, index) => {

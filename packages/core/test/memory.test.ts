@@ -1,13 +1,18 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
 import test from "node:test";
-import { createLessonStore } from "../src/storage.js";
 import { getMemoryLessons, getMemoryResults } from "../src/memory.js";
+import { createLessonStore } from "../src/storage.js";
 
-function lessonInput(title: string, takeaway: string, problem: string, extra: Record<string, unknown> = {}) {
+function lessonInput(
+  title: string,
+  takeaway: string,
+  problem: string,
+  extra: Record<string, unknown> = {},
+) {
   return {
     title,
     problem,
@@ -27,25 +32,31 @@ test("memory only includes active reviewed lessons and skips superseded ones", (
   const dbPath = path.join(dataDirectory, "learning.db");
   const store = createLessonStore(dbPath);
   try {
-    const oldLesson = store.save(lessonInput(
-      "Hydration mismatch",
-      "Keep the first server and browser render identical.",
-      "Initial renders differed",
-    ));
+    const oldLesson = store.save(
+      lessonInput(
+        "Hydration mismatch",
+        "Keep the first server and browser render identical.",
+        "Initial renders differed",
+      ),
+    );
     store.updateReview(oldLesson.id, oldLesson.reviewQuestions, "understood");
 
-    const newLesson = store.save(lessonInput(
-      "Hydration fix",
-      "Read browser-only state after mount.",
-      "Initial renders differed",
-    ));
+    const newLesson = store.save(
+      lessonInput(
+        "Hydration fix",
+        "Read browser-only state after mount.",
+        "Initial renders differed",
+      ),
+    );
     store.updateReview(newLesson.id, newLesson.reviewQuestions, "understood");
 
-    const unreviewed = store.save(lessonInput(
-      "Preview cleanup",
-      "Remove listeners on cleanup.",
-      "Preview data stayed in memory",
-    ));
+    const unreviewed = store.save(
+      lessonInput(
+        "Preview cleanup",
+        "Remove listeners on cleanup.",
+        "Preview data stayed in memory",
+      ),
+    );
 
     store.supersede(oldLesson.id, newLesson.id, "The first lesson used the wrong fix.");
 
@@ -65,23 +76,23 @@ test("memory command prints the retrieved lessons", () => {
   const dbPath = path.join(dataDirectory, "learning.db");
   const store = createLessonStore(dbPath);
   try {
-    const lesson = store.save(lessonInput(
-      "Stale closure",
-      "Capture the latest value in the effect.",
-      "The handler used an old value",
-    ));
+    const lesson = store.save(
+      lessonInput(
+        "Stale closure",
+        "Capture the latest value in the effect.",
+        "The handler used an old value",
+      ),
+    );
     store.updateReview(lesson.id, lesson.reviewQuestions, "understood");
 
-    const output = execFileSync(process.execPath, [
-      path.resolve("dist/src/cli.js"),
-      "memory",
-      "closure",
-      "--limit",
-      "5",
-    ], {
-      env: { ...process.env, FIXMIND_DATA_DIR: dataDirectory } as Record<string, string>,
-      encoding: "utf8",
-    });
+    const output = execFileSync(
+      process.execPath,
+      [path.resolve("dist/src/cli.js"), "memory", "closure", "--limit", "5"],
+      {
+        env: { ...process.env, FIXMIND_DATA_DIR: dataDirectory } as Record<string, string>,
+        encoding: "utf8",
+      },
+    );
 
     assert.match(output, /Stale closure/);
     assert.match(output, /Capture the latest value/);
@@ -97,20 +108,24 @@ test("memory prefers a title match over a weaker concept match and explains why"
   const dbPath = path.join(dataDirectory, "learning.db");
   const store = createLessonStore(dbPath);
   try {
-    const titleMatch = store.save(lessonInput(
-      "Stale closure",
-      "Capture the latest value in the effect.",
-      "The handler used an old value",
-      { concepts: ["react-hooks"] },
-    ));
+    const titleMatch = store.save(
+      lessonInput(
+        "Stale closure",
+        "Capture the latest value in the effect.",
+        "The handler used an old value",
+        { concepts: ["react-hooks"] },
+      ),
+    );
     store.updateReview(titleMatch.id, titleMatch.reviewQuestions, "understood");
 
-    const conceptMatch = store.save(lessonInput(
-      "Effect timing",
-      "Use the latest value after commit.",
-      "The handler used an old value",
-      { concepts: ["closure"] },
-    ));
+    const conceptMatch = store.save(
+      lessonInput(
+        "Effect timing",
+        "Use the latest value after commit.",
+        "The handler used an old value",
+        { concepts: ["closure"] },
+      ),
+    );
     store.updateReview(conceptMatch.id, conceptMatch.reviewQuestions, "understood");
 
     const ranked = getMemoryResults(store, { query: "closure", limit: 5 });

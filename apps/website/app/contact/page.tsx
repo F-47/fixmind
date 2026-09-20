@@ -1,5 +1,5 @@
-import { pageMetadata } from "@/lib/seo";
 import Contact from "@/components/contact";
+import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
   title: "Fixmind - Contact",

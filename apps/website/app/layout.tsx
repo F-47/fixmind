@@ -4,8 +4,8 @@ import { Providers } from "@/components/providers";
 import { Footer } from "@/components/shared/Footer";
 import { Nav } from "@/components/shared/Nav";
 import { ScrollToHash, ScrollToTop } from "@/lib/scroll";
-import UmamiTracker from "@/lib/umami";
 import { siteMetadata } from "@/lib/seo";
+import UmamiTracker from "@/lib/umami";
 import "./globals.css";
 
 export const metadata: Metadata = siteMetadata();

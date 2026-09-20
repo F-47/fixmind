@@ -1,20 +1,13 @@
 "use client";
 
-import {
-  Children,
-  cloneElement,
-  isValidElement,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { Children, cloneElement, isValidElement, type ReactElement, type ReactNode } from "react";
 import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
+import remarkGfm from "remark-gfm";
 import { CommandSnippet } from "@/components/ui/CommandSnippet";
 import { cn } from "@/lib/cn";
 import { trackUmamiEvent } from "@/lib/umami";
-import { highlightText, normalizeSearchQuery } from "./docs-data";
-import { resolveDocLink } from "./docs-data";
+import { highlightText, normalizeSearchQuery, resolveDocLink } from "./docs-data";
 
 type DocContentProps = {
   content: string;
@@ -23,12 +16,7 @@ type DocContentProps = {
   currentDocId: string;
 };
 
-export function DocContent({
-  content,
-  onNavigate,
-  highlightQuery,
-  currentDocId,
-}: DocContentProps) {
+export function DocContent({ content, onNavigate, highlightQuery, currentDocId }: DocContentProps) {
   const searchTerms = normalizeSearchQuery(highlightQuery);
 
   return (
@@ -71,10 +59,7 @@ export function DocContent({
           </ul>
         ),
         ol: ({ node, children, ...props }) => (
-          <ol
-            className="mb-6 list-decimal space-y-2 pl-6 text-muted"
-            {...props}
-          >
+          <ol className="mb-6 list-decimal space-y-2 pl-6 text-muted" {...props}>
             {renderHighlightedChildren(children, searchTerms)}
           </ol>
         ),
@@ -84,6 +69,7 @@ export function DocContent({
           </li>
         ),
         img: ({ node, alt, ...props }) => (
+          // biome-ignore lint/performance/noImgElement: markdown images have arbitrary remote sources and intrinsic dimensions
           <img
             alt={alt}
             className="mb-1 mr-5 inline-block h-8 w-auto align-middle last:mr-0"
@@ -131,14 +117,9 @@ export function DocContent({
           const isInline = !match && !className;
           const language = match?.[1]?.toLowerCase() ?? "";
           const text = String(children);
-          const isCommandBlock = [
-            "bash",
-            "sh",
-            "shell",
-            "powershell",
-            "ps1",
-            "zsh",
-          ].includes(language);
+          const isCommandBlock = ["bash", "sh", "shell", "powershell", "ps1", "zsh"].includes(
+            language,
+          );
 
           return isInline ? (
             <code
@@ -150,9 +131,7 @@ export function DocContent({
           ) : isCommandBlock ? (
             <CommandSnippet
               command={text}
-              prefix={
-                language === "powershell" || language === "ps1" ? ">" : "$"
-              }
+              prefix={language === "powershell" || language === "ps1" ? ">" : "$"}
               className="mb-6"
             />
           ) : (
@@ -167,9 +146,7 @@ export function DocContent({
             </code>
           );
         },
-        pre: ({ node, ...props }) => (
-          <pre className="m-0 bg-transparent p-0" {...props} />
-        ),
+        pre: ({ node, ...props }) => <pre className="m-0 bg-transparent p-0" {...props} />,
         table: ({ node, ...props }) => (
           <div className="mb-6 overflow-x-auto rounded-xl border border-line">
             <table
@@ -179,10 +156,7 @@ export function DocContent({
           </div>
         ),
         th: ({ node, children, ...props }) => (
-          <th
-            className="border-b border-line bg-surface px-4 py-3 font-medium text-ink"
-            {...props}
-          >
+          <th className="border-b border-line bg-surface px-4 py-3 font-medium text-ink" {...props}>
             {renderHighlightedChildren(children, searchTerms)}
           </th>
         ),
@@ -199,9 +173,7 @@ export function DocContent({
             {renderHighlightedChildren(children, searchTerms)}
           </blockquote>
         ),
-        hr: ({ node, ...props }) => (
-          <hr className="my-10 border-t border-line" {...props} />
-        ),
+        hr: ({ node, ...props }) => <hr className="my-10 border-t border-line" {...props} />,
       }}
     >
       {content}
@@ -209,10 +181,7 @@ export function DocContent({
   );
 }
 
-function renderHighlightedChildren(
-  children: ReactNode,
-  terms: string[],
-): ReactNode {
+function renderHighlightedChildren(children: ReactNode, terms: string[]): ReactNode {
   if (!terms.length) return children;
 
   return Children.map(children, (child) => {

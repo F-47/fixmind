@@ -6,13 +6,7 @@ import { useEffect, useRef, useState } from "react";
 const ACCESS_KEY = "cef832b8-cd5d-4546-958a-0cbf46a57fdd";
 const FRAME_NAME = "waitlist-form-frame";
 
-export function WaitlistModal({
-  plan,
-  onClose,
-}: {
-  plan: string;
-  onClose: () => void;
-}) {
+export function WaitlistModal({ plan, onClose }: { plan: string; onClose: () => void }) {
   const [sent, setSent] = useState(false);
   const [email, setEmail] = useState("");
   const submittedRef = useRef(false);
@@ -24,10 +18,12 @@ export function WaitlistModal({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
   return (
+    // biome-ignore lint/a11y: backdrop click supplements Escape and close buttons
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-bg/75 px-4 backdrop-blur-sm"
       onClick={onClose}
     >
+      {/* biome-ignore lint/a11y: propagation control is not an interactive action */}
       <div
         className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl"
         onClick={(event) => event.stopPropagation()}
@@ -41,8 +37,8 @@ export function WaitlistModal({
               You&apos;re on the waitlist
             </h3>
             <p className="mt-2 text-center text-sm text-muted">
-              We&apos;ll reach out at <span className="text-ink">{email}</span>{" "}
-              when {plan} is ready.
+              We&apos;ll reach out at <span className="text-ink">{email}</span> when {plan} is
+              ready.
             </p>
             <button
               type="button"
@@ -73,8 +69,7 @@ export function WaitlistModal({
               </button>
             </div>
             <p className="mt-3 text-sm leading-relaxed text-muted">
-              Leave your email and I&apos;ll only use it for the{" "}
-              {plan.toLowerCase()} waitlist.
+              Leave your email and I&apos;ll only use it for the {plan.toLowerCase()} waitlist.
             </p>
             <form
               className="mt-5 space-y-3"

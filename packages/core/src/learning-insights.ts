@@ -1,4 +1,4 @@
-import type { Lesson, ConceptStat } from "./types.js";
+import type { ConceptStat, Lesson } from "./types.js";
 
 export interface LearningInsights {
   periodDays: number;
@@ -27,20 +27,51 @@ export function buildLearningInsights(
 }
 
 export function formatLearningInsightsReport(insights: LearningInsights): string[] {
+  const period = periodLabel(insights.periodDays);
   const lines = reportHeader(insights);
-  lines.push(...reportSection("Top mistake patterns this month", insights.topMistakePatterns, "No recent lessons were captured in this window."));
-  lines.push(...reportSection("Most forgotten concepts", insights.forgottenConcepts, "No recently reviewed lessons are still marked as learning."));
-  lines.push(...reportSection("Recurring files", insights.recurringFiles, "No repeated files yet in the last 30 days."));
-  lines.push(...reportSection("Recurring tools", insights.recurringTools, "No repeated tools yet in the last 30 days."));
+  lines.push(
+    ...reportSection(
+      `Top mistake patterns ${period}`,
+      insights.topMistakePatterns,
+      "No recent lessons were captured in this window.",
+    ),
+  );
+  lines.push(
+    ...reportSection(
+      "Most forgotten concepts",
+      insights.forgottenConcepts,
+      "No recently reviewed lessons are still marked as learning.",
+    ),
+  );
+  lines.push(
+    ...reportSection(
+      "Recurring files",
+      insights.recurringFiles,
+      `No repeated files yet in the last ${insights.periodDays} days.`,
+    ),
+  );
+  lines.push(
+    ...reportSection(
+      "Recurring tools",
+      insights.recurringTools,
+      `No repeated tools yet in the last ${insights.periodDays} days.`,
+    ),
+  );
   const focus = insights.topMistakePatterns[0]?.name ?? insights.forgottenConcepts[0]?.name;
   if (focus) lines.push("", `Next step: focus on ${focus} first.`);
   return lines;
 }
 
+function periodLabel(periodDays: number): string {
+  return periodDays <= 7 ? "this week" : "this month";
+}
+
 function selectRecentLessons(lessons: Lesson[], now: Date, periodDays: number): Lesson[] {
   const cutoff = now.getTime() - periodDays * 24 * 60 * 60 * 1_000;
-  return lessons.filter((lesson) =>
-    lesson.status === "active" && (isRecent(lesson.createdAt, cutoff) || isRecent(lesson.updatedAt, cutoff))
+  return lessons.filter(
+    (lesson) =>
+      lesson.status === "active" &&
+      (isRecent(lesson.createdAt, cutoff) || isRecent(lesson.updatedAt, cutoff)),
   );
 }
 
@@ -49,7 +80,9 @@ function isRecent(timestamp: string, cutoff: number): boolean {
 }
 
 function isStillLearning(lesson: Lesson): boolean {
-  return lesson.status === "active" && lesson.reviewCount > 0 && lesson.understanding !== "understood";
+  return (
+    lesson.status === "active" && lesson.reviewCount > 0 && lesson.understanding !== "understood"
+  );
 }
 
 function selectMistakePattern(lesson: Lesson): string {

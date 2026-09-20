@@ -42,9 +42,7 @@ export function PlanCard({
       )}
     >
       <div className="flex items-center justify-between">
-        <h3 className="font-display text-lg font-semibold text-ink">
-          {plan.name}
-        </h3>
+        <h3 className="font-display text-lg font-semibold text-ink">{plan.name}</h3>
         <span
           className={cn(
             "font-mono text-[10px] uppercase tracking-[0.15em]",
@@ -60,9 +58,7 @@ export function PlanCard({
         </p>
       )}
       <div className="mt-4 flex items-baseline gap-1.5">
-        <span className="font-display text-3xl font-semibold text-ink">
-          {plan.price}
-        </span>
+        <span className="font-display text-3xl font-semibold text-ink">{plan.price}</span>
         {plan.unit && <span className="text-xs text-muted">{plan.unit}</span>}
       </div>
       {plan.note && (

@@ -15,9 +15,7 @@ export function ReasonCard({ reason }: { reason: ContactReason }) {
       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10 text-accent">
         <Mail size={16} />
       </div>
-      <h3 className="font-display text-base font-semibold text-ink">
-        {reason.title}
-      </h3>
+      <h3 className="font-display text-base font-semibold text-ink">{reason.title}</h3>
       <p className="text-sm leading-relaxed text-muted">{reason.description}</p>
       <span className="font-mono text-sm text-accent transition-colors group-hover:text-ink">
         {reason.email}

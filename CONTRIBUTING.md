@@ -4,7 +4,7 @@ Thanks for taking a look.
 
 ## Requirements
 
-- Node.js 22.5+
+- Node.js 22.13+
 - npm 10+
 
 ## Install
@@ -20,6 +20,8 @@ npm install
 ```bash
 npm run build
 npm test
+npm run lint
+npm run format
 npm run dev:website
 npm run dev:dashboard
 ```
@@ -29,7 +31,7 @@ npm run dev:dashboard
 - `packages/core` is the published `fixmind` package: CLI, MCP server, sync, validation, and tests.
 - `packages/dashboard` is the React dashboard bundled into the core package build.
 - `apps/website` is the marketing site.
-- `apps/desktop` is currently a placeholder for a future desktop shell.
+- `apps/desktop` is the native Tauri shell that launches the local dashboard server and opens it in a webview.
 
 ## Making a change
 

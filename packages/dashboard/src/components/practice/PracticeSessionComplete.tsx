@@ -27,8 +27,8 @@ export function PracticeSessionComplete({ sessionTotal, onPracticeAgain }: Props
               </h1>
               <p className="max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
                 You finished {sessionTotal} practice card
-                {sessionTotal === 1 ? "" : "s"}. The normal review schedule is
-                still updated in the background.
+                {sessionTotal === 1 ? "" : "s"}. The normal review schedule is still updated in the
+                background.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -55,9 +55,7 @@ export function PracticeSessionComplete({ sessionTotal, onPracticeAgain }: Props
               Session stats
             </div>
             <div className="mt-3 flex items-end gap-3">
-              <div className="text-5xl font-semibold tracking-tight text-ink">
-                {sessionTotal}
-              </div>
+              <div className="text-5xl font-semibold tracking-tight text-ink">{sessionTotal}</div>
               <div className="pb-2 text-sm text-muted">
                 card{sessionTotal === 1 ? "" : "s"} reviewed
               </div>

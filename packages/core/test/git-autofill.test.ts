@@ -14,7 +14,7 @@ test("buildGitAutofill infers files, pattern, concepts, and a compact code examp
       "@@ -1,5 +1,7 @@",
       " export function ThemeToggle() {",
       '-  const theme = localStorage.getItem("theme");',
-      '-  return <div>{theme}</div>;',
+      "-  return <div>{theme}</div>;",
       "+  useEffect(() => {",
       '+    setTheme(localStorage.getItem("theme"));',
       "+  }, []);",

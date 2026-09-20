@@ -1,16 +1,16 @@
-import { useMemo } from "react";
 import hljs from "highlight.js/lib/core";
-import type { DiffLine } from "@/lib/diff";
-import typescript from "highlight.js/lib/languages/typescript";
-import javascript from "highlight.js/lib/languages/javascript";
-import python from "highlight.js/lib/languages/python";
-import rust from "highlight.js/lib/languages/rust";
-import go from "highlight.js/lib/languages/go";
-import java from "highlight.js/lib/languages/java";
 import bash from "highlight.js/lib/languages/bash";
 import css from "highlight.js/lib/languages/css";
+import go from "highlight.js/lib/languages/go";
+import java from "highlight.js/lib/languages/java";
+import javascript from "highlight.js/lib/languages/javascript";
 import json from "highlight.js/lib/languages/json";
+import python from "highlight.js/lib/languages/python";
+import rust from "highlight.js/lib/languages/rust";
+import typescript from "highlight.js/lib/languages/typescript";
 import xml from "highlight.js/lib/languages/xml";
+import { useMemo } from "react";
+import type { DiffLine } from "@/lib/diff";
 import { diffLines } from "@/lib/diff";
 import { cn } from "./cn";
 
@@ -78,11 +78,7 @@ function highlightLine(line: string, lang: string | undefined): string {
 const BAD_MARK_CLASS = "bg-danger/30 rounded-sm";
 const GOOD_MARK_CLASS = "bg-positive/30 rounded-sm";
 
-function applyHighlightRanges(
-  html: string,
-  ranges: [number, number][],
-  markClass: string,
-): string {
+function applyHighlightRanges(html: string, ranges: [number, number][], markClass: string): string {
   if (ranges.length === 0) return html;
 
   const container = document.createElement("div");
@@ -91,16 +87,14 @@ function applyHighlightRanges(
   const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
   const textNodes: Text[] = [];
   let totalLength = 0;
-  let node: Node | null;
-  while ((node = walker.nextNode())) {
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     textNodes.push(node as Text);
     totalLength += (node.textContent ?? "").length;
   }
 
   const changed = new Array<boolean>(totalLength).fill(false);
   for (const [start, end] of ranges) {
-    for (let i = Math.max(0, start); i < Math.min(end, totalLength); i++)
-      changed[i] = true;
+    for (let i = Math.max(0, start); i < Math.min(end, totalLength); i++) changed[i] = true;
   }
 
   let offset = 0;
@@ -134,16 +128,8 @@ function applyHighlightRanges(
   return container.innerHTML;
 }
 
-function renderLine(
-  line: DiffLine,
-  lang: string | undefined,
-  markClass: string,
-): string {
-  return applyHighlightRanges(
-    highlightLine(line.text, lang),
-    line.changedRanges,
-    markClass,
-  );
+function renderLine(line: DiffLine, lang: string | undefined, markClass: string): string {
+  return applyHighlightRanges(highlightLine(line.text, lang), line.changedRanges, markClass);
 }
 
 interface CodeBlockProps {
@@ -154,13 +140,7 @@ interface CodeBlockProps {
   filesChanged?: string[];
 }
 
-export function CodeBlock({
-  value,
-  compareWith,
-  kind,
-  label,
-  filesChanged = [],
-}: CodeBlockProps) {
+export function CodeBlock({ value, compareWith, kind, label, filesChanged = [] }: CodeBlockProps) {
   const lang = useMemo(() => inferLanguage(filesChanged), [filesChanged]);
 
   const lines = useMemo<DiffLine[]>(() => {
@@ -187,8 +167,10 @@ export function CodeBlock({
       <pre className="m-0 h-full overflow-auto bg-surface py-2 font-mono text-xs leading-relaxed text-ink">
         {lines.map((line, index) => (
           <div
-            key={index}
+            // biome-ignore lint/suspicious/noArrayIndexKey: rendered code lines are immutable and may contain duplicate text
+            key={`${index}:${line}`}
             className="px-4 whitespace-pre-wrap"
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: renders highlight.js output built from escaped code text
             dangerouslySetInnerHTML={{
               __html: renderLine(line, lang, markClass),
             }}

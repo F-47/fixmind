@@ -1,45 +1,30 @@
-import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
-import type { DashboardLesson, Understanding } from "@/lib/types";
-import { MarkdownText } from "@/components/shared/MarkdownText";
+import { useEffect, useState } from "react";
 import { LessonCodeSection } from "@/components/lesson/LessonCodeSection";
 import { LessonHeader } from "@/components/lesson/LessonHeader";
 import { LessonQuestionsSection } from "@/components/lesson/LessonQuestionsSection";
-import {
-  LessonRecallBlock,
-  type SelfCheck,
-} from "@/components/lesson/LessonRecallBlock";
-import {
-  lessonSectionHeading,
-  lessonTagClass,
-} from "@/components/lesson/lessonStyles";
+import { LessonRecallBlock, type SelfCheck } from "@/components/lesson/LessonRecallBlock";
+import { lessonSectionHeading, lessonTagClass } from "@/components/lesson/lessonStyles";
+import { MarkdownText } from "@/components/shared/MarkdownText";
+import type { DashboardLesson, Understanding } from "@/lib/types";
 
 interface Props {
   lesson: DashboardLesson | null;
   reviewMode: boolean;
   onBack(): void;
   onStartReview(): void;
-  onSave(
-    answers: Record<string, string>,
-    understanding: Understanding,
-  ): Promise<void>;
+  onSave(answers: Record<string, string>, understanding: Understanding): Promise<void>;
   onDelete(id: string): void;
 }
 
-export function LessonPage({
-  lesson,
-  reviewMode,
-  onBack,
-  onStartReview,
-  onSave,
-  onDelete,
-}: Props) {
+export function LessonPage({ lesson, reviewMode, onBack, onStartReview, onSave, onDelete }: Props) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [understanding, setUnderstanding] = useState<Understanding | "">("");
   const [error, setError] = useState("");
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [selfChecks, setSelfChecks] = useState<Record<string, SelfCheck>>({});
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: lesson and mode changes start a fresh review form
   useEffect(() => {
     setAnswers({});
     setUnderstanding("");
@@ -51,12 +36,9 @@ export function LessonPage({
   if (!lesson) {
     return (
       <section className="py-8 text-ink">
-        <h1 className="mt-6 font-serif text-3xl font-bold tracking-tight">
-          Lesson not found
-        </h1>
+        <h1 className="mt-6 font-serif text-3xl font-bold tracking-tight">Lesson not found</h1>
         <p className="mt-3 max-w-xl text-base leading-relaxed text-muted">
-          The lesson may have been deleted, or the link no longer points to a
-          valid id.
+          The lesson may have been deleted, or the link no longer points to a valid id.
         </p>
       </section>
     );
@@ -97,9 +79,7 @@ export function LessonPage({
         )}
 
         <h2 className={lessonSectionHeading}>What broke</h2>
-        <MarkdownText className="text-base leading-relaxed">
-          {lesson.problem}
-        </MarkdownText>
+        <MarkdownText className="text-base leading-relaxed">{lesson.problem}</MarkdownText>
 
         <LessonRecallBlock
           title="Why it happened"
@@ -107,9 +87,7 @@ export function LessonPage({
           referenceText={`${lesson.mistake} ${lesson.rootCause} ${lesson.fixSummary}`}
           reviewMode={reviewMode}
           answer={answers.__rootCause ?? ""}
-          onAnswerChange={(value) =>
-            setAnswers((prev) => ({ ...prev, __rootCause: value }))
-          }
+          onAnswerChange={(value) => setAnswers((prev) => ({ ...prev, __rootCause: value }))}
           revealed={Boolean(revealed.__rootCause)}
           onToggleReveal={() =>
             setRevealed((prev) => ({
@@ -118,9 +96,7 @@ export function LessonPage({
             }))
           }
           check={selfChecks.__rootCause}
-          onCheck={(value) =>
-            setSelfChecks((prev) => ({ ...prev, __rootCause: value }))
-          }
+          onCheck={(value) => setSelfChecks((prev) => ({ ...prev, __rootCause: value }))}
           reveal={
             <div className="grid gap-5">
               <div>
@@ -156,31 +132,21 @@ export function LessonPage({
         <LessonRecallBlock
           title="When this doesn't apply"
           prompt="Before reading on: in what situation would this lesson's advice be wrong or unnecessary?"
-          referenceText={
-            lesson.whenNotApplicable ?? "Not captured for this lesson."
-          }
+          referenceText={lesson.whenNotApplicable ?? "Not captured for this lesson."}
           reviewMode={reviewMode}
           answer={answers.__scope ?? ""}
-          onAnswerChange={(value) =>
-            setAnswers((prev) => ({ ...prev, __scope: value }))
-          }
+          onAnswerChange={(value) => setAnswers((prev) => ({ ...prev, __scope: value }))}
           revealed={Boolean(revealed.__scope)}
-          onToggleReveal={() =>
-            setRevealed((prev) => ({ ...prev, __scope: !prev.__scope }))
-          }
+          onToggleReveal={() => setRevealed((prev) => ({ ...prev, __scope: !prev.__scope }))}
           check={selfChecks.__scope}
-          onCheck={(value) =>
-            setSelfChecks((prev) => ({ ...prev, __scope: value }))
-          }
+          onCheck={(value) => setSelfChecks((prev) => ({ ...prev, __scope: value }))}
           reveal={
             lesson.whenNotApplicable ? (
               <MarkdownText className="text-base leading-relaxed">
                 {lesson.whenNotApplicable}
               </MarkdownText>
             ) : (
-              <p className="text-base leading-relaxed">
-                Not captured for this lesson.
-              </p>
+              <p className="text-base leading-relaxed">Not captured for this lesson.</p>
             )
           }
         />

@@ -3,7 +3,13 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { configureClients, configureInstructions, configurePermissions, genericMcpConfiguration, mcpServerCommand } from "../src/setup.js";
+import {
+  configureClients,
+  configureInstructions,
+  configurePermissions,
+  genericMcpConfiguration,
+  mcpServerCommand,
+} from "../src/setup.js";
 
 test("builds a Windows-compatible local MCP command", () => {
   assert.deepEqual(mcpServerCommand("win32"), {
@@ -12,7 +18,7 @@ test("builds a Windows-compatible local MCP command", () => {
   });
   assert.deepEqual(genericMcpConfiguration("linux"), {
     mcpServers: {
-      "fixmind": {
+      fixmind: {
         command: "npx",
         args: ["-y", "fixmind", "mcp"],
       },
@@ -25,21 +31,30 @@ test("configures Cursor without deleting existing servers and is idempotent", ()
   const cursorDirectory = path.join(home, ".cursor");
   const configPath = path.join(cursorDirectory, "mcp.json");
   fs.mkdirSync(cursorDirectory, { recursive: true });
-  fs.writeFileSync(configPath, JSON.stringify({
-    mcpServers: { existing: { command: "existing-server" } },
-    setting: true,
-  }), "utf8");
+  fs.writeFileSync(
+    configPath,
+    JSON.stringify({
+      mcpServers: { existing: { command: "existing-server" } },
+      setting: true,
+    }),
+    "utf8",
+  );
 
   try {
     const first = configureClients({ clients: ["cursor"], homeDirectory: home, platform: "win32" });
     assert.equal(first[0].status, "configured");
     assert.ok(fs.existsSync(`${configPath}.backup`));
+    // biome-ignore lint/suspicious/noExplicitAny: this test intentionally probes an untyped external JSON config
     const config = JSON.parse(fs.readFileSync(configPath, "utf8")) as Record<string, any>;
     assert.equal(config.setting, true);
     assert.equal(config.mcpServers.existing.command, "existing-server");
-    assert.equal(config.mcpServers["fixmind"].command, "cmd");
+    assert.equal(config.mcpServers.fixmind.command, "cmd");
 
-    const second = configureClients({ clients: ["cursor"], homeDirectory: home, platform: "win32" });
+    const second = configureClients({
+      clients: ["cursor"],
+      homeDirectory: home,
+      platform: "win32",
+    });
     assert.equal(second[0].status, "already_configured");
   } finally {
     fs.rmSync(home, { recursive: true, force: true });
@@ -59,7 +74,10 @@ test("uses official CLI registration commands for Codex and Claude", () => {
     run,
   });
 
-  assert.equal(results.every((result) => result.status === "configured"), true);
+  assert.equal(
+    results.every((result) => result.status === "configured"),
+    true,
+  );
   assert.deepEqual(calls[1], {
     command: "codex",
     args: ["mcp", "add", "fixmind", "--", "npx", "-y", "fixmind", "mcp"],
@@ -93,9 +111,15 @@ test("reports unavailable CLI clients instead of crashing when the binary is mis
 test("injects instructions into Claude, Codex, and Cursor files", () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "fixmind-instructions-"));
   try {
-    const results = configureInstructions({ clients: ["claude", "codex", "cursor"], homeDirectory: home });
+    const results = configureInstructions({
+      clients: ["claude", "codex", "cursor"],
+      homeDirectory: home,
+    });
     assert.equal(results.length, 3);
-    assert.equal(results.every((r) => r.status === "written"), true);
+    assert.equal(
+      results.every((r) => r.status === "written"),
+      true,
+    );
 
     const claudeMd = fs.readFileSync(path.join(home, ".claude", "CLAUDE.md"), "utf8");
     assert.ok(claudeMd.includes("fixmind:instructions:start"));
@@ -164,6 +188,7 @@ test("configures Claude permissions in a fresh settings.json", () => {
     assert.equal(results.length, 1);
     assert.equal(results[0].status, "configured");
     const filePath = path.join(home, ".claude", "settings.json");
+    // biome-ignore lint/suspicious/noExplicitAny: this test intentionally probes an untyped external JSON config
     const config = JSON.parse(fs.readFileSync(filePath, "utf8")) as Record<string, any>;
     assert.deepEqual(config.permissions.allow, ["mcp__fixmind__save_lesson"]);
   } finally {
@@ -191,27 +216,46 @@ test("merges Claude permissions without clobbering existing settings", () => {
   const claudeDir = path.join(home, ".claude");
   fs.mkdirSync(claudeDir, { recursive: true });
   const filePath = path.join(claudeDir, "settings.json");
-  fs.writeFileSync(filePath, JSON.stringify({
-    enabledPlugins: { "rust-analyzer-lsp@claude-plugins-official": true },
-    autoUpdatesChannel: "latest",
-    mcpServers: { context7: { type: "stdio", command: "cmd", args: ["/c", "npx", "-y", "@upstash/context7-mcp@latest"] } },
-    theme: "dark-daltonized",
-    permissions: {
-      allow: ["mcp__context7__resolve-library-id"],
-      deny: ["Bash(rm -rf *)"],
-    },
-  }), "utf8");
+  fs.writeFileSync(
+    filePath,
+    JSON.stringify({
+      enabledPlugins: { "rust-analyzer-lsp@claude-plugins-official": true },
+      autoUpdatesChannel: "latest",
+      mcpServers: {
+        context7: {
+          type: "stdio",
+          command: "cmd",
+          args: ["/c", "npx", "-y", "@upstash/context7-mcp@latest"],
+        },
+      },
+      theme: "dark-daltonized",
+      permissions: {
+        allow: ["mcp__context7__resolve-library-id"],
+        deny: ["Bash(rm -rf *)"],
+      },
+    }),
+    "utf8",
+  );
 
   try {
     const results = configurePermissions({ clients: ["claude"], homeDirectory: home });
     assert.equal(results[0].status, "configured");
     assert.ok(fs.existsSync(`${filePath}.backup`));
 
+    // biome-ignore lint/suspicious/noExplicitAny: this test intentionally probes an untyped external JSON config
     const config = JSON.parse(fs.readFileSync(filePath, "utf8")) as Record<string, any>;
     assert.equal(config.autoUpdatesChannel, "latest");
     assert.equal(config.theme, "dark-daltonized");
-    assert.deepEqual(config.mcpServers.context7.args, ["/c", "npx", "-y", "@upstash/context7-mcp@latest"]);
-    assert.deepEqual(config.permissions.allow, ["mcp__context7__resolve-library-id", "mcp__fixmind__save_lesson"]);
+    assert.deepEqual(config.mcpServers.context7.args, [
+      "/c",
+      "npx",
+      "-y",
+      "@upstash/context7-mcp@latest",
+    ]);
+    assert.deepEqual(config.permissions.allow, [
+      "mcp__context7__resolve-library-id",
+      "mcp__fixmind__save_lesson",
+    ]);
     assert.deepEqual(config.permissions.deny, ["Bash(rm -rf *)"]);
   } finally {
     fs.rmSync(home, { recursive: true, force: true });

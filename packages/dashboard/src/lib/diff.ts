@@ -12,8 +12,7 @@ function diffOps(a: string[], b: string[]): DiffOp[] {
   const lcs: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
   for (let i = n - 1; i >= 0; i--) {
     for (let j = m - 1; j >= 0; j--) {
-      lcs[i][j] =
-        a[i] === b[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+      lcs[i][j] = a[i] === b[j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
     }
   }
 
@@ -55,7 +54,10 @@ function mergeRanges(ranges: [number, number][]): [number, number][] {
 }
 
 /** Character ranges within `a` and `b` that differ, aligned at word boundaries. */
-function tokenDiffRanges(a: string, b: string): { aRanges: [number, number][]; bRanges: [number, number][] } {
+function tokenDiffRanges(
+  a: string,
+  b: string,
+): { aRanges: [number, number][]; bRanges: [number, number][] } {
   const ops = diffOps(tokenize(a), tokenize(b));
   const aRanges: [number, number][] = [];
   const bRanges: [number, number][] = [];

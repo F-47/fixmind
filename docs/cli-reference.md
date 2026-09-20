@@ -14,6 +14,7 @@ fixmind setup --client codex,claude,cursor
 fixmind setup --capture-mode balanced
 fixmind setup --client cursor --dry-run
 fixmind setup --scope project
+fixmind setup --starter-pack
 ```
 
 | Flag | Default | Meaning |
@@ -21,6 +22,8 @@ fixmind setup --scope project
 | `--client <list>` | autodetected | Comma-separated clients to configure: `codex`, `claude`, `cursor`. Skips the interactive picker. |
 | `--scope <user\|project>` | `user` | `user` configures the client globally (every project on this device). `project` scopes Cursor's config, instruction files, and Claude's permissions to the current directory instead. Codex has no project-scope flag, so a project-scoped request for it still registers globally. |
 | `--capture-mode <strict\|balanced>` | `strict` | `strict` keeps capture conservative. `balanced` lets the agent save more borderline-but-useful lessons. |
+| `--starter-pack` | off | Install 15 curated example lessons so reviews and memory have content from day one. Also offered interactively. Re-running is a no-op if the pack is already installed. |
+| `--session-start-hook` | off | Also wire the Claude Code session-start hook (see `fixmind hooks`). Also offered interactively when Claude is configured. |
 | `--dry-run` | off | Print what would change without writing anything. |
 
 If no supported client is found and you do not pass `--client`, Fixmind prints a generic MCP server config you can paste into any other stdio-compatible client.
@@ -51,6 +54,40 @@ Returns the small set of reviewed, active lessons that are most relevant to the 
 ### `fixmind mcp`
 
 Starts the MCP server on stdio. You usually do not run this yourself - the AI client you configured with `fixmind setup` launches it for you.
+
+## Session injection
+
+### `fixmind inject`
+
+```bash
+fixmind inject
+fixmind inject --limit 3
+```
+
+Prints the most relevant reviewed lessons for the current project as a short markdown block. Lessons saved in this repository come first; if none match, the top reviewed lessons overall are listed instead. With no reviewed lessons yet it prints nothing.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--limit <n>` | `5` | How many lessons to include. |
+
+### `fixmind hooks <claude|cursor>`
+
+```bash
+fixmind hooks claude
+fixmind hooks claude --scope project
+fixmind hooks cursor
+```
+
+Wires lesson recall into the client so it happens automatically instead of only when the agent asks.
+
+- `claude`: adds a `SessionStart` hook to `.claude/settings.json` (user or project scope) that runs `fixmind inject` when a session starts. Claude Code adds the command's output to the session context, so the lessons are in view before the first change.
+- `cursor`: writes a `.cursor/rules/fixmind-memory.mdc` rule (project scope by default) reminding the agent to call the fixmind `memory` tool at task start.
+
+Both are idempotent and safe to re-run. Settings files get a `.backup` copy before the first edit.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--scope <user\|project>` | `user` for claude, `project` for cursor | Where to install the hook or rule. |
 
 ## Reviewing
 
@@ -100,7 +137,16 @@ Prints two tables: how often each concept shows up, and how often each mistake p
 
 ### `fixmind insights`
 
-Summarizes the last 30 days of recent saves and reviews: top mistake patterns, concepts that are still marked as learning after review, and recurring files/tools. No flags.
+```bash
+fixmind insights
+fixmind insights --weekly
+```
+
+Summarizes the last 30 days of recent saves and reviews: top mistake patterns, concepts that are still marked as learning after review, and recurring files/tools. `--weekly` narrows the window to the last 7 days and appends the current due-review count. Starter lessons are excluded.
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--weekly` | off | Report on the last 7 days instead of the last 30. |
 
 ### `fixmind status`
 
@@ -245,12 +291,13 @@ Removes the local session at `~/.fixmind/sync.json`. It does not delete anything
 ```bash
 fixmind export --format json
 fixmind export --format md --output lessons.md
+fixmind export --format anki --output deck.txt
 fixmind export --id 8d7571ed --format md
 ```
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--format <json\|md>` | `json` | Output format. |
+| `--format <json\|md\|anki>` | `json` | Output format. `anki` writes a tab-separated text file Anki can import directly: one note per review question (front), the expected answer plus the lesson's takeaway (back), and concept/pattern tags. |
 | `--output <file>` | stdout | Write to a file instead of printing. |
 | `--id <id>` | all lessons | Export a single lesson instead of the whole library. |
 

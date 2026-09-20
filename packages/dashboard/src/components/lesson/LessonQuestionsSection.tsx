@@ -1,24 +1,22 @@
-import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { cn } from "@/components/shared/cn";
-import { MarkdownText } from "@/components/shared/MarkdownText";
-import type { DashboardLesson, Understanding } from "@/lib/types";
+import { useEffect, useState } from "react";
+import { LessonDeleteControl } from "@/components/lesson/LessonDeleteControl";
 import {
   LessonExplanationCoverageHint,
   LessonSelfCheckButtons,
   type SelfCheck,
 } from "@/components/lesson/LessonRecallBlock";
-import { LessonDeleteControl } from "@/components/lesson/LessonDeleteControl";
 import { lessonSectionHeading } from "@/components/lesson/lessonStyles";
+import { cn } from "@/components/shared/cn";
+import { MarkdownText } from "@/components/shared/MarkdownText";
+import type { DashboardLesson, Understanding } from "@/lib/types";
 
 interface Props {
   lesson: DashboardLesson;
   reviewMode: boolean;
   answers: Record<string, string>;
   setAnswers(
-    value:
-      | Record<string, string>
-      | ((prev: Record<string, string>) => Record<string, string>),
+    value: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>),
   ): void;
   understanding: Understanding | "";
   setUnderstanding(value: Understanding | ""): void;
@@ -28,9 +26,7 @@ interface Props {
   onDelete(): void;
   revealed: Record<string, boolean>;
   setRevealed(
-    value:
-      | Record<string, boolean>
-      | ((prev: Record<string, boolean>) => Record<string, boolean>),
+    value: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>),
   ): void;
   selfChecks: Record<string, SelfCheck>;
   setSelfChecks(
@@ -58,6 +54,7 @@ export function LessonQuestionsSection({
 }: Props) {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: lesson and mode changes dismiss stale confirmation state
   useEffect(() => {
     setConfirmingDelete(false);
   }, [lesson.id, reviewMode]);
@@ -85,9 +82,7 @@ export function LessonQuestionsSection({
     <>
       <div className="mt-12 border-t border-line pt-8">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Check your understanding
-          </h2>
+          <h2 className="text-2xl font-semibold tracking-tight">Check your understanding</h2>
           {totalQuestions > 0 && (
             <span className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
               {checkedCount} / {totalQuestions} self-checked
@@ -114,9 +109,7 @@ export function LessonQuestionsSection({
                 {String(index + 1).padStart(2, "0")}
               </div>
               <div>
-                <MarkdownText className="text-base font-medium">
-                  {question.question}
-                </MarkdownText>
+                <MarkdownText className="text-base font-medium">{question.question}</MarkdownText>
                 {reviewMode && (
                   <textarea
                     className="mt-4 min-h-28 w-full border border-line bg-surface p-3 text-ink outline-none focus:border-accent"
@@ -131,6 +124,7 @@ export function LessonQuestionsSection({
                   />
                 )}
                 <button
+                  type="button"
                   className="mt-3 flex cursor-pointer items-center gap-2 border-0 bg-transparent p-0 font-mono text-[10px] uppercase tracking-[.2em] text-muted transition hover:text-accent"
                   onClick={() =>
                     setRevealed((prev) => ({
@@ -140,10 +134,7 @@ export function LessonQuestionsSection({
                   }
                 >
                   <ChevronDown
-                    className={cn(
-                      "size-3 transition-transform",
-                      isRevealed && "rotate-180",
-                    )}
+                    className={cn("size-3 transition-transform", isRevealed && "rotate-180")}
                   />
                   {isRevealed ? "Hide expected answer" : "Reveal expected answer"}
                 </button>
@@ -209,15 +200,14 @@ export function LessonQuestionsSection({
               <select
                 className="border border-line bg-surface p-2.5 text-ink outline-none focus:border-accent"
                 value={understanding}
-                onChange={(event) =>
-                  setUnderstanding(event.target.value as Understanding | "")
-                }
+                onChange={(event) => setUnderstanding(event.target.value as Understanding | "")}
               >
                 <option value="">Choose result</option>
                 <option value="understood">Learned</option>
                 <option value="partial">Not learned</option>
               </select>
               <button
+                type="button"
                 className="cursor-pointer border-0 bg-accent px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-page disabled:opacity-50"
                 onClick={() => void submit()}
                 disabled={!understanding}
@@ -237,6 +227,7 @@ export function LessonQuestionsSection({
         <div className="mt-8 border-t border-line pt-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <button
+              type="button"
               className="cursor-pointer border-0 bg-accent px-4 py-2.5 font-mono text-[10px] font-bold uppercase tracking-[.2em] text-page"
               onClick={onStartReview}
             >

@@ -200,11 +200,7 @@
 .dialog-glass {
   border-radius: 20px;
   border: 1px solid var(--color-line);
-  background: linear-gradient(
-    160deg,
-    rgba(22, 26, 35, 0.97),
-    rgba(11, 13, 20, 0.98)
-  );
+  background: linear-gradient(160deg, rgba(22, 26, 35, 0.97), rgba(11, 13, 20, 0.98));
   box-shadow:
     0 40px 100px rgba(0, 0, 0, 0.65),
     0 0 0 1px rgba(255, 255, 255, 0.04) inset;

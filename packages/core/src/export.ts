@@ -1,8 +1,5 @@
+import { formatDate } from "./cli-utils.js";
 import type { Lesson } from "./types.js";
-
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value));
-}
 
 const NOT_CAPTURED = "_Not captured._";
 
@@ -99,4 +96,47 @@ export function lessonsToMarkdown(lessons: Lesson[]): string {
 
 export function lessonsToJson(lessons: Lesson[]): string {
   return JSON.stringify(lessons, null, 2);
+}
+
+function ankiField(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+    .replace(/\t/g, " ")
+    .replace(/\r?\n/g, "<br>");
+}
+
+function ankiTag(text: string): string {
+  return text.replace(/\s+/g, "_");
+}
+
+function lessonToAnkiNotes(lesson: Lesson): string[] {
+  const tags = [
+    "fixmind",
+    ...lesson.concepts.slice(0, 3).map(ankiTag),
+    ...(lesson.mistakePattern ? [ankiTag(lesson.mistakePattern)] : []),
+    `fixmind-${lesson.id.slice(0, 8)}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return lesson.reviewQuestions.map((question) => {
+    const front = ankiField(question.question);
+    const backParts = [
+      ankiField(question.expectedAnswer),
+      `<b>${ankiField(lesson.title)}</b>`,
+      ankiField(lesson.takeaway ?? lesson.fixSummary),
+    ];
+    if (lesson.whenNotApplicable) backParts.push(`Scope: ${ankiField(lesson.whenNotApplicable)}`);
+    return `${front}\t${backParts.join("<br><br>")}\t${tags}`;
+  });
+}
+
+export function lessonsToAnki(lessons: Lesson[]): string {
+  const notes = lessons.flatMap(lessonToAnkiNotes);
+  if (notes.length === 0) return "";
+  return ["#separator:Tab", "#html:true", ...notes].join("\n");
 }

@@ -47,10 +47,7 @@ async function getSession() {
 
 async function getEntitlement(userId: string | null | undefined) {
   if (!supabase || !userId) return null;
-  const { data } = await supabase
-    .from("entitlements")
-    .select("plan, status")
-    .maybeSingle();
+  const { data } = await supabase.from("entitlements").select("plan, status").maybeSingle();
   return data ?? null;
 }
 

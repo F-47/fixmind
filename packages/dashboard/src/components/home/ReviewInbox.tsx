@@ -87,6 +87,7 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
                         </div>
                       </div>
                       <button
+                        type="button"
                         className="inline-flex shrink-0 cursor-pointer items-center gap-2 border-0 bg-accent px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-[.18em] text-page transition hover:translate-y-[-1px]"
                         onClick={() => onOpen(lesson, true)}
                       >
@@ -127,6 +128,7 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
 
                       <div className="mt-4 flex flex-wrap items-center gap-3">
                         <button
+                          type="button"
                           className="inline-flex cursor-pointer items-center gap-2 border-0 bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[.2em] text-page transition hover:translate-y-[-1px]"
                           onClick={() => onOpen(lesson, true)}
                         >
@@ -134,6 +136,7 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
                           <ArrowRight className="size-3.5" />
                         </button>
                         <button
+                          type="button"
                           className="inline-flex cursor-pointer items-center gap-2 border border-line bg-transparent px-4 py-2.5 font-mono text-[11px] uppercase tracking-[.2em] text-muted transition hover:border-accent/40 hover:text-ink"
                           onClick={() => onOpen(lesson, false)}
                         >
@@ -153,10 +156,10 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
               className="mt-4 inline-flex items-center gap-2 rounded-full border border-line bg-page px-3 py-2 font-mono text-[10px] uppercase tracking-[.18em] text-muted transition hover:border-accent/40 hover:text-ink"
               onClick={() => setShowAll((current) => !current)}
             >
-              <ChevronDown className={cn("size-3.5 transition-transform", showAll && "rotate-180")} />
-              {showAll
-                ? "Show fewer"
-                : `Show ${sortedLessons.length - visibleLessons.length} more`}
+              <ChevronDown
+                className={cn("size-3.5 transition-transform", showAll && "rotate-180")}
+              />
+              {showAll ? "Show fewer" : `Show ${sortedLessons.length - visibleLessons.length} more`}
             </button>
           )}
           <Link
@@ -176,8 +179,8 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
                 Start a short drill from the lessons waiting in your inbox
               </span>
               <span className="block max-w-lg text-sm leading-relaxed text-muted">
-                Practice uses the same due queue, so it appears and disappears
-                with the review inbox.
+                Practice uses the same due queue, so it appears and disappears with the review
+                inbox.
               </span>
             </span>
             <span className="inline-flex shrink-0 self-center cursor-pointer items-center gap-2 border-0 bg-accent px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-[.2em] text-page transition hover:translate-y-[-1px]">
@@ -191,12 +194,9 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
           <div className="mx-auto mb-3 flex size-12 items-center justify-center rounded-full border border-line bg-surface-2 text-muted">
             <Clock3 className="size-5" />
           </div>
-          <p className="text-base font-medium text-ink">
-            Nothing is due right now.
-          </p>
+          <p className="text-base font-medium text-ink">Nothing is due right now.</p>
           <p className="mt-1 text-sm leading-relaxed text-muted">
-            When a lesson becomes due, it will appear here at the top of the
-            dashboard.
+            When a lesson becomes due, it will appear here at the top of the dashboard.
           </p>
         </div>
       )}
@@ -207,16 +207,8 @@ export function ReviewInbox({ lessons, onOpen, maxVisible = 3, compact = false }
 function dueSummary(nextReviewAt: string): { label: string; tone: string } {
   const dueDate = new Date(nextReviewAt);
   const now = new Date();
-  const dueDay = Date.UTC(
-    dueDate.getUTCFullYear(),
-    dueDate.getUTCMonth(),
-    dueDate.getUTCDate(),
-  );
-  const today = Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate(),
-  );
+  const dueDay = Date.UTC(dueDate.getUTCFullYear(), dueDate.getUTCMonth(), dueDate.getUTCDate());
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const dayDelta = Math.max(0, Math.floor((today - dueDay) / DAY_MS));
 
   if (dayDelta === 0) {

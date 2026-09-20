@@ -1,17 +1,12 @@
 "use client";
 
-import { InfoPill } from "@/components/ui/InfoPill";
-import { supabase } from "@/lib/supabase";
-import {
-  ArrowRight,
-  Loader2,
-  Mail,
-  ShieldCheck,
-  SquareTerminal,
-} from "lucide-react";
+import { ArrowRight, Loader2, Mail, ShieldCheck, SquareTerminal } from "lucide-react";
+import Image from "next/image";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { InfoPill } from "@/components/ui/InfoPill";
+import { supabase } from "@/lib/supabase";
 
 function emailFromQuery(): string {
   return new URLSearchParams(window.location.search).get("email") ?? "";
@@ -141,9 +136,8 @@ export function AuthForm() {
               One login for optional sync.
             </h2>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-muted">
-              Fixmind is still fully local without an account. Sign in only if
-              you want encrypted sync across machines or need to manage a paid
-              plan.
+              Fixmind is still fully local without an account. Sign in only if you want encrypted
+              sync across machines or need to manage a paid plan.
             </p>
 
             <div className="mt-7 space-y-3">
@@ -155,15 +149,12 @@ export function AuthForm() {
               />
               <FeatureItem
                 index={1}
-                icon={
-                  <SquareTerminal size={16} className="shrink-0 text-accent" />
-                }
+                icon={<SquareTerminal size={16} className="shrink-0 text-accent" />}
                 title="Terminal sync on this device"
                 description={
                   <>
-                    Run <code className="text-ink">npx fixmind login</code> when
-                    you want encrypted sync on this machine. The passphrase
-                    encrypts your lessons before they sync.
+                    Run <code className="text-ink">npx fixmind login</code> when you want encrypted
+                    sync on this machine. The passphrase encrypts your lessons before they sync.
                   </>
                 }
               />
@@ -182,9 +173,7 @@ export function AuthForm() {
                 {mode === "signIn" ? "Welcome back" : "Create access"}
               </h2>
             </div>
-            <InfoPill>
-              {mode === "signIn" ? "Returning user" : "New account"}
-            </InfoPill>
+            <InfoPill>{mode === "signIn" ? "Returning user" : "New account"}</InfoPill>
           </div>
 
           <form className="mt-6 space-y-3" onSubmit={handleSubmit}>
@@ -234,29 +223,23 @@ export function AuthForm() {
           </form>
 
           <div className="mt-3 grid gap-3">
-            <button
-              type="button"
-              onClick={handleGoogle}
-              className={oauthButtonClassName}
-            >
-              <img
+            <button type="button" onClick={handleGoogle} className={oauthButtonClassName}>
+              <Image
                 src="/logos/google.svg"
                 alt=""
-                aria-hidden="true"
+                width={16}
+                height={16}
                 className="size-4 shrink-0"
               />
               Continue with Google
             </button>
 
-            <button
-              type="button"
-              onClick={handleGithub}
-              className={oauthButtonClassName}
-            >
-              <img
+            <button type="button" onClick={handleGithub} className={oauthButtonClassName}>
+              <Image
                 src="/logos/github.svg"
                 alt=""
-                aria-hidden="true"
+                width={16}
+                height={16}
                 className="size-4 shrink-0"
               />
               Continue with GitHub
@@ -268,9 +251,7 @@ export function AuthForm() {
             onClick={() => setMode(mode === "signIn" ? "signUp" : "signIn")}
             className="mt-4 text-sm text-muted underline decoration-line decoration-1 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
           >
-            {mode === "signIn"
-              ? "Need an account? Sign up"
-              : "Already have an account? Sign in"}
+            {mode === "signIn" ? "Need an account? Sign up" : "Already have an account? Sign in"}
           </button>
         </div>
       </div>

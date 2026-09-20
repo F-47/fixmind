@@ -1,7 +1,7 @@
-import { formatDate, statusColor, statusLabel } from "@/lib/format";
-import { cn } from "@/components/shared/cn";
-import type { DashboardLesson } from "@/lib/types";
 import { lessonTagClass } from "@/components/lesson/lessonStyles";
+import { cn } from "@/components/shared/cn";
+import { formatDate, statusColor, statusLabel } from "@/lib/format";
+import type { DashboardLesson } from "@/lib/types";
 
 export function LessonHeader({ lesson }: { lesson: DashboardLesson }) {
   return (
@@ -14,9 +14,7 @@ export function LessonHeader({ lesson }: { lesson: DashboardLesson }) {
           <span>&middot;</span>
           <span>{lesson.tool}</span>
         </div>
-        <span
-          className={cn("flex items-center gap-1.5", statusColor(lesson.understanding))}
-        >
+        <span className={cn("flex items-center gap-1.5", statusColor(lesson.understanding))}>
           <span className="size-1.5 rounded-full bg-current" />
           {statusLabel(lesson.understanding)}
         </span>
@@ -42,10 +40,7 @@ export function LessonHeader({ lesson }: { lesson: DashboardLesson }) {
               href={tag.url}
               target="_blank"
               rel="noopener noreferrer"
-              className={cn(
-                lessonTagClass,
-                "text-accent no-underline hover:border-accent",
-              )}
+              className={cn(lessonTagClass, "text-accent no-underline hover:border-accent")}
             >
               {tag.name} &#8599;
             </a>

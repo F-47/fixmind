@@ -2,9 +2,9 @@
 
 import { PolarEmbedCheckout } from "@polar-sh/checkout/embed";
 import { Check, Lock } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import { PlanCard, type Plan } from "@/components/pricing/PlanCard";
+import { type ReactNode, useEffect, useState } from "react";
+import { type Plan, PlanCard } from "@/components/pricing/PlanCard";
 import { WaitlistModal } from "@/components/pricing/WaitlistModal";
 import { useEntitlementQuery, useSessionQuery } from "@/services/queries";
 
@@ -33,8 +33,7 @@ const PLANS: Plan[] = [
     status: "available",
     cta: "checkout",
     checkoutUrl: PRO_CHECKOUT_URL,
-    tagline:
-      "For developers who switch machines and want encrypted sync across every device.",
+    tagline: "For developers who switch machines and want encrypted sync across every device.",
     features: [
       "Everything in Free",
       "Encrypted sync across your machines",
@@ -51,8 +50,7 @@ const PLANS: Plan[] = [
     note: "Waitlist",
     status: "roadmap",
     cta: "contact",
-    tagline:
-      "For teams that want shared learning later, once the individual product is proven.",
+    tagline: "For teams that want shared learning later, once the individual product is proven.",
     features: [
       "Everything in Pro",
       "Shared lesson library",
@@ -66,8 +64,7 @@ const PLANS: Plan[] = [
     note: "Waitlist",
     status: "roadmap",
     cta: "contact",
-    tagline:
-      "For orgs that need self-hosting, compliance, and deeper rollout support.",
+    tagline: "For orgs that need self-hosting, compliance, and deeper rollout support.",
     features: [
       "Everything in Team",
       "Self-hosted deployment",
@@ -88,9 +85,7 @@ export default function Pricing() {
   const [waitlistPlan, setWaitlistPlan] = useState<string | null>(null);
 
   const activePlan =
-    entitlement?.status === "active"
-      ? entitlement.plan?.toLowerCase() ?? null
-      : null;
+    entitlement?.status === "active" ? (entitlement.plan?.toLowerCase() ?? null) : null;
   const selectedPlan = activePlan === "pro" ? "Pro" : null;
 
   useEffect(() => {
@@ -109,9 +104,7 @@ export default function Pricing() {
     async function pollEntitlement(attempt = 1): Promise<void> {
       const result = await refetchEntitlement();
       const nextPlan =
-        result.data?.status === "active"
-          ? result.data.plan?.toLowerCase() ?? null
-          : null;
+        result.data?.status === "active" ? (result.data.plan?.toLowerCase() ?? null) : null;
 
       if (cancelled || nextPlan === "pro") {
         if (!cancelled) setCheckoutPending(false);
@@ -132,17 +125,13 @@ export default function Pricing() {
     return () => {
       cancelled = true;
     };
-  }, [activePlan, checkoutId, refetchEntitlement, sessionUserId]);
+  }, [activePlan, checkoutId, refetchEntitlement, session]);
 
   useEffect(() => {
     if (checkoutPending || !checkoutId || activePlan !== "pro") return;
     const url = new URL(window.location.href);
     url.searchParams.delete("checkout_id");
-    window.history.replaceState(
-      {},
-      "",
-      `${url.pathname}${url.search}${url.hash}`,
-    );
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   }, [activePlan, checkoutId, checkoutPending]);
 
   const checkoutStatus =
@@ -163,20 +152,17 @@ export default function Pricing() {
             className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[760px] -translate-x-1/2 rounded-full bg-accent/15 blur-[130px]"
           />
           <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">
-              Pricing
-            </p>
+            <p className="font-mono text-xs uppercase tracking-[0.2em] text-accent">Pricing</p>
             <h1 className="mt-4 font-display text-4xl font-semibold tracking-tight text-ink sm:text-5xl">
               Free forever for the learning loop. Pro for sync across devices.
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-muted">
-              Capturing, reviewing, searching, and exporting lessons stays free.
-              Pro adds encrypted sync so the same lessons follow you across
-              machines.
+              Capturing, reviewing, searching, and exporting lessons stays free. Pro adds encrypted
+              sync so the same lessons follow you across machines.
             </p>
             <p className="mx-auto mt-4 max-w-lg rounded-md border border-line bg-surface px-4 py-2 font-mono text-xs text-muted">
-              Free is always free. Pro is $5 per developer per month. Team and
-              Enterprise are waitlist tiers for later.
+              Free is always free. Pro is $5 per developer per month. Team and Enterprise are
+              waitlist tiers for later.
             </p>
             {checkoutStatus && <CheckoutStatus status={checkoutStatus} />}
           </div>
@@ -204,45 +190,27 @@ export default function Pricing() {
             You do not pay for the part that teaches you something.
           </h2>
           <div className="mt-12 grid gap-5 sm:grid-cols-3">
-            <Philosophy
-              icon={<Lock size={18} />}
-              title="Free is the whole loop"
-            >
-              Capturing a lesson and reviewing it later is the entire point of
-              fixmind. That never moves behind a paywall.
+            <Philosophy icon={<Lock size={18} />} title="Free is the whole loop">
+              Capturing a lesson and reviewing it later is the entire point of fixmind. That never
+              moves behind a paywall.
             </Philosophy>
-            <Philosophy
-              icon={<Check size={18} />}
-              title="Pro pays for mobility"
-            >
-              The paid part is keeping the same lessons with you when you move
-              between machines. The learning loop itself stays free.
+            <Philosophy icon={<Check size={18} />} title="Pro pays for mobility">
+              The paid part is keeping the same lessons with you when you move between machines. The
+              learning loop itself stays free.
             </Philosophy>
-            <Philosophy
-              icon={<Check size={18} />}
-              title="Team and Enterprise are future lanes"
-            >
-              Shared libraries, SSO, self-hosting, and org rollout support
-              belong in the roadmap, not the launch offer.
+            <Philosophy icon={<Check size={18} />} title="Team and Enterprise are future lanes">
+              Shared libraries, SSO, self-hosting, and org rollout support belong in the roadmap,
+              not the launch offer.
             </Philosophy>
           </div>
         </div>
       </section>
-      {waitlistPlan && (
-        <WaitlistModal
-          plan={waitlistPlan}
-          onClose={() => setWaitlistPlan(null)}
-        />
-      )}
+      {waitlistPlan && <WaitlistModal plan={waitlistPlan} onClose={() => setWaitlistPlan(null)} />}
     </div>
   );
 }
 
-function CheckoutStatus({
-  status,
-}: {
-  status: "active" | "pending" | "delayed";
-}) {
+function CheckoutStatus({ status }: { status: "active" | "pending" | "delayed" }) {
   const copy =
     status === "active"
       ? "Checkout complete. Your Pro plan should now be active."
@@ -269,9 +237,7 @@ function Philosophy({
   return (
     <div className="rounded-xl border border-line bg-surface p-6">
       <div className="text-accent">{icon}</div>
-      <h3 className="mt-4 font-display text-base font-semibold text-ink">
-        {title}
-      </h3>
+      <h3 className="mt-4 font-display text-base font-semibold text-ink">{title}</h3>
       <p className="mt-2 text-sm leading-relaxed text-muted">{children}</p>
     </div>
   );

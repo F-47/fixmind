@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useDashboardData } from "@/hooks/useDashboardData";
 import { LessonPage } from "@/components/lesson/LessonPage";
 import { ProactiveMemoryPanel } from "@/components/lesson/ProactiveMemoryPanel";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import { findProactiveMemoryMatches } from "@/lib/proactive-memory";
 
 export function LessonRoutePage() {
-  const { data, error, loadDashboardData, submitReview, removeLesson } =
-    useDashboardData();
+  const { data, error, loadDashboardData, submitReview, removeLesson } = useDashboardData();
   const navigate = useNavigate();
   const { lessonId } = useParams();
   const [searchParams] = useSearchParams();
@@ -25,11 +24,11 @@ export function LessonRoutePage() {
     [data, lessonId],
   );
   const proactiveMatches = useMemo(
-    () =>
-      lesson && data ? findProactiveMemoryMatches(lesson, data.lessons) : [],
+    () => (lesson && data ? findProactiveMemoryMatches(lesson, data.lessons) : []),
     [data, lesson],
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: each lesson gets an independent memory-panel dismissal
   useEffect(() => {
     setMemoryDismissed(false);
   }, [lesson?.id]);
@@ -50,12 +49,9 @@ export function LessonRoutePage() {
             <span>Lesson</span>
             <span>Not found</span>
           </div>
-          <h1 className="font-serif text-3xl font-bold tracking-tight">
-            Lesson not found
-          </h1>
+          <h1 className="font-serif text-3xl font-bold tracking-tight">Lesson not found</h1>
           <p className="mt-3 max-w-xl text-base leading-relaxed text-muted">
-            The lesson may have been deleted, or the link no longer points to a
-            valid id.
+            The lesson may have been deleted, or the link no longer points to a valid id.
           </p>
         </section>
       </main>

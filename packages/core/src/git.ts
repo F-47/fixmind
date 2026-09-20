@@ -27,9 +27,7 @@ export function readGitContext(cwd = process.cwd()): GitContext {
       isRepo: true,
       filesChanged: files,
       stat: runGit(["diff", "--stat"], cwd).trim() || undefined,
-      sourceDiff:
-        runGit(["diff", "--no-ext-diff", "--unified=3"], cwd).trim() ||
-        undefined,
+      sourceDiff: runGit(["diff", "--no-ext-diff", "--unified=3"], cwd).trim() || undefined,
     };
   } catch {
     return { isRepo: true, filesChanged: [] };

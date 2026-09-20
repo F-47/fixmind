@@ -58,8 +58,7 @@
   }
 
   .text-glow {
-    text-shadow: 0 0 32px
-      color-mix(in srgb, var(--color-accent) 55%, transparent);
+    text-shadow: 0 0 32px color-mix(in srgb, var(--color-accent) 55%, transparent);
   }
 
   @media (prefers-reduced-motion: no-preference) {
@@ -98,8 +97,12 @@ button {
 }
 
 @keyframes shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
 }
 
 .cta-shimmer {

@@ -16,7 +16,7 @@ export function InfoPill({
           ? "border-good/30 bg-good/10 text-good"
           : tone === "accent"
             ? "border-accent/30 bg-accent/10 text-accent"
-            : "border-line bg-surface-2 text-muted"
+            : "border-line bg-surface-2 text-muted",
       )}
     >
       {children}

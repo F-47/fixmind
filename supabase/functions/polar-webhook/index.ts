@@ -1,5 +1,6 @@
 /// <reference path="../deno.d.ts" />
 
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Supabase Edge Function: receives Polar subscription webhooks and keeps
 // the `entitlements` table in sync, so `fixmind login` can check
 // whether an account has an active Pro/Team subscription.
@@ -14,14 +15,15 @@
 // signature for you. Verify the exact event names below still match
 // Polar's current docs before relying on this in production.
 import { Webhooks } from "npm:@polar-sh/supabase@0.4.5";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL");
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const webhookSecret = Deno.env.get("POLAR_WEBHOOK_SECRET");
 
 if (!supabaseUrl || !serviceRoleKey || !webhookSecret) {
-  throw new Error("Missing SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or POLAR_WEBHOOK_SECRET secret.");
+  throw new Error(
+    "Missing SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or POLAR_WEBHOOK_SECRET secret.",
+  );
 }
 
 const supabase = createClient(supabaseUrl, serviceRoleKey);
@@ -52,7 +54,8 @@ async function upsertEntitlement(subscription: PolarSubscription, status: string
     current_period_end: subscription.currentPeriodEnd ?? null,
     updated_at: new Date().toISOString(),
   });
-  if (error) console.error(`Polar webhook: failed to upsert entitlement for ${email}: ${error.message}`);
+  if (error)
+    console.error(`Polar webhook: failed to upsert entitlement for ${email}: ${error.message}`);
 }
 
 Deno.serve(

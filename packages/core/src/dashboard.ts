@@ -1,18 +1,21 @@
-import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
+import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { buildDashboardData } from "./dashboard-data.js";
 import { lessonsToJson, lessonsToMarkdown } from "./export.js";
 import { createLessonStore, type LessonStore } from "./storage.js";
 import type { ReviewQuestion, Understanding } from "./types.js";
+import { isRecord } from "./utils.js";
 
 export interface DashboardOptions {
   port?: number;
   open?: boolean;
   store?: LessonStore;
+  dashboardDirectory?: string;
+  sessionToken?: string;
 }
 
 export interface DashboardHandle {
@@ -21,16 +24,26 @@ export interface DashboardHandle {
 }
 
 const HOST = "127.0.0.1";
-const DASHBOARD_DIRECTORY = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../dashboard");
+const DEFAULT_DASHBOARD_DIRECTORY = path.resolve(
+  path.dirname(process.argv[1] ?? process.execPath),
+  "../dashboard",
+);
 const DASHBOARD_SYNC_TIMEOUT_MS = 12_000;
 
 export async function startDashboard(options: DashboardOptions = {}): Promise<DashboardHandle> {
   const store = options.store ?? createLessonStore();
   const ownsStore = !options.store;
-  const { autoPullOnStart } = await import("./sync.js");
+  const { autoPullOnStart, scheduleAutoPush } = await import("./sync.js");
   await autoPullOnStart(store);
+  scheduleAutoPush(store);
   const server = http.createServer((request, response) => {
-    void handleRequest(store, request, response);
+    void handleRequest(
+      store,
+      path.resolve(options.dashboardDirectory ?? DEFAULT_DASHBOARD_DIRECTORY),
+      options.sessionToken ?? process.env.FIXMIND_SESSION_TOKEN,
+      request,
+      response,
+    );
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -45,7 +58,7 @@ export async function startDashboard(options: DashboardOptions = {}): Promise<Da
     url,
     async close() {
       await new Promise<void>((resolve, reject) => {
-        server.close((error) => error ? reject(error) : resolve());
+        server.close((error) => (error ? reject(error) : resolve()));
       });
       if (ownsStore) store.close();
     },
@@ -54,19 +67,49 @@ export async function startDashboard(options: DashboardOptions = {}): Promise<Da
 
 async function handleRequest(
   store: LessonStore,
+  dashboardDirectory: string,
+  sessionToken: string | undefined,
   request: IncomingMessage,
   response: ServerResponse,
 ): Promise<void> {
   try {
     const url = new URL(request.url ?? "/", `http://${HOST}`);
+    if (request.method === "GET" && url.pathname === "/api/health") {
+      sendJson(response, 200, { service: "fixmind-dashboard" });
+      return;
+    }
+    if (url.pathname.startsWith("/api/") && !authorizeApiRequest(request, sessionToken)) {
+      sendJson(response, 401, { error: "Unauthorized." });
+      return;
+    }
+    if (url.pathname.startsWith("/api/") && !hasTrustedOrigin(request)) {
+      sendJson(response, 403, { error: "Untrusted request origin." });
+      return;
+    }
     if (request.method === "GET" && url.pathname === "/api/dashboard") {
+      const limit = positiveIntParam(url.searchParams, "limit", 1);
+      const offset = positiveIntParam(url.searchParams, "offset", 0);
+      const paginated = limit !== undefined || offset !== undefined;
+      const etag = dashboardEtag(store.contentVersion(new Date()));
+      const requestTag = request.headers["if-none-match"];
+      const incomingTag = Array.isArray(requestTag) ? requestTag[0] : requestTag;
+
+      if (!paginated && incomingTag === etag) {
+        response.writeHead(304, { ETag: etag, "Cache-Control": "no-cache" });
+        response.end();
+        return;
+      }
+
       const all = store.list(Number.MAX_SAFE_INTEGER);
-      sendJson(response, 200, buildDashboardData(
-        all,
-        all,
-        store.due(),
-        store.conceptStats().slice(0, 10),
-      ));
+      const visible = paginated
+        ? all.slice(offset ?? 0, limit !== undefined ? (offset ?? 0) + limit : undefined)
+        : all;
+      sendJson(
+        response,
+        200,
+        buildDashboardData(all, visible, store.due(), store.conceptStats().slice(0, 10)),
+        paginated ? undefined : { ETag: etag, "Cache-Control": "no-cache" },
+      );
       return;
     }
 
@@ -114,31 +157,51 @@ async function handleRequest(
 
     if (request.method === "GET" && url.pathname === "/api/sync/status") {
       const { createSyncEngine } = await import("./sync.js");
-      sendJson(response, 200, await withDashboardSyncTimeout(() => createSyncEngine(store).status()));
+      sendJson(
+        response,
+        200,
+        await withDashboardSyncTimeout(() => createSyncEngine(store).status()),
+      );
       return;
     }
 
-    const reviewMatch = request.method === "POST"
-      && url.pathname.match(/^\/api\/lessons\/([^/]+)\/review$/);
+    const reviewMatch =
+      request.method === "POST" && url.pathname.match(/^\/api\/lessons\/([^/]+)\/review$/);
     if (reviewMatch) {
       await saveReview(store, decodeURIComponent(reviewMatch[1]), request, response);
       return;
     }
-    const deleteMatch = request.method === "DELETE"
-      && url.pathname.match(/^\/api\/lessons\/([^/]+)$/);
+    const deleteMatch =
+      request.method === "DELETE" && url.pathname.match(/^\/api\/lessons\/([^/]+)$/);
     if (deleteMatch) {
       const existed = store.delete(decodeURIComponent(deleteMatch[1]));
-      sendJson(response, existed ? 200 : 404, existed ? { ok: true } : { error: "Lesson not found." });
+      sendJson(
+        response,
+        existed ? 200 : 404,
+        existed ? { ok: true } : { error: "Lesson not found." },
+      );
       return;
     }
     if (request.method === "GET") {
-      serveDashboardAsset(url.pathname, response);
+      serveDashboardAsset(dashboardDirectory, url.pathname, response);
       return;
     }
     sendJson(response, 404, { error: "Not found." });
   } catch (error) {
     sendJson(response, 400, { error: error instanceof Error ? error.message : String(error) });
   }
+}
+
+function authorizeApiRequest(request: IncomingMessage, sessionToken: string | undefined): boolean {
+  if (!sessionToken) return true;
+  return request.headers.authorization === `Bearer ${sessionToken}`;
+}
+
+function hasTrustedOrigin(request: IncomingMessage): boolean {
+  const origin = request.headers.origin;
+  if (!origin) return true;
+  const host = request.headers.host;
+  return host !== undefined && origin === `http://${host}` && host.startsWith(`${HOST}:`);
 }
 
 async function saveReview(
@@ -184,37 +247,83 @@ async function readJson(request: IncomingMessage): Promise<Record<string, unknow
   return parsed;
 }
 
-function sendJson(response: ServerResponse, status: number, value: unknown): void {
-  send(response, status, "application/json; charset=utf-8", JSON.stringify(value));
+function positiveIntParam(
+  params: URLSearchParams,
+  name: string,
+  minimum: number,
+): number | undefined {
+  const raw = params.get(name);
+  if (raw === null) return undefined;
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < minimum) {
+    throw new Error(`?${name} must be an integer >= ${minimum}.`);
+  }
+  return parsed;
 }
 
-function send(response: ServerResponse, status: number, contentType: string, body: string): void {
+function dashboardEtag(contentVersion: string): string {
+  return `"${createHash("sha256").update(contentVersion).digest("hex").slice(0, 32)}"`;
+}
+
+function sendJson(
+  response: ServerResponse,
+  status: number,
+  value: unknown,
+  extraHeaders: Record<string, string> = {},
+): void {
+  send(response, status, "application/json; charset=utf-8", JSON.stringify(value), extraHeaders);
+}
+
+function send(
+  response: ServerResponse,
+  status: number,
+  contentType: string,
+  body: string,
+  extraHeaders: Record<string, string> = {},
+): void {
   response.writeHead(status, {
     "Content-Type": contentType,
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
-    "Content-Security-Policy": "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'",
+    "Content-Security-Policy":
+      "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'",
+    ...extraHeaders,
   });
   response.end(body);
 }
 
-function sendDownload(response: ServerResponse, body: string, filename: string, contentType: string): void {
+function sendDownload(
+  response: ServerResponse,
+  body: string,
+  filename: string,
+  contentType: string,
+): void {
   response.writeHead(200, {
     "Content-Type": contentType,
     "Content-Disposition": `attachment; filename="${filename}"`,
     "Cache-Control": "no-store",
     "X-Content-Type-Options": "nosniff",
-    "Content-Security-Policy": "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'",
+    "Content-Security-Policy":
+      "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'",
   });
   response.end(body);
 }
 
-function serveDashboardAsset(requestPath: string, response: ServerResponse): void {
-  const relativePath = requestPath === "/" ? "index.html" : decodeURIComponent(requestPath.slice(1));
-  const filePath = path.resolve(DASHBOARD_DIRECTORY, relativePath);
-  if (!filePath.startsWith(`${DASHBOARD_DIRECTORY}${path.sep}`) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+function serveDashboardAsset(
+  dashboardDirectory: string,
+  requestPath: string,
+  response: ServerResponse,
+): void {
+  const relativePath =
+    requestPath === "/" ? "index.html" : decodeURIComponent(requestPath.slice(1));
+  const filePath = path.resolve(dashboardDirectory, relativePath);
+  if (
+    !filePath.startsWith(`${dashboardDirectory}${path.sep}`) ||
+    !fs.existsSync(filePath) ||
+    !fs.statSync(filePath).isFile()
+  ) {
     if (requestPath !== "/" && !path.extname(requestPath)) {
-      serveFile(path.join(DASHBOARD_DIRECTORY, "index.html"), response);
+      serveFile(path.join(dashboardDirectory, "index.html"), response);
       return;
     }
     sendJson(response, 404, { error: "Dashboard asset not found." });
@@ -225,34 +334,43 @@ function serveDashboardAsset(requestPath: string, response: ServerResponse): voi
 
 function serveFile(filePath: string, response: ServerResponse): void {
   if (!fs.existsSync(filePath)) {
-    send(response, 500, "text/plain; charset=utf-8", "Dashboard assets are missing. Run npm run build.");
+    send(
+      response,
+      500,
+      "text/plain; charset=utf-8",
+      "Dashboard assets are missing. Run npm run build.",
+    );
     return;
   }
-  const contentType = new Map([
-    [".html", "text/html; charset=utf-8"], [".js", "text/javascript; charset=utf-8"],
-    [".css", "text/css; charset=utf-8"], [".json", "application/json; charset=utf-8"],
-    [".svg", "image/svg+xml"], [".png", "image/png"], [".ico", "image/x-icon"],
-  ]).get(path.extname(filePath).toLowerCase()) ?? "application/octet-stream";
+  const contentType =
+    new Map([
+      [".html", "text/html; charset=utf-8"],
+      [".js", "text/javascript; charset=utf-8"],
+      [".css", "text/css; charset=utf-8"],
+      [".json", "application/json; charset=utf-8"],
+      [".svg", "image/svg+xml"],
+      [".png", "image/png"],
+      [".ico", "image/x-icon"],
+    ]).get(path.extname(filePath).toLowerCase()) ?? "application/octet-stream";
   response.writeHead(200, {
     "Content-Type": contentType,
-    "Cache-Control": path.basename(filePath) === "index.html" ? "no-store" : "public, max-age=31536000, immutable",
+    "Cache-Control":
+      path.basename(filePath) === "index.html" ? "no-store" : "public, max-age=31536000, immutable",
     "X-Content-Type-Options": "nosniff",
-    "Content-Security-Policy": "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'",
+    "Content-Security-Policy":
+      "default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'",
   });
   fs.createReadStream(filePath).pipe(response);
 }
 
 function openBrowser(url: string): void {
-  const command = process.platform === "win32"
-    ? { file: "cmd", args: ["/c", "start", "", url] }
-    : process.platform === "darwin"
-      ? { file: "open", args: [url] }
-      : { file: "xdg-open", args: [url] };
+  const command =
+    process.platform === "win32"
+      ? { file: "cmd", args: ["/c", "start", "", url] }
+      : process.platform === "darwin"
+        ? { file: "open", args: [url] }
+        : { file: "xdg-open", args: [url] };
   execFile(command.file, command.args, { windowsHide: true }, () => undefined);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 async function withDashboardSyncTimeout<T>(operation: () => Promise<T>): Promise<T> {

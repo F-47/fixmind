@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { Download, Shield, Sparkles, Users } from "lucide-react";
+import Link from "next/link";
 import { pageMetadata } from "@/lib/seo";
 
 const DOWNLOAD_URL =
-  process.env.NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL ??
-  "https://github.com/fixmind/fixmind/releases/latest";
+  process.env.NEXT_PUBLIC_DESKTOP_DOWNLOAD_URL ?? "https://github.com/F-47/fixmind/releases/latest";
 
 export const metadata = pageMetadata({
   title: "Fixmind - Download",
@@ -35,8 +34,14 @@ export default function DownloadPage() {
   return (
     <main className="relative overflow-hidden mx-auto max-w-6xl px-6 py-16 sm:py-20">
       <div className="bg-grid absolute inset-0 -z-10 opacity-[0.22]" aria-hidden="true" />
-      <div className="absolute left-[-10%] top-[-8%] -z-10 h-72 w-72 rounded-full bg-accent/10 blur-3xl" aria-hidden="true" />
-      <div className="absolute bottom-[-12%] right-[-8%] -z-10 h-96 w-96 rounded-full bg-accent-dim/10 blur-3xl" aria-hidden="true" />
+      <div
+        className="absolute left-[-10%] top-[-8%] -z-10 h-72 w-72 rounded-full bg-accent/10 blur-3xl"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute bottom-[-12%] right-[-8%] -z-10 h-96 w-96 rounded-full bg-accent-dim/10 blur-3xl"
+        aria-hidden="true"
+      />
 
       <section className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div className="max-w-2xl animate-rise">
@@ -47,9 +52,8 @@ export default function DownloadPage() {
             Fixmind on your machine.
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-8 text-muted">
-            The desktop app is the cleanest way to use Fixmind. Local lessons
-            stay on your device, and Pro users can sign in to sync the same
-            learning history across machines.
+            The desktop app is the cleanest way to use Fixmind. Local lessons stay on your device,
+            and Pro users can sign in to sync the same learning history across machines.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">

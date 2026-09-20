@@ -1,11 +1,7 @@
 "use client";
 
-import {
-  QueryClient,
-  QueryClientProvider,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { useEffect, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useEffect } from "react";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
 import { queryKeys } from "@/services/query-keys";
 

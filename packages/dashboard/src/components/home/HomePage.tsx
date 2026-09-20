@@ -1,29 +1,37 @@
 import { FilterX } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDashboardData } from "@/hooks/useDashboardData";
-import { cn } from "@/components/shared/cn";
-import { Filters } from "@/components/home/Filters";
 import { AdvancedFilters } from "@/components/home/AdvancedFilters";
+import { Filters } from "@/components/home/Filters";
 import { Hero } from "@/components/home/Hero";
 import { LessonList } from "@/components/home/LessonList";
+import { Progress } from "@/components/home/Progress";
 import { ReviewInbox } from "@/components/home/ReviewInbox";
+import { Sidebar } from "@/components/home/Sidebar";
 import { SyncStatusCard } from "@/components/home/SyncStatusCard";
+import { cn } from "@/components/shared/cn";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import { formatToolName, formatWeek, weekStartOf } from "@/lib/format";
 import {
   DEFAULT_LESSON_FILTERS,
   filterLessons,
   type LessonFilterState,
 } from "@/lib/lesson-filters";
-import { Progress } from "@/components/home/Progress";
-import { Sidebar } from "@/components/home/Sidebar";
 
 const PAGE_SIZE = 8;
 
 export function HomePage() {
   const navigate = useNavigate();
-  const { data, error, refreshing, syncMeta, loadDashboardData, refreshDashboard, removeLesson, resetAll } =
-    useDashboardData();
+  const {
+    data,
+    error,
+    refreshing,
+    syncMeta,
+    loadDashboardData,
+    refreshDashboard,
+    removeLesson,
+    resetAll,
+  } = useDashboardData();
   const [filters, setFilters] = useState<LessonFilterState>(DEFAULT_LESSON_FILTERS);
   const [selectedWeek, setSelectedWeek] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -43,6 +51,7 @@ export function HomePage() {
     void loadDashboardData();
   }, [loadDashboardData]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: changing any filter invalidates the current page
   useEffect(() => {
     setPage(1);
   }, [
@@ -68,7 +77,7 @@ export function HomePage() {
   );
   const modelFilters = [
     ["all", "All models"],
-    ...((data?.models ?? []).map(({ name }): [string, string] => [name, formatToolName(name)])),
+    ...(data?.models ?? []).map(({ name }): [string, string] => [name, formatToolName(name)]),
   ] as Array<[string, string]>;
   const conceptOptions = useMemo(
     () =>
@@ -80,7 +89,11 @@ export function HomePage() {
   );
   const patternOptions = useMemo(
     () =>
-      [...new Set(lessonCorpus.map((lesson) => lesson.mistakePattern?.trim() || lesson.displayPattern))]
+      [
+        ...new Set(
+          lessonCorpus.map((lesson) => lesson.mistakePattern?.trim() || lesson.displayPattern),
+        ),
+      ]
         .filter(Boolean)
         .sort((a, b) => a.localeCompare(b)),
     [lessonCorpus],
@@ -126,11 +139,7 @@ export function HomePage() {
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-10 px-4 py-8 sm:px-6 lg:px-8">
       <Hero totalLessons={data.summary.total} />
 
-      <SyncStatusCard
-        syncMeta={syncMeta}
-        refreshing={refreshing}
-        onRefresh={refreshDashboard}
-      />
+      <SyncStatusCard syncMeta={syncMeta} refreshing={refreshing} onRefresh={refreshDashboard} />
 
       {hasDueLessons && (
         <ReviewInbox
@@ -146,15 +155,14 @@ export function HomePage() {
       <section className="space-y-4 border-b border-line pb-10">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div className="space-y-2">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              Your progress
-            </h2>
+            <h2 className="text-2xl font-semibold tracking-tight">Your progress</h2>
             <div className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
               Lessons per week by understanding
             </div>
           </div>
           {selectedWeek && (
             <button
+              type="button"
               className="cursor-pointer border-0 bg-transparent p-0 font-mono text-[11px] uppercase tracking-[.2em] text-accent hover:underline"
               onClick={() => setSelectedWeek(null)}
             >
@@ -201,9 +209,7 @@ export function HomePage() {
             {hasLessons && (
               <Filters
                 query={filters.query}
-                onQuery={(value) =>
-                  setFilters((prev) => ({ ...prev, query: value }))
-                }
+                onQuery={(value) => setFilters((prev) => ({ ...prev, query: value }))}
               />
             )}
 
@@ -237,9 +243,7 @@ export function HomePage() {
             onPrev={() => setPage((current) => current - 1)}
             onNext={() => setPage((current) => current + 1)}
             onOpen={(lesson, review) =>
-              navigate(
-                `/lessons/${encodeURIComponent(lesson.id)}${review ? "?review=1" : ""}`,
-              )
+              navigate(`/lessons/${encodeURIComponent(lesson.id)}${review ? "?review=1" : ""}`)
             }
             onDelete={(lessonId) => void removeLesson(lessonId)}
           />

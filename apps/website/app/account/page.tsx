@@ -1,7 +1,7 @@
 import { Suspense } from "react";
-import { pageMetadata } from "@/lib/seo";
 import Account from "@/components/account";
 import { AccountFallback } from "@/components/account/AccountFallback";
+import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
   title: "Fixmind - Account",

@@ -1,5 +1,5 @@
-import type { PracticeMode } from "@/lib/types";
 import { cn } from "@/components/shared/cn";
+import type { PracticeMode } from "@/lib/types";
 
 interface Props {
   mode: PracticeMode;
