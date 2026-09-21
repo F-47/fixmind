@@ -115,7 +115,24 @@ jobs:
         working-directory: apps/desktop
         shell: bash
         run: |
-          node -e 'const fs = require("node:fs"); const { TAURI_SIGNING_PRIVATE_KEY: key, TAURI_UPDATER_PUBLIC_KEY: pubkey } = process.env; if (!key || !pubkey) throw new Error("Configure TAURI_SIGNING_PRIVATE_KEY and TAURI_UPDATER_PUBLIC_KEY before tagging a release."); fs.writeFileSync("src-tauri/tauri.release.conf.json", JSON.stringify({ bundle: { createUpdaterArtifacts: true }, plugins: { updater: { pubkey, endpoints: ["https://github.com/F-47/fixmind/releases/latest/download/latest.json"], windows: { installMode: "passive" } } }, null, 2));'
+          node <<'NODE'
+          const fs = require("node:fs");
+          const { TAURI_SIGNING_PRIVATE_KEY: key, TAURI_UPDATER_PUBLIC_KEY: pubkey } = process.env;
+          if (!key || !pubkey) {
+            throw new Error("Configure TAURI_SIGNING_PRIVATE_KEY and TAURI_UPDATER_PUBLIC_KEY before tagging a release.");
+          }
+          const releaseConfig = {
+            bundle: { createUpdaterArtifacts: true },
+            plugins: {
+              updater: {
+                pubkey,
+                endpoints: ["https://github.com/F-47/fixmind/releases/latest/download/latest.json"],
+                windows: { installMode: "passive" },
+              },
+            },
+          };
+          fs.writeFileSync("src-tauri/tauri.release.conf.json", JSON.stringify(releaseConfig, null, 2));
+          NODE
 
       - name: Build native sidecar
         working-directory: apps/desktop
