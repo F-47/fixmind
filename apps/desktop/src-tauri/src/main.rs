@@ -6,7 +6,9 @@ use std::env;
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream, ToSocketAddrs};
-use std::path::{Path, PathBuf};
+#[cfg(any(not(debug_assertions), test))]
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 #[cfg(debug_assertions)]
 use std::process::Stdio;
@@ -63,7 +65,17 @@ fn main() {
         ])
         .setup(|app| {
             let handle = app.handle().clone();
-            start_startup_sequence(handle);
+            match available_port() {
+                Ok(port) => {
+                    DASHBOARD_PORT.store(port, Ordering::Release);
+                    create_main_window(&handle, Some(port))?;
+                    start_startup_sequence(handle, port);
+                }
+                Err(error) => {
+                    create_main_window(&handle, None)?;
+                    startup_failed(&handle, error);
+                }
+            }
             let notify_handle = app.handle().clone();
             std::thread::spawn(move || poll_due_reviews(notify_handle));
             Ok(())
@@ -75,6 +87,26 @@ fn main() {
             shutdown_dashboard(app);
         }
     });
+}
+
+fn create_main_window(handle: &tauri::AppHandle, dashboard_port: Option<u16>) -> tauri::Result<()> {
+    let session_token = SESSION_TOKEN.get_or_init(generate_session_token).clone();
+    let initialization_script = dashboard_port.map_or_else(String::new, |port| {
+        format!(
+            "if (window.location.origin === 'http://{DASHBOARD_HOST}:{port}') {{ Object.defineProperty(window, '__FIXMIND_SESSION_TOKEN__', {{ value: {}, writable: false, configurable: false, enumerable: false }}); }}",
+            serde_json::to_string(&session_token).expect("session token serializes")
+        )
+    });
+    WebviewWindowBuilder::new(handle, "main", WebviewUrl::App("index.html".into()))
+        .initialization_script(&initialization_script)
+        .title("Fixmind")
+        .inner_size(1180.0, 760.0)
+        .min_inner_size(760.0, 560.0)
+        .center()
+        .theme(Some(Theme::Dark))
+        .background_color(Color(8, 9, 13, 255))
+        .build()
+        .map(|_| ())
 }
 
 #[derive(Serialize)]
@@ -104,7 +136,12 @@ fn retry_startup(app: tauri::AppHandle) {
     SHUTTING_DOWN.store(false, Ordering::Release);
     stop_dashboard_process();
     set_startup_state("starting", None);
-    start_startup_sequence(app);
+    let port = DASHBOARD_PORT.load(Ordering::Acquire);
+    if port == 0 {
+        startup_failed(&app, "Restart Fixmind to retry startup.".to_string());
+        return;
+    }
+    start_startup_sequence(app, port);
 }
 
 #[tauri::command]
@@ -136,14 +173,8 @@ fn diagnostics_report(app: tauri::AppHandle) -> Result<String, String> {
     ))
 }
 
-fn start_startup_sequence(handle: tauri::AppHandle) {
+fn start_startup_sequence(handle: tauri::AppHandle, port: u16) {
     tauri::async_runtime::spawn(async move {
-        let session_token = SESSION_TOKEN.get_or_init(generate_session_token).clone();
-        let port = match available_port() {
-            Ok(port) => port,
-            Err(error) => return startup_failed(&handle, error),
-        };
-        DASHBOARD_PORT.store(port, Ordering::Release);
         if let Err(error) = start_dashboard(&handle, port) {
             return startup_failed(&handle, error);
         }
@@ -153,34 +184,19 @@ fn start_startup_sequence(handle: tauri::AppHandle) {
                 "The local workspace took too long to respond.".to_string(),
             );
         }
-        let window = WebviewWindowBuilder::new(
-            &handle,
-            "main",
-            WebviewUrl::External(
-                format!("http://{DASHBOARD_HOST}:{port}")
-                    .parse()
-                    .expect("valid dashboard url"),
-            ),
-        )
-        .initialization_script(&format!(
-            "if (window.location.origin === 'http://{DASHBOARD_HOST}:{port}') {{ Object.defineProperty(window, '__FIXMIND_SESSION_TOKEN__', {{ value: {}, writable: false, configurable: false, enumerable: false }}); }}",
-            serde_json::to_string(&session_token).expect("session token serializes")
-        ))
-        .theme(Some(Theme::Dark))
-        .background_color(Color(8, 9, 13, 255))
-        .title("Fixmind")
-        .build();
-        match window {
-            Ok(_) => {
-                set_startup_state("ready", None);
-                if let Some(window) = handle.get_webview_window("splash") {
-                    let _ = window.close();
+        let dashboard_url = format!("http://{DASHBOARD_HOST}:{port}")
+            .parse()
+            .expect("valid dashboard url");
+        match handle.get_webview_window("main") {
+            Some(window) => match window.navigate(dashboard_url) {
+                Ok(_) => {
+                    set_startup_state("ready", None);
                 }
-            }
-            Err(error) => startup_failed(
-                &handle,
-                format!("Could not open the dashboard window: {error}"),
-            ),
+                Err(error) => {
+                    startup_failed(&handle, format!("Could not open the dashboard: {error}"))
+                }
+            },
+            None => startup_failed(&handle, "The Fixmind window is unavailable.".to_string()),
         }
     });
 }

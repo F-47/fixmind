@@ -7,7 +7,7 @@ export function DashboardNavbar() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-line/80 bg-page/90 backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 py-4 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <Link to="/" className="group flex items-center gap-3">
           {/* biome-ignore lint/performance/noImgElement: this Vite app does not provide Next.js image optimization */}
           <img

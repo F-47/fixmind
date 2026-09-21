@@ -98,103 +98,98 @@ function App() {
     startup: "Fixmind could not open the local dashboard. Retry or restart Fixmind to try again.",
   }[status.category];
   return (
-    <main className="splash-shell">
-      <div className="splash-stage">
-        <div className="splash-card">
-          <div className="card-top">
-            <div className="brand-lockup">
-              <span className="brand-mark" aria-hidden="true">
-                <span />
-              </span>
-              <div>
-                <div className="eyebrow">Fixmind Desktop</div>
-                <h1>{failed ? "Your workspace is safe" : "Starting your local workspace"}</h1>
-              </div>
-            </div>
-            <div className="status-pill">Local first</div>
+    <main className="startup-shell">
+      <section className="startup-panel" aria-live="polite">
+        <div className="brand-lockup">
+          <span className="brand-mark" aria-hidden="true">
+            <span />
+          </span>
+          <div>
+            <h1>{failed ? "Your workspace is safe" : "Opening Fixmind"}</h1>
+            <p className="startup-subtitle">
+              {failed
+                ? "Your local lessons have not been changed."
+                : "Preparing your local workspace."}
+            </p>
           </div>
-          {failed ? (
-            <>
-              <p className="recovery-copy">
-                {failureGuidance} Your lessons were not changed or deleted.
-              </p>
-              <details className="technical-details">
-                <summary>Show technical details</summary>
-                <code>{status.message ?? "No additional details were recorded."}</code>
-              </details>
-              <div className="recovery-actions">
-                <button
-                  type="button"
-                  className="primary-action"
-                  onClick={() => void runAction("retry_startup")}
-                >
-                  Retry
-                </button>
-                <button
-                  type="button"
-                  className="secondary-action"
-                  onClick={() => void runAction("restart_fixmind")}
-                >
-                  Restart Fixmind
-                </button>
-                <button
-                  type="button"
-                  className="secondary-action"
-                  onClick={() => void runAction("open_logs")}
-                >
-                  Open Logs
-                </button>
-                <button
-                  type="button"
-                  className="secondary-action"
-                  onClick={() => void copyDiagnostics()}
-                >
-                  {copied ? "Diagnostics copied" : "Copy Diagnostics"}
-                </button>
-                <button
-                  type="button"
-                  className="secondary-action"
-                  onClick={() => void checkForUpdates()}
-                >
-                  {updateState === "checking" ? "Checking for updates…" : "Check for updates"}
-                </button>
-              </div>
-              {actionError ? (
-                <p className="action-error" role="alert">
-                  {actionError}
-                </p>
-              ) : null}
-            </>
-          ) : (
-            <div className="card-footer" aria-live="polite">
-              <div className="pulse" aria-hidden="true" />
-              <span>Launching dashboard</span>
-              <button type="button" className="update-link" onClick={() => void checkForUpdates()}>
-                {updateState === "checking" ? "Checking…" : "Check for updates"}
+        </div>
+        {failed ? (
+          <>
+            <p className="recovery-copy">
+              {failureGuidance} Your lessons were not changed or deleted.
+            </p>
+            <details className="technical-details">
+              <summary>Show technical details</summary>
+              <code>{status.message ?? "No additional details were recorded."}</code>
+            </details>
+            <div className="recovery-actions">
+              <button
+                type="button"
+                className="primary-action"
+                onClick={() => void runAction("retry_startup")}
+              >
+                Retry
               </button>
-            </div>
-          )}
-          {updateState === "available" && availableUpdate ? (
-            <div className="update-card" role="status">
-              <span>Fixmind {availableUpdate.version} is ready.</span>
               <button
                 type="button"
                 className="secondary-action"
-                onClick={() => void installUpdate()}
+                onClick={() => void runAction("restart_fixmind")}
               >
-                Install and restart
+                Restart Fixmind
+              </button>
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={() => void runAction("open_logs")}
+              >
+                Open Logs
+              </button>
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={() => void copyDiagnostics()}
+              >
+                {copied ? "Diagnostics copied" : "Copy Diagnostics"}
+              </button>
+              <button
+                type="button"
+                className="secondary-action"
+                onClick={() => void checkForUpdates()}
+              >
+                {updateState === "checking" ? "Checking for updates…" : "Check for updates"}
               </button>
             </div>
-          ) : null}
-          {updateState === "none" ? <p className="update-note">You are up to date.</p> : null}
-          {updateState === "error" ? (
-            <p className="update-note">Updates are unavailable right now.</p>
-          ) : null}
-          {updateState === "installing" ? (
-            <p className="update-note">Downloading the update…</p>
-          ) : null}
-        </div>
-      </div>
+            {actionError ? (
+              <p className="action-error" role="alert">
+                {actionError}
+              </p>
+            ) : null}
+          </>
+        ) : (
+          <div className="card-footer" aria-live="polite">
+            <div className="pulse" aria-hidden="true" />
+            <span>Launching dashboard</span>
+            <button type="button" className="update-link" onClick={() => void checkForUpdates()}>
+              {updateState === "checking" ? "Checking…" : "Check for updates"}
+            </button>
+          </div>
+        )}
+        {updateState === "available" && availableUpdate ? (
+          <div className="update-card" role="status">
+            <span>Fixmind {availableUpdate.version} is ready.</span>
+            <button type="button" className="secondary-action" onClick={() => void installUpdate()}>
+              Install and restart
+            </button>
+          </div>
+        ) : null}
+        {updateState === "none" ? <p className="update-note">You are up to date.</p> : null}
+        {updateState === "error" ? (
+          <p className="update-note">Updates are unavailable right now.</p>
+        ) : null}
+        {updateState === "installing" ? (
+          <p className="update-note">Downloading the update…</p>
+        ) : null}
+      </section>
     </main>
   );
 }
