@@ -91,10 +91,8 @@ jobs:
       - name: Generate updater metadata
         shell: pwsh
         run: |
-          $bundleDirectory = "apps/desktop/src-tauri/target/release/bundle/nsis"
-          $updaterBundle = (Get-ChildItem "$bundleDirectory/*.nsis.zip" | Select-Object -First 1)
-          if (-not $updaterBundle) { throw "Updater bundle was not generated." }
-          $signaturePath = "$($updaterBundle.FullName).sig"
+          $installer = "apps/desktop/src-tauri/target/release/bundle/nsis/Fixmind_${env:DESKTOP_VERSION}_x64-setup.exe"
+          $signaturePath = "$installer.sig"
           if (-not (Test-Path -LiteralPath $signaturePath)) { throw "Updater signature was not generated." }
           $metadata = @{
             version = $env:DESKTOP_VERSION
@@ -102,7 +100,7 @@ jobs:
             pub_date = (Get-Date).ToUniversalTime().ToString("o")
             platforms = @{ "windows-x86_64" = @{
               signature = (Get-Content -LiteralPath $signaturePath -Raw).Trim()
-              url = "https://github.com/F-47/fixmind/releases/download/$env:GITHUB_REF_NAME/$($updaterBundle.Name)"
+              url = "https://github.com/F-47/fixmind/releases/download/$env:GITHUB_REF_NAME/$(Split-Path $installer -Leaf)"
             }}
           } | ConvertTo-Json -Depth 8
           Set-Content -Path latest.json -Value $metadata -Encoding utf8
@@ -113,6 +111,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $installer = "apps/desktop/src-tauri/target/release/bundle/nsis/Fixmind_${env:DESKTOP_VERSION}_x64-setup.exe"
-          $bundle = Get-ChildItem "apps/desktop/src-tauri/target/release/bundle/nsis/*.nsis.zip" | Select-Object -First 1
-          $signature = "$($bundle.FullName).sig"
-          gh release create $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --title "Fixmind $env:GITHUB_REF_NAME" --generate-notes $installer $bundle.FullName $signature latest.json SHA256SUMS.txt
+          $signature = "$installer.sig"
+          gh release create $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --title "Fixmind $env:GITHUB_REF_NAME" --generate-notes $installer $signature latest.json SHA256SUMS.txt
