@@ -74,7 +74,7 @@ jobs:
             runner: windows-latest
             bundles: nsis
           - platform: darwin-x86_64
-            runner: macos-13
+            runner: macos-15-intel
             bundles: dmg
           - platform: darwin-aarch64
             runner: macos-14
