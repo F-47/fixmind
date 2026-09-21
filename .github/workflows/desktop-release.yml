@@ -59,6 +59,7 @@ jobs:
         run: |
           npm run lint
           npm test
+          npm run prepare:sidecar -w @fixmind/desktop
           cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml -- --check
           cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
 
