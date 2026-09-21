@@ -80,4 +80,4 @@ jobs:
         with:
           workspaces: apps/desktop/src-tauri
       - run: npm run package -w @fixmind/desktop
-      - run: powershell -NoProfile -ExecutionPolicy Bypass -File apps/desktop/scripts/smoke-installed-app.ps1 -InstallerPath apps/desktop/src-tauri/target/release/bundle/nsis/Fixmind_0.1.5_x64-setup.exe
+      - run: powershell -NoProfile -ExecutionPolicy Bypass -File apps/desktop/scripts/smoke-installed-app.ps1 -InstallerPath apps/desktop/src-tauri/target/release/bundle/nsis/Fixmind_0.1.6_x64-setup.exe
