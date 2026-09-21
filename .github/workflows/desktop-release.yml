@@ -71,11 +71,11 @@ jobs:
           npm run prepare:sidecar
           npm run frontend:build
           cargo build --release --manifest-path src-tauri/Cargo.toml
-          npx tauri build --no-bundle --ci --no-sign --config src-tauri/tauri.release.conf.json
+          npx tauri build --no-bundle --ci --config src-tauri/tauri.release.conf.json
 
       - name: Bundle NSIS installer and signed updater artifact
         working-directory: apps/desktop
-        run: npx tauri bundle --bundles nsis --ci --no-sign --config src-tauri/tauri.release.conf.json
+        run: npx tauri bundle --bundles nsis --ci --config src-tauri/tauri.release.conf.json
 
       - name: Run installed-package smoke test
         working-directory: apps/desktop
