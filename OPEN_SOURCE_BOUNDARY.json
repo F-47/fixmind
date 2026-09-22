@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "license": "MIT",
+  "openSourceProduct": [
+    "CLI and MCP server",
+    "local lesson storage, review, search, and export",
+    "dashboard and desktop client",
+    "client-side encryption and hosted-sync contract"
+  ],
+  "commercialService": [
+    "operated encrypted sync",
+    "subscription entitlement operations",
+    "production infrastructure and monitoring",
+    "account support and future team administration"
+  ],
+  "excludedPrivatePaths": [
+    "supabase/**",
+    "docs/open-source-boundary-inventory.md",
+    "docs/open-source-security-audit.md",
+    "docs/team-insights-design.md",
+    "OPEN-SOURCE-COMMERCIAL-PLAN.md",
+    "PLAN*.md",
+    "PHASE-*-RELEASE-CHECKLIST.md",
+    "apps/website/AGENTS.md",
+    "apps/website/CLAUDE.md",
+    "skills-lock.json"
+  ],
+  "securityStatement": "Public clients are untrusted. Hosted authorization and paid entitlement are enforced by the operated service database."
+}

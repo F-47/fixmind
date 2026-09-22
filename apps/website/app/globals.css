@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #08090d;
+  --color-surface: #11141b;
+  --color-surface-2: #161a23;
+  --color-line: #232838;
+  --color-ink: #e9ecf4;
+  --color-muted: #828a9c;
+  --color-accent: #7c5cff;
+  --color-accent-dim: #4b3aae;
+  --color-good: #4ade80;
+  --color-bad: #ff5c72;
+
+  --font-display: "ui-sans-serif", "system-ui", sans-serif;
+  --font-sans: "ui-sans-serif", "system-ui", sans-serif;
+  --font-mono: "ui-monospace", "SFMono-Regular", monospace;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+  body {
+    @apply m-0 min-h-screen bg-bg font-sans text-ink antialiased;
+  }
+  button {
+    font: inherit;
+  }
+  * {
+    scrollbar-color: var(--color-line) transparent;
+    scrollbar-width: thin;
+  }
+}
+
+@layer utilities {
+  .bg-grid {
+    background-image:
+      linear-gradient(
+        to right,
+        color-mix(in srgb, var(--color-line) 60%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--color-line) 60%, transparent) 1px,
+        transparent 1px
+      );
+    background-size: 48px 48px;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 32px color-mix(in srgb, var(--color-accent) 55%, transparent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .animate-pulse-slow {
+      animation: pulse-slow 4s ease-in-out infinite;
+    }
+    .animate-rise {
+      animation: rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    }
+  }
+}
+
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+button {
+  cursor: pointer;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.cta-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(124, 92, 255, 0.18) 40%,
+    rgba(124, 92, 255, 0.28) 50%,
+    rgba(124, 92, 255, 0.18) 60%,
+    transparent 100%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 2.8s ease-in-out infinite;
+}

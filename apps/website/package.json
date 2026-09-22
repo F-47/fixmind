@@ -1,0 +1,37 @@
+{
+  "name": "@fixmind/website",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "tsc -p tsconfig.json --noEmit && next build --webpack"
+  },
+  "dependencies": {
+    "@hcaptcha/react-hcaptcha": "^2.2.0",
+    "@polar-sh/checkout": "^0.3.0",
+    "@supabase/supabase-js": "^2.108.2",
+    "@tanstack/react-query": "^5.101.1",
+    "axios": "^1.18.1",
+    "cnfast": "^0.0.8",
+    "lucide-react": "^1.17.0",
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-markdown": "^10.1.0",
+    "rehype-slug": "^6.0.0",
+    "remark-gfm": "^4.0.1",
+    "sonner": "^2.0.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.1",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint-config-next": "^16.2.9",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^4.3.0",
+    "typescript": "^5.8.3"
+  }
+}
