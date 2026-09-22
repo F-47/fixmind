@@ -18,13 +18,13 @@
     "@tauri-apps/api": "2.11.1",
     "@tauri-apps/plugin-updater": "^2.11.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.9.3",
     "@types/node": "^22.15.0",
     "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.0.2",
     "typescript": "^5.8.3",
     "vite": "^8.0.16"
