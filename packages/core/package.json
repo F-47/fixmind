@@ -28,7 +28,7 @@
     "fixmind": "node dist/src/launcher.js"
   },
   "dependencies": {
-    "@clack/prompts": "^1.5.1",
+    "@clack/prompts": "^1.8.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@supabase/supabase-js": "^2.45.4",
     "zod": "^4.4.3"
