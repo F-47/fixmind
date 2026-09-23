@@ -1,0 +1,36 @@
+{
+  "name": "fixmind-monorepo",
+  "private": true,
+  "version": "0.0.1",
+  "license": "MIT",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "npm run build -w @fixmind/dashboard && npm run build -w fixmind && npm run build -w @fixmind/website && npm run build -w @fixmind/desktop",
+    "test": "npm run test -w fixmind",
+    "test:public-export": "node --test scripts/public-export.test.mjs",
+    "export:public": "node scripts/export-public.mjs",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "dev:dashboard": "concurrently -n api,ui -c blue,magenta \"npm:dev:dashboard:api\" \"npm:dev:dashboard:ui\"",
+    "dev:dashboard:api": "npm run build:server -w fixmind && node packages/core/dist/src/launcher.js dashboard --no-open",
+    "dev:dashboard:ui": "npm run dev -w @fixmind/dashboard",
+    "dev:website": "npm run dev -w @fixmind/website",
+    "dev:desktop": "npm run dev -w @fixmind/desktop",
+    "build:desktop": "npm run build -w @fixmind/desktop",
+    "build:website": "npm run build -w @fixmind/website"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@types/node": "^22.15.0",
+    "concurrently": "^10.0.3",
+    "typescript": "^5.8.3"
+  }
+}

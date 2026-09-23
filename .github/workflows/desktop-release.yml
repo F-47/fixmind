@@ -1,0 +1,245 @@
+name: Desktop release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+# A tag is published by one job only, after every native build has completed.
+concurrency:
+  group: desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate release
+    runs-on: ubuntu-latest
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+
+      - name: Install Linux build dependencies
+        run: >-
+          sudo apt-get update && sudo apt-get install -y
+          build-essential curl file libayatana-appindicator3-dev librsvg2-dev
+          libssl-dev libwebkit2gtk-4.1-dev
+
+      - name: Verify tag matches desktop version
+        shell: bash
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          desktop_version="$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")"
+          test "$desktop_version" = "$tag_version" || {
+            echo "Tag $tag_version does not match desktop version $desktop_version." >&2
+            exit 1
+          }
+
+      - name: Verify updater signing configuration
+        run: >-
+          node -e 'if (!process.env.TAURI_SIGNING_PRIVATE_KEY || !process.env.TAURI_UPDATER_PUBLIC_KEY)
+          throw new Error("Configure TAURI_SIGNING_PRIVATE_KEY and TAURI_UPDATER_PUBLIC_KEY before tagging a release.")'
+
+      - run: npm ci
+
+      - name: Run release validation
+        run: |
+          npm run lint
+          npm test
+          npm run prepare:sidecar -w @fixmind/desktop
+          cargo fmt --manifest-path apps/desktop/src-tauri/Cargo.toml -- --check
+          cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml
+
+  build:
+    name: Build ${{ matrix.platform }}
+    needs: validate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-x86_64
+            runner: windows-latest
+            bundles: nsis
+          - platform: darwin-x86_64
+            runner: macos-15-intel
+            bundles: dmg
+          - platform: darwin-aarch64
+            runner: macos-14
+            bundles: dmg
+          - platform: linux-x86_64
+            runner: ubuntu-latest
+            bundles: deb,appimage
+    runs-on: ${{ matrix.runner }}
+    env:
+      RUST_BACKTRACE: "1"
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+      TAURI_UPDATER_PUBLIC_KEY: ${{ secrets.TAURI_UPDATER_PUBLIC_KEY }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master
+
+      - uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: >-
+          sudo apt-get update && sudo apt-get install -y
+          build-essential curl file libayatana-appindicator3-dev librsvg2-dev
+          libssl-dev libwebkit2gtk-4.1-dev
+
+      - run: npm ci
+
+      - name: Configure signed updater builds
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require("node:fs");
+          const { TAURI_SIGNING_PRIVATE_KEY: key, TAURI_UPDATER_PUBLIC_KEY: pubkey } = process.env;
+          if (!key || !pubkey) {
+            throw new Error("Configure TAURI_SIGNING_PRIVATE_KEY and TAURI_UPDATER_PUBLIC_KEY before tagging a release.");
+          }
+          const releaseConfig = {
+            bundle: { createUpdaterArtifacts: true },
+            plugins: {
+              updater: {
+                pubkey,
+                endpoints: ["https://github.com/F-47/fixmind/releases/latest/download/latest.json"],
+                windows: { installMode: "passive" },
+              },
+            },
+          };
+          fs.writeFileSync("src-tauri/tauri.release.conf.json", JSON.stringify(releaseConfig, null, 2));
+          NODE
+
+      - name: Build native sidecar
+        working-directory: apps/desktop
+        run: npm run prepare:sidecar
+
+      - name: Build signed bundles
+        working-directory: apps/desktop
+        run: npx tauri build --bundles ${{ matrix.bundles }} --ci --config src-tauri/tauri.release.conf.json
+
+      - name: Run installed-package smoke test
+        if: runner.os == 'Windows'
+        working-directory: apps/desktop
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-installed-app.ps1 -InstallerPath "src-tauri/target/release/bundle/nsis/Fixmind_$($env:GITHUB_REF_NAME.TrimStart('v'))_x64-setup.exe"
+
+      - name: Upload release assets
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: desktop-${{ matrix.platform }}
+          path: apps/desktop/src-tauri/target/release/bundle/**
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish GitHub release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: desktop-*
+          path: release-assets
+          merge-multiple: false
+
+      - name: Generate updater metadata and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          updater_asset() {
+            local pattern="$1"
+            local signature
+            signature="$(find release-assets -type f -path "release-assets/$pattern" -print -quit)"
+            test -n "$signature" || { echo "Missing signed updater artifact matching $pattern." >&2; exit 1; }
+            printf '%s' "$signature"
+          }
+
+          windows_signature="$(updater_asset 'desktop-windows-x86_64/*-setup.exe.sig')"
+          macos_x64_signature="$(updater_asset 'desktop-darwin-x86_64/*.app.tar.gz.sig')"
+          macos_arm64_signature="$(updater_asset 'desktop-darwin-aarch64/*.app.tar.gz.sig')"
+          linux_signature="$(updater_asset 'desktop-linux-x86_64/*.AppImage.tar.gz.sig')"
+          export windows_signature macos_x64_signature macos_arm64_signature linux_signature
+
+          mkdir publish-assets
+          while IFS= read -r -d '' asset; do
+            relative_path="${asset#release-assets/}"
+            platform="${relative_path%%/*}"
+            filename="$(basename "$asset")"
+            case "$filename" in
+              *.exe|*.exe.sig|*.dmg|*.dmg.sig|*.app.tar.gz|*.app.tar.gz.sig|*.deb|*.AppImage|*.AppImage.tar.gz|*.AppImage.tar.gz.sig)
+                cp "$asset" "publish-assets/$platform-$filename"
+                ;;
+            esac
+          done < <(find release-assets -type f -print0)
+
+          node <<'NODE'
+          const fs = require("node:fs");
+          const path = require("node:path");
+          const tag = process.env.GITHUB_REF_NAME;
+          const version = tag.replace(/^v/, "");
+          const repository = process.env.GITHUB_REPOSITORY;
+          const updater = (signaturePath) => {
+            const signature = fs.readFileSync(signaturePath, "utf8").trim();
+            const relativePath = path.relative("release-assets", signaturePath);
+            const platform = relativePath.split(path.sep)[0];
+            const asset = `${platform}-${path.basename(signaturePath, ".sig")}`;
+            return {
+              signature,
+              url: `https://github.com/${repository}/releases/download/${tag}/${asset}`,
+            };
+          };
+          fs.writeFileSync("latest.json", `${JSON.stringify({
+            version,
+            notes: `Fixmind desktop ${tag}`,
+            pub_date: new Date().toISOString(),
+            platforms: {
+              "windows-x86_64": updater(process.env.windows_signature),
+              "darwin-x86_64": updater(process.env.macos_x64_signature),
+              "darwin-aarch64": updater(process.env.macos_arm64_signature),
+              "linux-x86_64": updater(process.env.linux_signature),
+            },
+          }, null, 2)}\n`);
+          NODE
+          find publish-assets -type f -printf '%f\n' | sort | while IFS= read -r asset; do
+            sha256sum "publish-assets/$asset"
+          done > SHA256SUMS.txt
+
+      - name: Publish release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mapfile -d '' assets < <(find publish-assets -type f -print0)
+          assets+=(latest.json SHA256SUMS.txt)
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber "${assets[@]}"
+          else
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --title "Fixmind $GITHUB_REF_NAME" --generate-notes "${assets[@]}"
+          fi

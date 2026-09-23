@@ -1,0 +1,56 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/cn";
+
+const MCP_CLIENTS = [
+  { id: "claude-code", label: "Claude Code" },
+  { id: "codex", label: "Codex" },
+  { id: "cursor", label: "Cursor" },
+  { id: "visual-studio-code", label: "Visual Studio Code" },
+  { id: "github-copilot-cli", label: "GitHub Copilot CLI" },
+  { id: "opencode", label: "OpenCode" },
+  { id: "other-mcp-clients", label: "Other MCP clients" },
+] as const;
+
+export function McpClientsAccordion() {
+  const [selected, setSelected] = useState<(typeof MCP_CLIENTS)[number]["id"]>(MCP_CLIENTS[0].id);
+
+  useEffect(() => {
+    const update = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (MCP_CLIENTS.some((client) => client.id === hash)) {
+        setSelected(hash as (typeof MCP_CLIENTS)[number]["id"]);
+      }
+    };
+
+    update();
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
+
+  return (
+    <div className="mt-1 space-y-1 pl-3">
+      {MCP_CLIENTS.map((client) => {
+        const isActive = selected === client.id;
+
+        return (
+          <Link
+            key={client.id}
+            href={`/docs/mcp-clients#${client.id}`}
+            onClick={() => setSelected(client.id)}
+            className={cn(
+              "block rounded-lg px-3 py-2 text-sm transition-colors",
+              isActive
+                ? "bg-accent/5 font-medium text-ink"
+                : "text-muted hover:bg-surface/50 hover:text-ink",
+            )}
+          >
+            {client.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}

@@ -1,0 +1,272 @@
+@import "tailwindcss";
+
+@theme {
+  --color-page: #08090d;
+  --color-surface: #11141b;
+  --color-surface-2: #161a23;
+  --color-line: #232838;
+  --color-ink: #e9ecf4;
+  --color-muted: #828a9c;
+  --color-accent: #7c5cff;
+  --color-accent-dim: #4b3aae;
+  --color-positive: #4ade80;
+  --color-warn: #e8b35f;
+  --color-danger: #ff5c72;
+
+  --font-serif: "ui-sans-serif", "system-ui", sans-serif;
+  --font-sans: "ui-sans-serif", "system-ui", sans-serif;
+  --font-mono: "ui-monospace", "SFMono-Regular", monospace;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  body {
+    @apply m-0 min-h-screen bg-page font-sans text-ink;
+  }
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+  dialog::backdrop {
+    background: #050608d9;
+    backdrop-filter: blur(4px);
+  }
+
+  /* highlight.js token colors — tuned to the fixmind brand palette */
+  .hljs-keyword,
+  .hljs-built_in,
+  .hljs-tag {
+    color: #7c5cff;
+  }
+  .hljs-string,
+  .hljs-attr {
+    color: #4ade80;
+  }
+  .hljs-number,
+  .hljs-literal {
+    color: #e8b35f;
+  }
+  .hljs-comment {
+    color: #5a6275;
+    font-style: italic;
+  }
+  .hljs-title,
+  .hljs-class,
+  .hljs-type,
+  .hljs-selector-class {
+    color: #a78bff;
+  }
+  .hljs-function,
+  .hljs-name {
+    color: #c5cdd6;
+  }
+  .hljs-operator,
+  .hljs-punctuation {
+    color: #828a9c;
+  }
+  .hljs-meta {
+    color: #5a6275;
+  }
+  .hljs-variable,
+  .hljs-params {
+    color: #e9ecf4;
+  }
+
+  /* Word-level diff highlights inside code blocks */
+  mark {
+    background: transparent;
+    color: inherit;
+  }
+
+  /* Scrollbars matching the editorial dark theme */
+  * {
+    scrollbar-color: var(--color-line) transparent;
+    scrollbar-width: thin;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-line);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-muted);
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  button {
+    cursor: pointer;
+  }
+}
+
+/* ─── Keyframe animations ─────────────────────────────────────────────── */
+
+@keyframes bar-rise {
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+/* ─── Animation utilities ─────────────────────────────────────────────── */
+
+.animate-bar-rise {
+  animation: bar-rise 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transform-origin: bottom;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ─── Glass dialog ────────────────────────────────────────────────────── */
+
+.dialog-glass {
+  border-radius: 20px;
+  border: 1px solid var(--color-line);
+  background: linear-gradient(160deg, rgba(22, 26, 35, 0.97), rgba(11, 13, 20, 0.98));
+  box-shadow:
+    0 40px 100px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  backdrop-filter: blur(20px);
+  color: var(--color-ink);
+}
+
+/* ─── Stat card ───────────────────────────────────────────────────────── */
+
+.stat-card {
+  border-radius: 14px;
+  border: 1px solid var(--color-line);
+  background: var(--color-surface-2);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.2s;
+}
+.stat-card:hover {
+  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-line));
+}
+
+/* ─── RankList bar ────────────────────────────────────────────────────── */
+
+.rank-bar-bg {
+  position: relative;
+  overflow: hidden;
+}
+.rank-bar-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--color-accent) 18%, transparent),
+    transparent
+  );
+  border-radius: 999px;
+  transform-origin: left;
+  transform: scaleX(var(--rank-pct, 0));
+  transition: transform 0.6s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+/* ─── Lesson card left border ─────────────────────────────────────────── */
+
+.lesson-card-understood {
+  border-left: 2px solid var(--color-positive);
+  padding-left: 1rem;
+}
+.lesson-card-learning {
+  border-left: 2px solid var(--color-warn);
+  padding-left: 1rem;
+}
+
+/* ─── CTA shimmer ─────────────────────────────────────────────────────── */
+
+.cta-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(124, 92, 255, 0.18) 40%,
+    rgba(124, 92, 255, 0.28) 50%,
+    rgba(124, 92, 255, 0.18) 60%,
+    transparent 100%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 2.8s ease-in-out infinite;
+}
