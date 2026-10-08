@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { type ReactNode, useEffect, useState } from "react";
 import { type Plan, PlanCard } from "@/components/pricing/PlanCard";
 import { WaitlistModal } from "@/components/pricing/WaitlistModal";
-import { useEntitlementQuery, useSessionQuery } from "@/services/queries";
+import { isEntitlementActive, useEntitlementQuery, useSessionQuery } from "@/services/queries";
 
 const PRO_CHECKOUT_URL = process.env.NEXT_PUBLIC_PRO_CHECKOUT_URL;
 const CHECKOUT_POLL_LIMIT = 10;
@@ -84,8 +84,9 @@ export default function Pricing() {
   const [checkoutPending, setCheckoutPending] = useState(false);
   const [waitlistPlan, setWaitlistPlan] = useState<string | null>(null);
 
-  const activePlan =
-    entitlement?.status === "active" ? (entitlement.plan?.toLowerCase() ?? null) : null;
+  const activePlan = isEntitlementActive(entitlement)
+    ? (entitlement.plan?.toLowerCase() ?? null)
+    : null;
   const selectedPlan = activePlan === "pro" ? "Pro" : null;
 
   useEffect(() => {
@@ -103,8 +104,9 @@ export default function Pricing() {
 
     async function pollEntitlement(attempt = 1): Promise<void> {
       const result = await refetchEntitlement();
-      const nextPlan =
-        result.data?.status === "active" ? (result.data.plan?.toLowerCase() ?? null) : null;
+      const nextPlan = isEntitlementActive(result.data)
+        ? (result.data.plan?.toLowerCase() ?? null)
+        : null;
 
       if (cancelled || nextPlan === "pro") {
         if (!cancelled) setCheckoutPending(false);

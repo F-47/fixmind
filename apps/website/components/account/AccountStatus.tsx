@@ -17,7 +17,7 @@ import Link from "next/link";
 import { InfoPill } from "@/components/ui/InfoPill";
 import { cn } from "@/lib/cn";
 import { supabase } from "@/lib/supabase";
-import { useEntitlementQuery, useLessonCountQuery } from "@/services/queries";
+import { isEntitlementActive, useEntitlementQuery, useLessonCountQuery } from "@/services/queries";
 import { CommandCard } from "./CommandCard";
 
 function capitalize(value: string): string {
@@ -66,7 +66,7 @@ export function AccountStatus({ session }: { session: Session }) {
     ? "loading"
     : entitlement === null
       ? "free"
-      : entitlement.status === "active"
+      : isEntitlementActive(entitlement)
         ? "active"
         : "inactive";
   const planName = entitlement?.plan ? capitalize(entitlement.plan) : "Free";
@@ -87,7 +87,7 @@ export function AccountStatus({ session }: { session: Session }) {
         ? "Encrypted sync is enabled for this account."
         : state === "free"
           ? "You can use fixmind locally on this machine without a subscription."
-          : "This account still works locally. Upgrade only if you want sync.";
+          : "Your previous plan is no longer active. This account still works locally. Upgrade again if you want sync.";
   const lessonCountLabel = syncEnabled
     ? lessonCount === undefined
       ? "Loading lessons..."
@@ -141,7 +141,7 @@ export function AccountStatus({ session }: { session: Session }) {
                 ? `${planName} plan`
                 : state === "free"
                   ? "Free local-only use"
-                  : "No paid plan"
+                  : `${planName} plan expired`
             }
             accent={state === "active"}
           />

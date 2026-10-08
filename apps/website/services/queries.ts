@@ -7,6 +7,19 @@ import { queryKeys } from "@/services/query-keys";
 export interface Entitlement {
   plan: string;
   status: string;
+  currentPeriodEnd: string | null;
+}
+
+// Matches the server-side gate (`has_active_sync_entitlement`): a row must be
+// `active` AND its period must not have ended. `status` alone can go stale if a
+// webhook event is missed, so the account page must never trust it by itself.
+export function isEntitlementActive(
+  entitlement: Entitlement | null | undefined,
+): entitlement is Entitlement {
+  if (entitlement?.status !== "active") return false;
+  if (!entitlement.currentPeriodEnd) return true;
+  const expiresAt = Date.parse(entitlement.currentPeriodEnd);
+  return Number.isFinite(expiresAt) && expiresAt > Date.now();
 }
 
 export function useSessionQuery() {
@@ -47,8 +60,17 @@ async function getSession() {
 
 async function getEntitlement(userId: string | null | undefined) {
   if (!supabase || !userId) return null;
-  const { data } = await supabase.from("entitlements").select("plan, status").maybeSingle();
-  return data ?? null;
+  const { data } = await supabase
+    .from("entitlements")
+    .select("plan, status, current_period_end")
+    .maybeSingle();
+  return data
+    ? {
+        plan: data.plan,
+        status: data.status,
+        currentPeriodEnd: data.current_period_end ?? null,
+      }
+    : null;
 }
 
 async function getLessonCount(userId: string | null | undefined) {
