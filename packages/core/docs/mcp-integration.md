@@ -78,16 +78,6 @@ If a client is not consistently saving lessons, you can ask it directly: "save a
 
 If a save does not meet the quality bar, `save_lesson` returns an error explaining what is missing or too generic. The agent can revise the payload and retry; no lesson is stored until validation succeeds.
 
-## Token and context overhead
-
-Connecting the fixmind MCP server adds a small, mostly one-time cost to an agent's context:
-
-- The server's instructions and both tool schemas are sent once when the client connects. Clients that support prompt caching reuse this across later turns in the same session.
-- `save_lesson` is called only when the agent decides a meaningful fix happened. Sessions with no qualifying fixes add nothing beyond the initial connection cost.
-- When a lesson is saved, the generated payload is similar in size to a short commit message or code review comment.
-
-In practice, this overhead is small compared with the tokens used by the coding work itself.
-
 If a client is not consistently calling `save_lesson`, or you want to know why a save was rejected, see [FAQ & Troubleshooting](./faq.md).
 
 ## Tool input
