@@ -11,6 +11,7 @@ dns.setDefaultResultOrder("ipv4first");
 const OAUTH_CALLBACK_PORT = 51763;
 const OAUTH_TIMEOUT_MS = 5 * 60 * 1000;
 const ACCOUNT_URL = process.env.FIXMIND_ACCOUNT_URL ?? "https://www.fixmind.dev/account";
+export const PRICING_URL = process.env.FIXMIND_PRICING_URL ?? "https://fixmind.dev/pricing";
 
 export interface SyncRow {
   lessonId: string;
@@ -362,6 +363,11 @@ export function createSupabaseBackend(url: string, anonKey: string): SyncBackend
         verifier_ciphertext: record.verifierCiphertext,
         verifier_iv: record.verifierIv,
       });
+      if (error?.code === "42501") {
+        throw new Error(
+          `Sync setup failed: the server requires an active Pro or Team plan for this account. Subscribe at ${PRICING_URL}, then run \`npx fixmind login\` again.`,
+        );
+      }
       if (error) throw new Error(`Sync setup failed: ${error.message}`);
     },
 

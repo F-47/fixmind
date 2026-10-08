@@ -85,11 +85,26 @@ class FakeBackend implements SyncBackend {
     return email ? this.entitlements.get(email) : undefined;
   }
 
-  async getUserRecord(userId: string, _session: SessionTokens) {
+  private hasActiveEntitlement(session: SessionTokens): boolean {
+    const email = this.sessionToEmail.get(session.accessToken);
+    if (!email) return false;
+    const entitlement = this.entitlements.get(email);
+    if (entitlement?.status !== "active") return false;
+    if (!entitlement.currentPeriodEnd) return true;
+    return Date.parse(entitlement.currentPeriodEnd) > Date.now();
+  }
+
+  async getUserRecord(userId: string, session: SessionTokens) {
+    if (!this.hasActiveEntitlement(session)) return undefined;
     return this.records.get(userId);
   }
 
-  async createUserRecord(userId: string, _session: SessionTokens, record: SyncUserRecord) {
+  async createUserRecord(userId: string, session: SessionTokens, record: SyncUserRecord) {
+    if (!this.hasActiveEntitlement(session)) {
+      throw new Error(
+        'Sync setup failed: new row violates row-level security policy for table "sync_users"',
+      );
+    }
     this.records.set(userId, record);
   }
 
@@ -139,6 +154,61 @@ test("login succeeds but reports unentitled when no entitlement exists", async (
     assert.equal(result.entitled, false);
     assert.equal((await engine.status()).loggedIn, true);
     await assert.rejects(engine.push(), /requires an active Pro or Team plan/);
+  })();
+});
+
+test("unentitled login defers remote sync setup until the account is entitled", async () => {
+  const backend = new FakeBackend();
+  const credentials = {
+    supabaseUrl: "https://example.supabase.co",
+    supabaseAnonKey: "anon-key",
+    email: "dev@example.com",
+    password: "hunter2",
+    passphrase: "shared passphrase",
+  };
+
+  await withMachine(async (store) => {
+    const engine = createSyncEngine(store, backend);
+    const login = await engine.login(credentials);
+    assert.equal(login.entitled, false);
+    assert.equal(backend.records.size, 0);
+
+    await assert.rejects(engine.push(), /requires an active Pro or Team plan/);
+    assert.equal(backend.records.size, 0);
+
+    backend.grantEntitlement("dev@example.com");
+    store.save(lessonInput());
+    const pushed = await engine.push();
+    assert.equal(pushed.pushed, 1);
+    assert.equal(backend.records.size, 1);
+  })();
+
+  await withMachine(async (store) => {
+    const engine = createSyncEngine(store, backend);
+    const login = await engine.login(credentials);
+    assert.equal(login.entitled, true);
+    const pulled = await engine.pull();
+    assert.equal(pulled.applied, 1);
+  })();
+});
+
+test("a second unentitled login rejects a different passphrase", async () => {
+  const backend = new FakeBackend();
+  const credentials = {
+    supabaseUrl: "https://example.supabase.co",
+    supabaseAnonKey: "anon-key",
+    email: "dev@example.com",
+    password: "hunter2",
+    passphrase: "shared passphrase",
+  };
+
+  await withMachine(async (store) => {
+    const engine = createSyncEngine(store, backend);
+    await engine.login(credentials);
+    await assert.rejects(
+      engine.login({ ...credentials, passphrase: "wrong passphrase" }),
+      /Incorrect passphrase/,
+    );
   })();
 });
 

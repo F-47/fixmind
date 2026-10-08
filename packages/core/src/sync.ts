@@ -5,6 +5,7 @@ import { dataDirectory } from "./paths.js";
 import type { LessonStore } from "./storage.js";
 import {
   createSupabaseBackend,
+  PRICING_URL,
   type SessionTokens,
   type SyncBackend,
   type SyncRow,
@@ -21,7 +22,8 @@ export type {
 
 const VERIFIER_PLAINTEXT = "fixmind-sync-verify";
 const EPOCH = "1970-01-01T00:00:00.000Z";
-export const PRICING_URL = process.env.FIXMIND_PRICING_URL ?? "https://fixmind.dev/pricing";
+
+export { PRICING_URL };
 
 interface SyncConfig {
   supabaseUrl: string;
@@ -270,6 +272,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
     userId: string,
     sessionTokens: SessionTokens,
     passphrase: string,
+    entitled: boolean,
   ): Promise<{ key: Buffer; salt: string }> {
     const record = await activeBackend.getUserRecord(userId, sessionTokens);
     if (record) {
@@ -285,14 +288,29 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       return { key, salt: record.salt };
     }
 
+    const remoteSetup = async (key: Buffer, salt: string): Promise<void> => {
+      if (!entitled) return;
+      const verifier = encrypt(VERIFIER_PLAINTEXT, key);
+      await activeBackend.createUserRecord(userId, sessionTokens, {
+        salt,
+        verifierCiphertext: verifier.ciphertext,
+        verifierIv: verifier.iv,
+      });
+    };
+
+    const local = readSyncConfig();
+    if (local && local.userId === userId && local.salt && local.keyBase64) {
+      const localKey = deriveKey(passphrase, local.salt);
+      if (localKey.toString("base64") !== local.keyBase64) {
+        throw new Error("Incorrect passphrase for this sync account.");
+      }
+      await remoteSetup(localKey, local.salt);
+      return { key: localKey, salt: local.salt };
+    }
+
     const salt = generateSalt();
     const key = deriveKey(passphrase, salt);
-    const verifier = encrypt(VERIFIER_PLAINTEXT, key);
-    await activeBackend.createUserRecord(userId, sessionTokens, {
-      salt,
-      verifierCiphertext: verifier.ciphertext,
-      verifierIv: verifier.iv,
-    });
+    await remoteSetup(key, salt);
     return { key, salt };
   }
 
@@ -319,6 +337,35 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
     }
   }
 
+  async function ensureUserRecord(
+    config: SyncConfig,
+    activeBackend: SyncBackend,
+    sessionTokens: SessionTokens,
+    key: Buffer,
+  ): Promise<void> {
+    const record = await activeBackend.getUserRecord(config.userId, sessionTokens);
+    if (!record) {
+      const verifier = encrypt(VERIFIER_PLAINTEXT, key);
+      await activeBackend.createUserRecord(config.userId, sessionTokens, {
+        salt: config.salt,
+        verifierCiphertext: verifier.ciphertext,
+        verifierIv: verifier.iv,
+      });
+      return;
+    }
+    let verified: string | undefined;
+    try {
+      verified = decrypt({ iv: record.verifierIv, ciphertext: record.verifierCiphertext }, key);
+    } catch {
+      verified = undefined;
+    }
+    if (verified !== VERIFIER_PLAINTEXT) {
+      throw new Error(
+        "This machine's sync passphrase does not match the account. Run `npx fixmind login` again with your sync passphrase.",
+      );
+    }
+  }
+
   async function completeLogin(params: {
     supabaseUrl: string;
     supabaseAnonKey: string;
@@ -335,6 +382,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       params.userId,
       params.session,
       params.passphrase,
+      entitled,
     );
 
     writeSyncConfig({
@@ -482,6 +530,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       };
       try {
         await requireEntitlement(activeBackend, session);
+        await ensureUserRecord(config, activeBackend, session, key);
         const pushed = await pushPendingLessons(config, activeBackend, session, key);
         markSyncSuccess();
         return { pushed };
@@ -501,6 +550,7 @@ export function createSyncEngine(store: LessonStore, backend?: SyncBackend): Syn
       };
       try {
         await requireEntitlement(activeBackend, session);
+        await ensureUserRecord(config, activeBackend, session, key);
 
         const rows = await activeBackend.fetchLessonsSince(
           config.userId,
