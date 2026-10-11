@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { check, type Update } from "@tauri-apps/plugin-updater";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import "./styles.css";
@@ -17,10 +16,6 @@ function App() {
   });
   const [actionError, setActionError] = React.useState<string>();
   const [copied, setCopied] = React.useState(false);
-  const [availableUpdate, setAvailableUpdate] = React.useState<Update | null>(null);
-  const [updateState, setUpdateState] = React.useState<
-    "idle" | "checking" | "available" | "none" | "error" | "installing"
-  >("idle");
 
   React.useEffect(() => {
     let cancelled = false;
@@ -38,32 +33,6 @@ function App() {
       cancelled = true;
     };
   }, []);
-
-  const checkForUpdates = React.useCallback(async () => {
-    setUpdateState("checking");
-    try {
-      const update = await check({ timeout: 5000 });
-      setAvailableUpdate(update);
-      setUpdateState(update ? "available" : "none");
-    } catch {
-      setUpdateState("error");
-    }
-  }, []);
-
-  React.useEffect(() => {
-    void checkForUpdates();
-  }, [checkForUpdates]);
-
-  const installUpdate = React.useCallback(async () => {
-    if (!availableUpdate) return;
-    setUpdateState("installing");
-    try {
-      await availableUpdate.downloadAndInstall(undefined, { restartAfterInstall: true });
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : "The update could not be installed.");
-      setUpdateState("available");
-    }
-  }, [availableUpdate]);
 
   const runAction = async (action: string) => {
     setActionError(undefined);
@@ -151,13 +120,6 @@ function App() {
               >
                 {copied ? "Diagnostics copied" : "Copy Diagnostics"}
               </button>
-              <button
-                type="button"
-                className="secondary-action"
-                onClick={() => void checkForUpdates()}
-              >
-                {updateState === "checking" ? "Checking for updates…" : "Check for updates"}
-              </button>
             </div>
             {actionError ? (
               <p className="action-error" role="alert">
@@ -169,26 +131,8 @@ function App() {
           <div className="card-footer" aria-live="polite">
             <div className="pulse" aria-hidden="true" />
             <span>Launching dashboard</span>
-            <button type="button" className="update-link" onClick={() => void checkForUpdates()}>
-              {updateState === "checking" ? "Checking…" : "Check for updates"}
-            </button>
           </div>
         )}
-        {updateState === "available" && availableUpdate ? (
-          <div className="update-card" role="status">
-            <span>Fixmind {availableUpdate.version} is ready.</span>
-            <button type="button" className="secondary-action" onClick={() => void installUpdate()}>
-              Install and restart
-            </button>
-          </div>
-        ) : null}
-        {updateState === "none" ? <p className="update-note">You are up to date.</p> : null}
-        {updateState === "error" ? (
-          <p className="update-note">Updates are unavailable right now.</p>
-        ) : null}
-        {updateState === "installing" ? (
-          <p className="update-note">Downloading the update…</p>
-        ) : null}
       </section>
     </main>
   );

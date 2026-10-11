@@ -4,6 +4,16 @@ All notable changes to the `fixmind` package are documented here. Format follows
 
 ## [Unreleased]
 
+### Added
+
+- Dashboard-native desktop update flow: a "Check updates" navbar button (desktop shell only) opens an app-update modal with live download progress, install-and-restart, and a Later option, replacing the unreachable splash-card updater UI.
+- Desktop update diagnostics: every update check, download milestone, and failure is now recorded in the desktop log (`updater_log` command plus a startup line logging the configured updater endpoints).
+
+### Fixed
+
+- Removed the splash update UI that was destroyed by the dashboard navigation and the "Check for updates" entry point users never saw on healthy boots.
+
+
 ## [1.0.29]
 
 - Cleared the monorepo's Biome warning debt and restored the affected lint rules to error severity.

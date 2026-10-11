@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "18637ad41b5f1aa20e6e5f98a0b94229e0848248",
+  "sourceCommit": "74c7e3b4212f2a91e4af1a5bdaad8ef1410dce32",
   "dirtyWorkingTree": false,
-  "fileCount": 277,
+  "fileCount": 278,
   "files": [
     {
       "path": ".gitattributes",
@@ -26,19 +26,19 @@
     },
     {
       "path": ".github/workflows/ci.yml",
-      "sha256": "c8d7b7f3695ae2eec18789e81ba3a4cfe0a90953d6bd1ca956248e89589473c4"
+      "sha256": "6eae65717f79a2a11f8d11cc6272f9d711987845384e7ab4d8f7155946fb649c"
     },
     {
       "path": ".github/workflows/desktop-release.yml",
-      "sha256": "788f8c60030b823cb068f22ed24c1609e92d037349fbc08578ef2fff6607164c"
+      "sha256": "79e96efe4c981065c9bb0584b6ffd8a5a3824bfe7a6f0efad5d37d85df3fc2fa"
     },
     {
       "path": ".gitignore",
-      "sha256": "ad489aebe15b67fbdd6d1987b3f4e54a71936eca6bf408fb6ebe90207ab45070"
+      "sha256": "331fa9a619a874be7484765edb566f1c2563c94c6f2df60f9d12b01ab492ba17"
     },
     {
       "path": "CHANGELOG.md",
-      "sha256": "ec8c5af416da8f61aab91af20459bf82274ede6702a3e107b3fc650fcbed80bb"
+      "sha256": "c4f76d77c4503b6bebc061a17f2a3e9199d0cbbe9c19e5ba234b3e89fedf091c"
     },
     {
       "path": "CODE_OF_CONDUCT.md",
@@ -46,11 +46,11 @@
     },
     {
       "path": "CONTRIBUTING.md",
-      "sha256": "3799f23101d85822554f97f041cf796d0b466afdafa1c1988f11731ed64a3820"
+      "sha256": "b61c1a536628d7577f2a0a1555878f6aebec619bda230884c4a8e4490fae3fb6"
     },
     {
       "path": "LICENSE",
-      "sha256": "f07f218c580bb9c08d5783f5eb3902fc7d000d421d1f83396be6a17f99f1623f"
+      "sha256": "3ef4648844d9af5953aa58244c4cfba59a54e6de84c14571f5c91676f6715763"
     },
     {
       "path": "OPEN_SOURCE_BOUNDARY.json",
@@ -58,7 +58,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "d01e92484f689fae3bf294db52bc615b575353663366f3c25c99ef93793c3daa"
+      "sha256": "ebe923d81431dc46cbf30aec5f70be6a4aab1b4288898d99ab66a1ff287fa90a"
     },
     {
       "path": "SECURITY.md",
@@ -74,15 +74,15 @@
     },
     {
       "path": "apps/desktop/README.md",
-      "sha256": "b45a9b4b4bad953757d85b40bc6ef03c0db74e561afbb7cb397a3ecae6da513c"
+      "sha256": "e412c8f100fc1f3e02a183936e34e952e4aee344ef2a12ebd27524f1b5edf206"
     },
     {
       "path": "apps/desktop/index.html",
-      "sha256": "da6a89d80c2e1c71e326b2d3a7d78f9eeda4f8d33bad08db4f34ceb29e30495f"
+      "sha256": "c486fefdcf66f712a8b0a4cf96b4ced2ea781bcdfca9e517f5defad8e16e8cdd"
     },
     {
       "path": "apps/desktop/package.json",
-      "sha256": "5ebbf38a285be3ba1065d416ac9dc925c91c2382b0f5c0793dddbd56af2f9d13"
+      "sha256": "d926744ed2183435ded21cda663c1c8eadf2412515538de17527022462878511"
     },
     {
       "path": "apps/desktop/public/logo.jpeg",
@@ -94,7 +94,7 @@
     },
     {
       "path": "apps/desktop/scripts/smoke-installed-app.ps1",
-      "sha256": "482dd7919491869e2fc6a3fecec906c355677909b4c13e5eea9aa5ff90840e95"
+      "sha256": "f165f413c1d5ffef581dd6c7d892d49c077e27fffff679d5d4a62d3610eddc0b"
     },
     {
       "path": "apps/desktop/src-tauri/Cargo.lock",
@@ -106,7 +106,7 @@
     },
     {
       "path": "apps/desktop/src-tauri/build.rs",
-      "sha256": "6aeeab41bc35efde4e3c2b644a6248f7fc06d24ae30b75c0d33491cbb0c1fa31"
+      "sha256": "7d6cdbc1f57d6524b848d02ade919e0099f603cca94dc9f4ed814b6e0cf0aaa4"
     },
     {
       "path": "apps/desktop/src-tauri/capabilities/default.json",
@@ -126,19 +126,19 @@
     },
     {
       "path": "apps/desktop/src-tauri/src/main.rs",
-      "sha256": "dede6498e2e349e1809dc007badcb9d2ba5ae08d3d3a17fbb2a43dff6df5b020"
+      "sha256": "5cda6277e31c9149caea8ebe61309b6a56605387bbd93a48a38d652e6c8a6b98"
     },
     {
       "path": "apps/desktop/src-tauri/tauri.conf.json",
-      "sha256": "e61cb8e8724a852b0db3b83c425f3bbe4b0174a3bea1ae6f397b171f8c6c8152"
+      "sha256": "3ee601cae549fa670d81ab52df238cfbfd04382208c9a12e7ef3c3d6e2ad0aae"
     },
     {
       "path": "apps/desktop/src/main.tsx",
-      "sha256": "64c4d964407132ac55148349747fa99b38e8685677e6d5c10f71ddc9db8d7e0c"
+      "sha256": "6162d86be8d778f78bcb1aa958662f5b17ee976d877c7a9d19eefa8e3db8150e"
     },
     {
       "path": "apps/desktop/src/styles.css",
-      "sha256": "d4850a2c89983b176c05119872020286dd58f660d9f1db0c3e80d904b13ea2d6"
+      "sha256": "36f41b2adf06eb8eb83546f1fc85366f2143116066cb82b1ad4f5bfa18a07ff8"
     },
     {
       "path": "apps/desktop/tsconfig.json",
@@ -150,11 +150,11 @@
     },
     {
       "path": "apps/website/.gitignore",
-      "sha256": "f14039117a3f725bf02c18429b4fefac682a96b0371ddb78f253693040c94b0b"
+      "sha256": "7ec2496057f6872fec81de1013e07ef99a215efbc171f217194b47addd3295ff"
     },
     {
       "path": "apps/website/README.md",
-      "sha256": "ad1c1d85bc8004c0d54c4d4ee34dba6e52882f16687a6c7a51d4689c62d03b8f"
+      "sha256": "4a3a2a94ff90283dc4565fa21f61e184a4a7aa696f6cc76ab05570875743ff6f"
     },
     {
       "path": "apps/website/app/account/loading.tsx",
@@ -222,7 +222,7 @@
     },
     {
       "path": "apps/website/components/account/AccountStatus.tsx",
-      "sha256": "47901612188e8923dd63e4fae246aa45b015315166ca14d24f1cace19dd3336d"
+      "sha256": "a063358a85e19c7a8415f175c7c6fa890f951ea3386cecb76a33a295f61a5af8"
     },
     {
       "path": "apps/website/components/account/AuthForm.tsx",
@@ -266,7 +266,7 @@
     },
     {
       "path": "apps/website/components/docs/docs-data.ts",
-      "sha256": "6782cfae6a329fde739c1605f0a4ed98d66a46ba934c7f34f4e4fadd6c511cb3"
+      "sha256": "54f2900d46267f8d567b4a5398b422aadf29c279bb8fd432d30d0ed07a39a1d5"
     },
     {
       "path": "apps/website/components/docs/index.tsx",
@@ -326,7 +326,7 @@
     },
     {
       "path": "apps/website/components/pricing/index.tsx",
-      "sha256": "852b92927f2ee97e175dfe43484bb4e52683d866310842cf710689cbbc642397"
+      "sha256": "d9f4c2b5ea99df64656767a0d1fd84812bea1b1ac23a1daa87a97bd3fbc74198"
     },
     {
       "path": "apps/website/components/providers.tsx",
@@ -434,7 +434,7 @@
     },
     {
       "path": "apps/website/public/logos/github.svg",
-      "sha256": "31473d8cdc39786137158970f40949109141f07b8c94d811b11489cf96cdb97a"
+      "sha256": "0102336874a0027151b08d37e04aec92ff8d48353e52325f3381a8ce6a57991d"
     },
     {
       "path": "apps/website/public/logos/google.svg",
@@ -446,7 +446,7 @@
     },
     {
       "path": "apps/website/services/queries.ts",
-      "sha256": "dcf9edabe74fea40a3ca16fa107190805e0e38d936e57aa7d2d48af7a45203aa"
+      "sha256": "e29cf7e62b102fa94ddfa10e3638bf9b6b01a9f4247545938c8e757b1252fc44"
     },
     {
       "path": "apps/website/services/query-keys.ts",
@@ -470,7 +470,7 @@
     },
     {
       "path": "docs/cli-reference.md",
-      "sha256": "3b7aa71b3515f0001640c8fdc0e4abd4daa6307ea4cada385e17a52806815ff2"
+      "sha256": "da0f8fde03ea5749039cb97024efaa57259e4bbe7d9fe298f417b1c623702873"
     },
     {
       "path": "docs/commercial-service-boundary.md",
@@ -478,23 +478,23 @@
     },
     {
       "path": "docs/faq.md",
-      "sha256": "a7852f5ea499af775b9a93e404cd7e75594352fe5cd365e37067638f2446214b"
+      "sha256": "1eb89d38411b2712c908f4db72045930a24e70a675dbc155a27a6610fbd0e0ec"
     },
     {
       "path": "docs/lesson-schema.md",
-      "sha256": "03c797e84d71222d06157997436665e7dd69604861781d00e7c31a40c1f9dda0"
+      "sha256": "d9e8626e45312dc995129e763a0dde1f48a5610b3611388e54aa3483802985f4"
     },
     {
       "path": "docs/mcp-clients.md",
-      "sha256": "5cf7b2577dd246a7b048c3bd72acc3f3105fc0886060cfcc5f78ad4a74bd2b23"
+      "sha256": "678880b86418d0235e6ce3c0165c088f647cef829154227bd0035abff7202410"
     },
     {
       "path": "docs/mcp-integration.md",
-      "sha256": "6dd3805dd4822b8398c0f97bd9afb1a4fd82de7e01940b9175eb1a1180b44d13"
+      "sha256": "1d74431be0bddf7cdb7dbdcc2ec36317def04520b225bb0c50e708b74dfba635"
     },
     {
       "path": "docs/quickstart.md",
-      "sha256": "b1ed44534457cf0116b9e8c17ff95cc877946edc5018c67090d9c5c64a53bfe6"
+      "sha256": "c4d0d3d7e9be9a98fcb3f3a7b58295d0bc4a5ba88da67db047d7ba946c05dadd"
     },
     {
       "path": "docs/releasing-desktop.md",
@@ -502,11 +502,11 @@
     },
     {
       "path": "docs/sync-setup.md",
-      "sha256": "a0c92a7e23e2cc381f2c4f44ca840b8467d9e31e815be5c6ca3aece352a6aa0e"
+      "sha256": "06ee680e8df388efc8fefdab13c3d01cbcb2c6a5f9d9782d135c3bb1f00d7e5c"
     },
     {
       "path": "package-lock.json",
-      "sha256": "772533a8dab7f7c2fd9dca617eeb9f0c7dc75321eb7300cc41d3f39f80d2cdb7"
+      "sha256": "ea6bca54013486085224fe4223bd765265fbf5a2a5ece271390a77c12042da05"
     },
     {
       "path": "package.json",
@@ -514,7 +514,7 @@
     },
     {
       "path": "packages/core/README.md",
-      "sha256": "fb028f4b31ab6714168bf38b88948ab4285ea1c1fa1696c3fa4b9d653ed258cb"
+      "sha256": "8fd20dc6ed75b21adf992c81aff6e728a51b491d98212e3f5519ceb90a1593cd"
     },
     {
       "path": "packages/core/count.cjs",
@@ -522,31 +522,31 @@
     },
     {
       "path": "packages/core/docs/cli-reference.md",
-      "sha256": "3b7aa71b3515f0001640c8fdc0e4abd4daa6307ea4cada385e17a52806815ff2"
+      "sha256": "da0f8fde03ea5749039cb97024efaa57259e4bbe7d9fe298f417b1c623702873"
     },
     {
       "path": "packages/core/docs/faq.md",
-      "sha256": "a7852f5ea499af775b9a93e404cd7e75594352fe5cd365e37067638f2446214b"
+      "sha256": "1eb89d38411b2712c908f4db72045930a24e70a675dbc155a27a6610fbd0e0ec"
     },
     {
       "path": "packages/core/docs/lesson-schema.md",
-      "sha256": "03c797e84d71222d06157997436665e7dd69604861781d00e7c31a40c1f9dda0"
+      "sha256": "d9e8626e45312dc995129e763a0dde1f48a5610b3611388e54aa3483802985f4"
     },
     {
       "path": "packages/core/docs/mcp-clients.md",
-      "sha256": "5cf7b2577dd246a7b048c3bd72acc3f3105fc0886060cfcc5f78ad4a74bd2b23"
+      "sha256": "678880b86418d0235e6ce3c0165c088f647cef829154227bd0035abff7202410"
     },
     {
       "path": "packages/core/docs/mcp-integration.md",
-      "sha256": "5f90088915752eceb95c8351d9ab63a050bf05e8159b989e7eefacb474d1a048"
+      "sha256": "6dd3805dd4822b8398c0f97bd9afb1a4fd82de7e01940b9175eb1a1180b44d13"
     },
     {
       "path": "packages/core/docs/quickstart.md",
-      "sha256": "b1ed44534457cf0116b9e8c17ff95cc877946edc5018c67090d9c5c64a53bfe6"
+      "sha256": "c4d0d3d7e9be9a98fcb3f3a7b58295d0bc4a5ba88da67db047d7ba946c05dadd"
     },
     {
       "path": "packages/core/docs/sync-setup.md",
-      "sha256": "a0c92a7e23e2cc381f2c4f44ca840b8467d9e31e815be5c6ca3aece352a6aa0e"
+      "sha256": "06ee680e8df388efc8fefdab13c3d01cbcb2c6a5f9d9782d135c3bb1f00d7e5c"
     },
     {
       "path": "packages/core/package.json",
@@ -770,11 +770,11 @@
     },
     {
       "path": "packages/core/src/sync-backend.ts",
-      "sha256": "27191802bfccf683646851ec968de00cea4497c734563d6f7a44ab354250ba2b"
+      "sha256": "657d892af8e5df6c465777b4d18e58532250864c2898117ab4501b7963ec2860"
     },
     {
       "path": "packages/core/src/sync.ts",
-      "sha256": "644f517678864947735bd901417c774ae46802cb04dab4999031621bc9f17273"
+      "sha256": "e4a1e7c727ddd89e7ed9a4734eda75654ed8d450abe765ad4c285a4f47fb0404"
     },
     {
       "path": "packages/core/src/types.ts",
@@ -794,7 +794,7 @@
     },
     {
       "path": "packages/core/sync-cli.ps1",
-      "sha256": "227451866872e43770e9ecc486e21f6f9af00616c71b21abd4d946cb89ccbe9a"
+      "sha256": "8333c76ba5f957ff084eadf701d2d813f538e420c24e0c81fb76ca8170ab96d6"
     },
     {
       "path": "packages/core/test/cli.test.ts",
@@ -886,7 +886,7 @@
     },
     {
       "path": "packages/core/test/sync.test.ts",
-      "sha256": "53de7bcc371fc9568403e4e4d013c048998d6e4b7775bd488766f60fba24fed7"
+      "sha256": "9f5aafa931d783e5d677cb21c9fef17c81da01c8b06bc93a8484c59d8763ab37"
     },
     {
       "path": "packages/core/test/validation.test.ts",
@@ -898,11 +898,11 @@
     },
     {
       "path": "packages/dashboard/index.html",
-      "sha256": "da6a89d80c2e1c71e326b2d3a7d78f9eeda4f8d33bad08db4f34ceb29e30495f"
+      "sha256": "c486fefdcf66f712a8b0a4cf96b4ced2ea781bcdfca9e517f5defad8e16e8cdd"
     },
     {
       "path": "packages/dashboard/package.json",
-      "sha256": "7864871af8a5c675ae600218bd509cfcb7d9f1179a96ae0269e71b8e87eb1fbf"
+      "sha256": "d050827fbb429b120156cf0b5a7bce3b2d9d0dbadf3b3bb100caf18baca02b33"
     },
     {
       "path": "packages/dashboard/public/fixmind-logo.png",
@@ -1017,12 +1017,16 @@
       "sha256": "35f58d3d9ff0882c1af4d5cc76bbb524679a7dcfe769f68521f07d871a3d4a55"
     },
     {
+      "path": "packages/dashboard/src/components/shared/AppUpdateDialog.tsx",
+      "sha256": "b26bb3b7f2c07809568832f7122eeb2771f235945776867eb4bd026a0ee4c80d"
+    },
+    {
       "path": "packages/dashboard/src/components/shared/CodeBlock.tsx",
       "sha256": "13d49dd05e5c71c7a83c49fd53c8ebfc2620b778158f28b5cce56dc8f1c2c70f"
     },
     {
       "path": "packages/dashboard/src/components/shared/DashboardNavbar.tsx",
-      "sha256": "154fc34f2dd3eaa25095bfb912c3998c4ec3481536d4863179e7bce8b4d25021"
+      "sha256": "1ebbf79ffbf4a484fe4a24ee21ad5e81697f2c705e3621b253171af0655340a9"
     },
     {
       "path": "packages/dashboard/src/components/shared/MarginArt.tsx",

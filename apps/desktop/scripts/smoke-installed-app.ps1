@@ -74,4 +74,17 @@ try {
 }
 finally {
   Remove-Item -LiteralPath $smokeRoot -Recurse -Force -ErrorAction SilentlyContinue
+
+  # The NSIS template remembers the install dir found in a previous uninstall entry.
+  # A smoke run that fails before the uninstaller finishes can leave an entry whose
+  # InstallLocation points into the removed-just-now smoke directory, and later
+  # silent installs would drop files into that dead temp path. Clear any leftovers.
+  $leakedEntries = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*" -ErrorAction SilentlyContinue |
+    Where-Object {
+      $_.DisplayName -like "Fixmind*" -and
+      $_.UninstallString -like "*Fixmind Installer Smoke*"
+    }
+  foreach ($entry in $leakedEntries) {
+    Remove-Item -LiteralPath $entry.PSPath -Recurse -Force -ErrorAction SilentlyContinue
+  }
 }

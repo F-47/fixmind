@@ -77,10 +77,10 @@ jobs:
             bundles: nsis
           - platform: darwin-x86_64
             runner: macos-15-intel
-            bundles: dmg
+            bundles: app,dmg
           - platform: darwin-aarch64
             runner: macos-14
-            bundles: dmg
+            bundles: app,dmg
           - platform: linux-x86_64
             runner: ubuntu-latest
             bundles: deb,appimage
@@ -177,17 +177,19 @@ jobs:
         run: |
           set -euo pipefail
           updater_asset() {
-            local pattern="$1"
-            local signature
-            signature="$(find release-assets -type f -path "release-assets/$pattern" -print -quit)"
-            test -n "$signature" || { echo "Missing signed updater artifact matching $pattern." >&2; exit 1; }
+            local signature pattern
+            for pattern in "$@"; do
+              signature="$(find release-assets -type f -path "release-assets/$pattern" -print -quit)" || true
+              [ -n "$signature" ] && break
+            done
+            test -n "$signature" || { echo "Missing signed updater artifact matching: $*" >&2; exit 1; }
             printf '%s' "$signature"
           }
 
           windows_signature="$(updater_asset 'desktop-windows-x86_64/*-setup.exe.sig')"
-          macos_x64_signature="$(updater_asset 'desktop-darwin-x86_64/*.app.tar.gz.sig')"
-          macos_arm64_signature="$(updater_asset 'desktop-darwin-aarch64/*.app.tar.gz.sig')"
-          linux_signature="$(updater_asset 'desktop-linux-x86_64/*.AppImage.tar.gz.sig')"
+          macos_x64_signature="$(updater_asset 'desktop-darwin-x86_64/*.app.tar.gz.sig' 'desktop-darwin-x86_64/*.dmg.sig')"
+          macos_arm64_signature="$(updater_asset 'desktop-darwin-aarch64/*.app.tar.gz.sig' 'desktop-darwin-aarch64/*.dmg.sig')"
+          linux_signature="$(updater_asset 'desktop-linux-x86_64/*.AppImage.sig' 'desktop-linux-x86_64/*.AppImage.tar.gz.sig')"
           export windows_signature macos_x64_signature macos_arm64_signature linux_signature
 
           mkdir publish-assets

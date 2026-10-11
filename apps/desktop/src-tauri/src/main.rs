@@ -61,7 +61,8 @@ fn main() {
             retry_startup,
             restart_fixmind,
             open_logs,
-            diagnostics_report
+            diagnostics_report,
+            updater_log
         ])
         .setup(|app| {
             let handle = app.handle().clone();
@@ -69,10 +70,12 @@ fn main() {
                 Ok(port) => {
                     DASHBOARD_PORT.store(port, Ordering::Release);
                     create_main_window(&handle, Some(port))?;
+                    log_updater_setup(&handle);
                     start_startup_sequence(handle, port);
                 }
                 Err(error) => {
                     create_main_window(&handle, None)?;
+                    log_updater_setup(&handle);
                     startup_failed(&handle, error);
                 }
             }
@@ -171,6 +174,32 @@ fn diagnostics_report(app: tauri::AppHandle) -> Result<String, String> {
         log_file.display(),
         status.message.unwrap_or_else(|| "none".to_string()),
     ))
+}
+
+#[tauri::command]
+fn updater_log(app: tauri::AppHandle, message: String) {
+    write_desktop_log(&app, &format!("[updater] {}", message));
+}
+
+fn log_updater_setup(app: &tauri::AppHandle) {
+    let endpoints = app
+        .config()
+        .plugins
+        .0
+        .get("updater")
+        .and_then(|value| value.get("endpoints"))
+        .cloned()
+        .unwrap_or(serde_json::Value::Null);
+    let configured = endpoints.as_array().is_some_and(|list| !list.is_empty())
+        || endpoints.as_str().is_some_and(|text| !text.is_empty());
+    write_desktop_log(
+        app,
+        &format!(
+            "[updater] app version {}, updater endpoints configured: {}",
+            app.package_info().version,
+            configured,
+        ),
+    );
 }
 
 fn start_startup_sequence(handle: tauri::AppHandle, port: u16) {

@@ -1,4 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
+import { AppUpdateDialog } from "@/components/shared/AppUpdateDialog";
 
 export function DashboardNavbar() {
   const location = useLocation();
@@ -24,8 +25,11 @@ export function DashboardNavbar() {
           </div>
         </Link>
 
-        <div className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
-          {inLesson ? "Lesson" : inPractice ? "Practice" : "Dashboard"}
+        <div className="flex items-center gap-3">
+          <div className="font-mono text-[10px] uppercase tracking-[.2em] text-muted">
+            {inLesson ? "Lesson" : inPractice ? "Practice" : "Dashboard"}
+          </div>
+          <AppUpdateDialog />
         </div>
       </div>
     </header>
