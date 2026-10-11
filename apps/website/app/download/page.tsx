@@ -32,7 +32,7 @@ const access = [
 
 export default function DownloadPage() {
   return (
-    <main className="relative overflow-hidden mx-auto max-w-6xl px-6 py-16 sm:py-20">
+    <main className="relative overflow-hidden px-6 py-16 sm:py-20">
       <div className="bg-grid absolute inset-0 -z-10 opacity-[0.22]" aria-hidden="true" />
       <div
         className="absolute left-[-10%] top-[-8%] -z-10 h-72 w-72 rounded-full bg-accent/10 blur-3xl"
@@ -43,7 +43,7 @@ export default function DownloadPage() {
         aria-hidden="true"
       />
 
-      <section className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+      <section className="grid gap-10 max-w-6xl mx-auto lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
         <div className="max-w-2xl animate-rise">
           <div className="font-mono text-[11px] uppercase tracking-[.24em] text-accent">
             Desktop app
@@ -109,7 +109,7 @@ export default function DownloadPage() {
         </div>
       </section>
 
-      <section className="mt-16 grid gap-4 md:grid-cols-3">
+      <section className="mt-16 max-w-6xl mx-auto grid gap-4 md:grid-cols-3">
         {[
           ["Windows", "Native desktop build for Windows users."],
           ["macOS", "Native desktop build for Mac users."],
@@ -122,7 +122,7 @@ export default function DownloadPage() {
         ))}
       </section>
 
-      <section className="mt-16 grid gap-4 md:grid-cols-3">
+      <section className="mt-16 max-w-6xl mx-auto grid gap-4 md:grid-cols-3">
         {[
           ["Local-first", "All the basic lesson browsing and review stays on your device."],
           ["Sync when needed", "Pro users can sign in and bring encrypted sync online."],

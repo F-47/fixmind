@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "74c7e3b4212f2a91e4af1a5bdaad8ef1410dce32",
+  "sourceCommit": "e2cf839e0efdac9c9a80ae4e745472f7da48fb7f",
   "dirtyWorkingTree": false,
   "fileCount": 278,
   "files": [
@@ -82,7 +82,7 @@
     },
     {
       "path": "apps/desktop/package.json",
-      "sha256": "d926744ed2183435ded21cda663c1c8eadf2412515538de17527022462878511"
+      "sha256": "59ece1a6377fc759773867448022bd9845e292626f94501a402b2d8b1fc62631"
     },
     {
       "path": "apps/desktop/public/logo.jpeg",
@@ -110,7 +110,7 @@
     },
     {
       "path": "apps/desktop/src-tauri/capabilities/default.json",
-      "sha256": "5d2b2fd591046c5422742a9be3eb13acdfe9ce701a5ae1fd1d3caa837e793d42"
+      "sha256": "11513a771ddae58be0247ac8420ec7099ade7b7c98731bbc6dfe197790436297"
     },
     {
       "path": "apps/desktop/src-tauri/icons/icon.icns",
@@ -126,11 +126,11 @@
     },
     {
       "path": "apps/desktop/src-tauri/src/main.rs",
-      "sha256": "5cda6277e31c9149caea8ebe61309b6a56605387bbd93a48a38d652e6c8a6b98"
+      "sha256": "56b367325e183780952636cdee994b36facf39abbe13f52abd3bcf0ebc5650e3"
     },
     {
       "path": "apps/desktop/src-tauri/tauri.conf.json",
-      "sha256": "3ee601cae549fa670d81ab52df238cfbfd04382208c9a12e7ef3c3d6e2ad0aae"
+      "sha256": "261fdc7ff99056de3050d815673ab0023f2b98f0bb44ecfcea18c1c71d84a8f9"
     },
     {
       "path": "apps/desktop/src/main.tsx",
@@ -182,7 +182,7 @@
     },
     {
       "path": "apps/website/app/download/page.tsx",
-      "sha256": "f89a69c930baeec5308acc235ec843dcdcef25d83f738e8a342df8b035c2a8d9"
+      "sha256": "2489d8aeb359307bbce485df7e477978b7c96dc22f5690cb9fddcd396b2a33de"
     },
     {
       "path": "apps/website/app/globals.css",

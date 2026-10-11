@@ -3,5 +3,8 @@
   "identifier": "default",
   "description": "Fixmind desktop window permissions",
   "windows": ["main", "splash"],
+  "remote": {
+    "urls": ["http://127.0.0.1:*"]
+  },
   "permissions": ["core:default", "notification:default", "updater:default"]
 }

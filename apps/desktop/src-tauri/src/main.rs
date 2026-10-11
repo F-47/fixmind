@@ -375,11 +375,62 @@ fn wait_for_dashboard(timeout: Duration) -> bool {
 }
 
 #[cfg(debug_assertions)]
-fn start_dashboard(_app: &tauri::AppHandle, port: u16) -> Result<(), String> {
-    let executable = find_fixmind_command().ok_or_else(|| {
-        "Could not find the Fixmind CLI on PATH. Install or link `fixmind` first.".to_string()
+fn dev_server_log_file(app: &tauri::AppHandle) -> Result<std::fs::File, String> {
+    let directory = app
+        .path()
+        .app_log_dir()
+        .map_err(|error| format!("Could not resolve the Fixmind log directory: {error}"))?;
+    std::fs::create_dir_all(&directory)
+        .map_err(|error| format!("Could not create the Fixmind log directory: {error}"))?;
+    OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(directory.join("dev-server.log"))
+        .map_err(|error| format!("Could not open the dev server log: {error}"))
+}
+
+#[cfg(debug_assertions)]
+fn find_cli_entry() -> Option<PathBuf> {
+    // Under `npm run dev` the desktop inherits a PATH whose first entries are the
+    // workspace's node_modules/.bin shims. Spawning `fixmind.cmd` there crashes
+    // instantly: the shim resolves the CLI module relative to the process cwd
+    // (src-tauri), where Node cannot find the fixmind package. Spawn node on the
+    // workspace CLI entry directly so the dev server always matches the repo.
+    let cli_entry = env::var_os("CARGO_MANIFEST_DIR")?;
+    let cli_entry = PathBuf::from(cli_entry)
+        .parent()? // apps/desktop/src-tauri -> apps/desktop
+        .parent()? // apps/desktop -> apps
+        .parent()? // apps -> repository root
+        .join("packages")
+        .join("core")
+        .join("dist")
+        .join("src")
+        .join("cli.js");
+    if cli_entry.is_file() {
+        Some(cli_entry)
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod find_cli_entry_tests {
+    use super::find_cli_entry;
+
+    #[cfg(windows)]
+    #[test]
+    fn resolves_the_workspace_cli_entry() {
+        find_cli_entry().expect("workspace cli.js should exist after a build");
+    }
+}
+
+#[cfg(debug_assertions)]
+fn start_dashboard(app: &tauri::AppHandle, port: u16) -> Result<(), String> {
+    let cli_entry = find_cli_entry().ok_or_else(|| {
+        "Could not find packages/core/dist/src/cli.js. Run npm run build:server first.".to_string()
     })?;
-    let mut command = Command::new(executable);
+    let mut command = Command::new("node");
+    command.args(["--no-warnings"]).arg(&cli_entry);
     #[cfg(windows)]
     {
         const CREATE_NO_WINDOW: u32 = 0x0800_0000;
@@ -390,12 +441,17 @@ fn start_dashboard(_app: &tauri::AppHandle, port: u16) -> Result<(), String> {
             .get()
             .ok_or("Desktop session token is unavailable.")?,
     );
+    let server_log = dev_server_log_file(app)
+        .map_err(|error| format!("Could not prepare the dev server log: {error}"))?;
+    let error_log = server_log
+        .try_clone()
+        .map_err(|error| format!("Could not share the dev server log: {error}"))?;
     let child = command
         .args(development_dashboard_arguments(port))
         .env(session_name, session_value)
         .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
+        .stdout(Stdio::from(server_log))
+        .stderr(Stdio::from(error_log))
         .spawn()
         .map_err(|error| format!("Could not launch the Fixmind development dashboard: {error}"))?;
     *DASHBOARD_PROCESS
@@ -504,7 +560,25 @@ fn generate_session_token() -> String {
         .collect()
 }
 
-#[cfg(debug_assertions)]
+#[cfg(all(windows, debug_assertions))]
+fn stop_dashboard_process() {
+    if let Ok(mut process) = DASHBOARD_PROCESS.lock() {
+        if let Some(mut child) = process.take() {
+            // The dev child is a .cmd shim whose grandchildren (the CLI server
+            // launcher and dashboard server) survive a direct kill. Kill the
+            // whole tree so the dashboard port is released for the next run.
+            let _ = Command::new("taskkill")
+                .args(["/T", "/F", "/PID", &child.id().to_string()])
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .output();
+            let _ = child.wait();
+        }
+    }
+}
+
+#[cfg(all(not(windows), debug_assertions))]
 fn stop_dashboard_process() {
     if let Ok(mut process) = DASHBOARD_PROCESS.lock() {
         if let Some(mut child) = process.take() {
@@ -550,26 +624,6 @@ fn write_desktop_log(app: &tauri::AppHandle, message: &str) {
     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(log_file) {
         let _ = writeln!(file, "{}", message.trim_end());
     }
-}
-
-#[cfg(debug_assertions)]
-fn find_fixmind_command() -> Option<PathBuf> {
-    let names = if cfg!(windows) {
-        vec!["fixmind.cmd", "fixmind.exe", "fixmind"]
-    } else {
-        vec!["fixmind"]
-    };
-
-    let path = env::var_os("PATH")?;
-    for dir in env::split_paths(&path) {
-        for name in &names {
-            let candidate = dir.join(name);
-            if candidate.is_file() {
-                return Some(candidate);
-            }
-        }
-    }
-    None
 }
 
 fn socket_addr() -> std::net::SocketAddr {
