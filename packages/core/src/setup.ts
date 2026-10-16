@@ -3,7 +3,18 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-export type SupportedClient = "codex" | "claude" | "cursor";
+export type SupportedClient =
+  | "codex"
+  | "claude"
+  | "cursor"
+  | "opencode"
+  | "vscode"
+  | "copilot"
+  | "pi";
+
+// JSON-file clients (OpenCode, VS Code, Copilot CLI, Pi) are configured by
+// editing their config files directly instead of shelling out to a CLI.
+export type JsonFileClient = "opencode" | "vscode" | "copilot" | "pi";
 
 // "user" configures the client globally, so the MCP server is available in every
 // project on this device. "project" scopes the configuration to a single project
@@ -43,6 +54,12 @@ export function detectClients(homeDirectory = os.homedir()): SupportedClient[] {
   if (commandExists("claude")) detected.push("claude");
   if (commandExists("cursor") || fs.existsSync(path.join(homeDirectory, ".cursor")))
     detected.push("cursor");
+  if (commandExists("opencode") || fs.existsSync(path.join(homeDirectory, ".config", "opencode")))
+    detected.push("opencode");
+  if (commandExists("code")) detected.push("vscode");
+  if (commandExists("copilot") || fs.existsSync(path.join(homeDirectory, ".copilot")))
+    detected.push("copilot");
+  if (commandExists("pi") || fs.existsSync(path.join(homeDirectory, ".pi"))) detected.push("pi");
   return detected;
 }
 
@@ -59,6 +76,17 @@ export function configureClients(options: SetupOptions): SetupResult[] {
         homeDirectory,
         projectDirectory,
         scope,
+        serverCommand,
+        Boolean(options.dryRun),
+      );
+    }
+    if (client === "opencode" || client === "vscode" || client === "copilot" || client === "pi") {
+      return configureJsonFileClient(
+        client,
+        homeDirectory,
+        projectDirectory,
+        scope,
+        platform,
         serverCommand,
         Boolean(options.dryRun),
       );
@@ -186,6 +214,150 @@ function configureCursor(
   };
 }
 
+interface JsonFileClientSpec {
+  label: string;
+  fileName: string;
+  wrapperKey: string;
+  scopeDirectory: (
+    homeDirectory: string,
+    projectDirectory: string,
+    scope: SetupScope,
+    platform: NodeJS.Platform,
+  ) => string;
+  serverEntry: (server: ServerCommand) => Record<string, unknown>;
+}
+
+const JSON_FILE_CLIENTS: Record<JsonFileClient, JsonFileClientSpec> = {
+  opencode: {
+    label: "OpenCode",
+    fileName: "opencode.json",
+    wrapperKey: "mcp",
+    scopeDirectory: (homeDirectory, projectDirectory, scope) =>
+      scope === "user" ? path.join(homeDirectory, ".config", "opencode") : projectDirectory,
+    serverEntry: (server) => ({
+      type: "local",
+      command: [server.command, ...server.args],
+      enabled: true,
+    }),
+  },
+  vscode: {
+    label: "VS Code",
+    fileName: "mcp.json",
+    wrapperKey: "servers",
+    scopeDirectory: (homeDirectory, projectDirectory, scope, platform) =>
+      scope === "user"
+        ? vscodeUserProfileDirectory(homeDirectory, platform)
+        : path.join(projectDirectory, ".vscode"),
+    serverEntry: (server) => ({ type: "stdio", command: server.command, args: server.args }),
+  },
+  copilot: {
+    label: "Copilot CLI",
+    fileName: "mcp-config.json",
+    wrapperKey: "mcpServers",
+    scopeDirectory: (homeDirectory, projectDirectory, scope) =>
+      scope === "user" ? path.join(homeDirectory, ".copilot") : projectDirectory,
+    serverEntry: (server) => ({ type: "stdio", command: server.command, args: server.args }),
+  },
+  pi: {
+    label: "Pi",
+    fileName: "mcp.json",
+    wrapperKey: "mcpServers",
+    scopeDirectory: (homeDirectory, projectDirectory, scope) =>
+      scope === "user"
+        ? path.join(homeDirectory, ".pi", "agent")
+        : path.join(projectDirectory, ".pi"),
+    serverEntry: (server) => ({ command: server.command, args: server.args }),
+  },
+};
+
+function vscodeUserProfileDirectory(
+  homeDirectory: string,
+  platform: NodeJS.Platform = process.platform,
+): string {
+  if (platform === "win32") return path.join(homeDirectory, "AppData", "Roaming", "Code", "User");
+  if (platform === "darwin")
+    return path.join(homeDirectory, "Library", "Application Support", "Code", "User");
+  return path.join(homeDirectory, ".config", "Code", "User");
+}
+
+// OpenCode, VS Code, Copilot CLI, and Pi do not expose an `mcp add`-style CLI,
+// so setup writes a fixmind entry into their JSON config files while keeping
+// any other servers and settings already present.
+function configureJsonFileClient(
+  client: JsonFileClient,
+  homeDirectory: string,
+  projectDirectory: string,
+  scope: SetupScope,
+  platform: NodeJS.Platform,
+  server: ServerCommand,
+  dryRun: boolean,
+): SetupResult {
+  const spec = JSON_FILE_CLIENTS[client];
+  const directory = spec.scopeDirectory(homeDirectory, projectDirectory, scope, platform);
+  const filePath = path.join(directory, spec.fileName);
+  let config: Record<string, unknown> = {};
+  if (fs.existsSync(filePath)) {
+    try {
+      const raw = fs.readFileSync(filePath, "utf8");
+      if (hasJsonComments(raw)) {
+        throw new Error(
+          `${filePath} contains JSON comments, which fixmind setup cannot rewrite safely. Remove the comments or add the fixmind server entry by hand.`,
+        );
+      }
+      config = JSON.parse(raw) as Record<string, unknown>;
+    } catch (error) {
+      throw new Error(
+        `Cannot configure ${spec.label} because ${filePath} contains invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  const existingServers = config[spec.wrapperKey];
+  const servers = isRecord(existingServers) ? { ...existingServers } : {};
+  if (isRecord(servers.fixmind)) {
+    return {
+      client,
+      status: "already_configured",
+      detail: `${spec.label} already has fixmind in ${filePath}.`,
+    };
+  }
+
+  servers.fixmind = spec.serverEntry(server);
+  const updated = { ...config, [spec.wrapperKey]: servers };
+  if (!dryRun) {
+    fs.mkdirSync(directory, { recursive: true });
+    if (fs.existsSync(filePath)) {
+      fs.copyFileSync(filePath, `${filePath}.backup`);
+    }
+    fs.writeFileSync(filePath, `${JSON.stringify(updated, null, 2)}\n`, "utf8");
+  }
+  return {
+    client,
+    status: dryRun ? "dry_run" : "configured",
+    detail: `${dryRun ? "Would update" : "Updated"} ${filePath}`,
+  };
+}
+
+function hasJsonComments(text: string): boolean {
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const character = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') inString = false;
+      continue;
+    }
+    if (character === '"') {
+      inString = true;
+    } else if (character === "/" && (text[i + 1] === "/" || text[i + 1] === "*")) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const INSTRUCTION_MARKER = "fixmind:instructions";
 
 const INSTRUCTION_BODY = `\
@@ -229,8 +401,9 @@ function instructionBlock(client: SupportedClient): string {
 
 export interface InstructionResult {
   client: SupportedClient;
-  status: "written" | "already_configured" | "dry_run";
+  status: "written" | "already_configured" | "dry_run" | "not_supported";
   filePath: string;
+  detail?: string;
 }
 
 export function configureInstructions(options: SetupOptions): InstructionResult[] {
@@ -242,21 +415,42 @@ export function configureInstructions(options: SetupOptions): InstructionResult[
   );
 }
 
-function instructionFilePath(
+// Returns the file that should receive the Fixmind instruction block for a
+// client, or undefined when the client has no instruction file for the chosen
+// scope (VS Code, Copilot CLI, and Pi only read project-scope instructions).
+export function instructionFilePath(
   client: SupportedClient,
   homeDirectory: string,
   projectDirectory: string,
   scope: SetupScope,
-): string {
+): string | undefined {
   const directory = resolveScopeDirectory(homeDirectory, projectDirectory, scope);
-  if (scope === "project") {
-    if (client === "claude") return path.join(directory, "CLAUDE.md");
-    if (client === "codex") return path.join(directory, "AGENTS.md");
-    return path.join(directory, ".cursor", "rules", "fixmind.mdc");
+  if (client === "claude") {
+    return scope === "project"
+      ? path.join(directory, "CLAUDE.md")
+      : path.join(directory, ".claude", "CLAUDE.md");
   }
-  if (client === "claude") return path.join(directory, ".claude", "CLAUDE.md");
+  if (client === "opencode") {
+    return scope === "user"
+      ? path.join(homeDirectory, ".config", "opencode", "AGENTS.md")
+      : path.join(directory, "AGENTS.md");
+  }
+  if (client === "vscode" || client === "copilot") {
+    return scope === "project"
+      ? path.join(projectDirectory, ".github", "copilot-instructions.md")
+      : undefined;
+  }
+  if (client === "pi") {
+    return scope === "project" ? path.join(projectDirectory, "AGENTS.md") : undefined;
+  }
   if (client === "codex") return path.join(directory, "AGENTS.md");
   return path.join(directory, ".cursor", "rules", "fixmind.mdc");
+}
+
+function notSupportedInstructionDetail(client: "vscode" | "copilot" | "pi"): string {
+  return client === "pi"
+    ? "Pi reads AGENTS.md from the project; rerun setup with --scope project to write Fixmind instructions."
+    : "This client reads .github/copilot-instructions.md from the project; rerun setup with --scope project to write Fixmind instructions.";
 }
 
 function injectInstruction(
@@ -267,6 +461,14 @@ function injectInstruction(
   dryRun: boolean,
 ): InstructionResult {
   const filePath = instructionFilePath(client, homeDirectory, projectDirectory, scope);
+  if (!filePath) {
+    return {
+      client,
+      status: "not_supported",
+      filePath: "",
+      detail: notSupportedInstructionDetail(client as "vscode" | "copilot" | "pi"),
+    };
+  }
   const block = instructionBlock(client);
   const marker = client === "cursor" ? "alwaysApply: true" : `${INSTRUCTION_MARKER}:start`;
 

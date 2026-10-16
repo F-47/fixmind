@@ -61,7 +61,7 @@ export const commands: readonly CommandDefinition[] = [
   {
     names: ["setup"],
     usage: [
-      "  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--capture-mode strict|balanced] [--dry-run] [--no-dashboard] [--starter-pack] [--session-start-hook]",
+      "  fixmind setup [--client codex,claude,cursor,opencode,vscode,copilot,pi] [--scope user|project] [--capture-mode strict|balanced] [--dry-run] [--no-dashboard] [--starter-pack] [--session-start-hook]",
     ],
     kind: "standalone",
     run: ({ options }) => setupRunner(options),

@@ -174,7 +174,7 @@ function logSetupResults(
   scope: SetupScope,
   captureMode: "strict" | "balanced",
   results: Array<{ client: string; status: string; detail: string }>,
-  instructions: Array<{ client: string; status: string; filePath: string }>,
+  instructions: Array<{ client: string; status: string; filePath: string; detail?: string }>,
   permissions: Array<{ client: string; status: string; filePath: string }>,
   projectDirectory: string,
 ): void {
@@ -184,7 +184,9 @@ function logSetupResults(
   for (const result of results)
     console.log(`${result.client}: ${result.status} - ${result.detail}`);
   for (const result of instructions)
-    console.log(`${result.client} instructions: ${result.status} - ${result.filePath}`);
+    console.log(
+      `${result.client} instructions: ${result.status} - ${result.detail || result.filePath}`,
+    );
   for (const result of permissions)
     console.log(`${result.client} permissions: ${result.status} - ${result.filePath}`);
   console.log("Restart configured AI clients so they discover the MCP server.");

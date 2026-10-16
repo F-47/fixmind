@@ -6,11 +6,11 @@ This page lists every `fixmind` command and flag. If you're new here, start with
 
 ### `fixmind setup`
 
-Sets up Claude Code, Cursor, and Codex, then registers the MCP server with whichever ones you pick.
+Sets up Claude Code, Cursor, Codex, OpenCode, VS Code, Copilot CLI, and Pi, then registers the MCP server with whichever ones you pick.
 
 ```bash
 fixmind setup
-fixmind setup --client codex,claude,cursor
+fixmind setup --client codex,claude,cursor,opencode,vscode,copilot,pi
 fixmind setup --capture-mode balanced
 fixmind setup --client cursor --dry-run
 fixmind setup --scope project
@@ -19,8 +19,8 @@ fixmind setup --starter-pack
 
 | Flag | Default | Meaning |
 |---|---|---|
-| `--client <list>` | autodetected | Comma-separated clients to configure: `codex`, `claude`, `cursor`. Skips the interactive picker. |
-| `--scope <user\|project>` | `user` | `user` configures the client globally (every project on this device). `project` scopes Cursor's config, instruction files, and Claude's permissions to the current directory instead. Codex has no project-scope flag, so a project-scoped request for it still registers globally. |
+| `--client <list>` | autodetected | Comma-separated clients to configure: `codex`, `claude`, `cursor`, `opencode`, `vscode`, `copilot`, `pi`. Skips the interactive picker. |
+| `--scope <user\|project>` | `user` | `user` configures the client globally (every project on this device). `project` scopes the config and instruction files to the current directory instead. Codex has no project-scope flag, so a project-scoped request for it still registers globally. VS Code, Copilot CLI, and Pi write instructions only at project scope, because they read `.github/copilot-instructions.md` and `AGENTS.md` from the project. |
 | `--capture-mode <strict\|balanced>` | `strict` | `strict` keeps capture conservative. `balanced` lets the agent save more borderline-but-useful lessons. |
 | `--starter-pack` | off | Install 15 curated example lessons so reviews and memory have content from day one. Also offered interactively. Re-running is a no-op if the pack is already installed. |
 | `--session-start-hook` | off | Also wire the Claude Code session-start hook (see `fixmind hooks`). Also offered interactively when Claude is configured. |

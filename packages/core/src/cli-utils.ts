@@ -12,6 +12,7 @@ import {
   spinner,
   text,
 } from "@clack/prompts";
+import type { SupportedClient } from "./setup.js";
 import type { Lesson } from "./types.js";
 
 export const common = { input: stdin, output: stdout };
@@ -83,14 +84,23 @@ export function formatLessonList(lessons: Lesson[]): string {
 }
 
 export function supportedClientOptions(
-  detected: Array<"codex" | "claude" | "cursor">,
-): Array<{ value: "codex" | "claude" | "cursor"; label: string; hint?: string }> {
+  detected: SupportedClient[],
+): Array<{ value: SupportedClient; label: string; hint?: string }> {
   const detectedSet = new Set(detected);
-  return [
-    { value: "codex", label: "Codex", hint: detectedSet.has("codex") ? "detected" : undefined },
-    { value: "claude", label: "Claude", hint: detectedSet.has("claude") ? "detected" : undefined },
-    { value: "cursor", label: "Cursor", hint: detectedSet.has("cursor") ? "detected" : undefined },
+  const rows: Array<[SupportedClient, string]> = [
+    ["codex", "Codex"],
+    ["claude", "Claude"],
+    ["cursor", "Cursor"],
+    ["opencode", "OpenCode"],
+    ["vscode", "VS Code"],
+    ["copilot", "Copilot CLI"],
+    ["pi", "Pi"],
   ];
+  return rows.map(([value, label]) => ({
+    value,
+    label,
+    hint: detectedSet.has(value) ? "detected" : undefined,
+  }));
 }
 
 export function validateScope(value: string): "user" | "project" {
@@ -99,13 +109,23 @@ export function validateScope(value: string): "user" | "project" {
   return value;
 }
 
-export function validateClients(values: string[]): Array<"codex" | "claude" | "cursor"> {
-  const supported = new Set<"codex" | "claude" | "cursor">(["codex", "claude", "cursor"]);
-  const invalid = values.filter((value) => !supported.has(value as "codex" | "claude" | "cursor"));
+export function validateClients(values: string[]): SupportedClient[] {
+  const supported = new Set<SupportedClient>([
+    "codex",
+    "claude",
+    "cursor",
+    "opencode",
+    "vscode",
+    "copilot",
+    "pi",
+  ]);
+  const invalid = values.filter((value) => !supported.has(value as SupportedClient));
   if (invalid.length) {
-    throw new Error(`Unsupported client(s): ${invalid.join(", ")}. Use codex, claude, or cursor.`);
+    throw new Error(
+      `Unsupported client(s): ${invalid.join(", ")}. Use codex, claude, cursor, opencode, vscode, copilot, or pi.`,
+    );
   }
-  return [...new Set(values)] as Array<"codex" | "claude" | "cursor">;
+  return [...new Set(values)] as SupportedClient[];
 }
 
 export function isAddressInUseError(error: unknown): boolean {

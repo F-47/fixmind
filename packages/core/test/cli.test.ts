@@ -15,7 +15,7 @@ const GOLDEN_HELP_LINES = [
   "fixmind",
   "",
   "Commands:",
-  "  fixmind setup [--client codex,claude,cursor] [--scope user|project] [--capture-mode strict|balanced] [--dry-run] [--no-dashboard] [--starter-pack] [--session-start-hook]",
+  "  fixmind setup [--client codex,claude,cursor,opencode,vscode,copilot,pi] [--scope user|project] [--capture-mode strict|balanced] [--dry-run] [--no-dashboard] [--starter-pack] [--session-start-hook]",
   "  fixmind settings [--capture-mode strict|balanced]",
   "  fixmind memory [query] [--limit 5]",
   "  fixmind dashboard [--port 4317] [--no-open]",

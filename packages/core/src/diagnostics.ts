@@ -15,6 +15,8 @@ interface SetupScopeStatus {
   claudeInstructions: boolean;
   codexInstructions: boolean;
   cursorInstructions: boolean;
+  opencodeInstructions: boolean;
+  copilotInstructions: boolean;
   claudePermission: "enabled" | "missing" | "invalid";
 }
 
@@ -90,11 +92,30 @@ function inspectSetupScope(scopeDirectory: string): SetupScopeStatus {
     path.join(scopeDirectory, ".cursor", "rules", "fixmind.mdc"),
     "alwaysApply: true",
   );
+  // OpenCode's user-scope instructions live under ~/.config/opencode, while
+  // every other known location shares the Codex/prefix paths already checked.
+  const opencodeInstructions =
+    codexInstructions ||
+    hasFixmindMarker(
+      path.join(scopeDirectory, ".config", "opencode", "AGENTS.md"),
+      "fixmind:instructions:start",
+    );
+  const copilotInstructions = hasFixmindMarker(
+    path.join(scopeDirectory, ".github", "copilot-instructions.md"),
+    "fixmind:instructions:start",
+  );
   return {
-    anyInstructions: claudeInstructions || codexInstructions || cursorInstructions,
+    anyInstructions:
+      claudeInstructions ||
+      codexInstructions ||
+      cursorInstructions ||
+      opencodeInstructions ||
+      copilotInstructions,
     claudeInstructions,
     codexInstructions,
     cursorInstructions,
+    opencodeInstructions,
+    copilotInstructions,
     claudePermission: inspectClaudePermission(scopeDirectory),
   };
 }
@@ -128,6 +149,8 @@ function formatScopeStatus(label: string, status: SetupScopeStatus): string {
     `  Claude instructions: ${status.claudeInstructions ? "present" : "missing"}`,
     `  Claude save permission: ${status.claudePermission}`,
     `  Codex instructions: ${status.codexInstructions ? "present" : "missing"}`,
+    `  OpenCode instructions: ${status.opencodeInstructions ? "present" : "missing"}`,
+    `  Copilot instructions: ${status.copilotInstructions ? "present" : "missing"}`,
     `  Cursor instructions: ${status.cursorInstructions ? "present" : "missing"}`,
   ].join("\n");
 }

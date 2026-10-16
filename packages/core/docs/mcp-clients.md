@@ -1,6 +1,6 @@
 # MCP Clients
 
-Fixmind's installer can set up Claude Code, Codex, and Cursor for you. For every other MCP-capable client, use the same pattern:
+Fixmind's installer can set up Claude Code, Codex, Cursor, OpenCode, VS Code, Copilot CLI, and Pi for you. For any other MCP-capable client, use the same pattern:
 
 1. Add a server named `fixmind`.
 2. Point it at the same stdio launcher.
@@ -62,13 +62,77 @@ Cursor also supports project-local rules files, which is how Fixmind adds the le
 
 ## Visual Studio Code
 
-VS Code supports MCP servers through its MCP configuration flow. Add Fixmind by using the **MCP: Add Server** command or by editing `.vscode/mcp.json` directly.
+The easiest path is still:
 
-The server entry should look like this:
+```bash
+npx fixmind setup
+```
+
+That writes a `fixmind` entry into `.vscode/mcp.json` (project scope) or your user profile's `mcp.json` (user scope). Server entries live in a top-level `servers` object and look like this:
 
 ```json
 {
   "servers": {
+    "fixmind": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "fixmind", "mcp"]
+    }
+  }
+}
+```
+
+VS Code reads Fixmind instructions from `.github/copilot-instructions.md`, which setup writes at project scope.
+
+## GitHub Copilot CLI
+
+The easiest path is still:
+
+```bash
+npx fixmind setup
+```
+
+User scope writes to `~/.copilot/mcp-config.json`, and project scope writes a portable `.mcp.json` at the project root. Both keep servers in a top-level `mcpServers` object; you can also add the server by hand with the `/mcp add` slash command.
+
+Copilot also reads Fixmind instructions from `.github/copilot-instructions.md`, which setup writes at project scope.
+
+## OpenCode
+
+The easiest path is still:
+
+```bash
+npx fixmind setup
+```
+
+Setup writes a `fixmind` entry into `opencode.json` — globally at `~/.config/opencode/opencode.json`, or in the project root for project scope:
+
+```json
+{
+  "mcp": {
+    "fixmind": {
+      "type": "local",
+      "command": ["npx", "-y", "fixmind", "mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+
+OpenCode keeps MCP servers under its `mcp` config option, and reads instructions from `AGENTS.md` (global: `~/.config/opencode/AGENTS.md`; project: `AGENTS.md`).
+
+## Pi
+
+The easiest path is still:
+
+```bash
+npx fixmind setup
+```
+
+Pi reads user-level servers from `~/.pi/agent/mcp.json` and project servers from `.pi/mcp.json`:
+
+```json
+{
+  "mcpServers": {
     "fixmind": {
       "command": "npx",
       "args": ["-y", "fixmind", "mcp"]
@@ -77,26 +141,10 @@ The server entry should look like this:
 }
 ```
 
-VS Code can store MCP servers in either workspace settings or your user profile.
-
-## GitHub Copilot CLI
-
-Copilot CLI has a built-in GitHub MCP server, and it also lets you add your own servers.
-
-Use the `/mcp add` slash command, then add a server named `fixmind` that runs the shared launcher.
-
-Copilot CLI stores the result in its MCP config under `~/.copilot` by default.
-
-## OpenCode
-
-OpenCode supports both local and remote MCP servers. Add Fixmind from the `opencode mcp add` flow, or put it in your `opencode.json` configuration.
-
-Point the server at the shared launcher.
-
-OpenCode keeps MCP servers under its `mcp` config option.
+Pi reads instructions from `AGENTS.md`, which setup writes at project scope.
 
 ## Other MCP clients
 
-If you use Pi or another MCP client that can launch a local stdio server, register a server named `fixmind` with the shared launcher.
+If you use any other MCP client that can launch a local stdio server, register a server named `fixmind` with the shared launcher.
 
 If the client only accepts JSON config, the shape is usually the same: a server name, a command, and an argument list that starts `-y fixmind mcp`.

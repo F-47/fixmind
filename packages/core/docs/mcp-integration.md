@@ -23,7 +23,7 @@ Run:
 npx fixmind setup
 ```
 
-The setup command detects Codex, Claude Code, and Cursor, asks which clients to configure, initializes local storage, and registers this stdio command:
+The setup command detects Codex, Claude Code, Cursor, OpenCode, VS Code, Copilot CLI, and Pi, asks which clients to configure, initializes local storage, and registers this stdio command:
 
 ```powershell
 npx -y fixmind mcp
@@ -34,11 +34,11 @@ On Windows, clients receive the compatible equivalent using `cmd /c`.
 Non-interactive examples:
 
 ```powershell
-npx fixmind setup --client codex,claude,cursor
+npx fixmind setup --client codex,claude,cursor,opencode,vscode,copilot,pi
 npx fixmind setup --client cursor --dry-run
 ```
 
-Setup is idempotent. Existing MCP entries are preserved. Before changing Cursor's JSON configuration, the previous file is copied to `mcp.json.backup`.
+Setup is idempotent. Existing MCP entries are preserved. Before changing status JSON config files, the previous file is copied to `<file>.backup`.
 
 For Claude Code, setup also pre-approves the `mcp__fixmind__save_lesson` tool by adding it to `permissions.allow` in `~/.claude/settings.json`, so the agent is not blocked by a runtime permission prompt when saving a lesson. Existing settings and other permission entries are preserved, and a `.backup` copy of `settings.json` is made before the first change.
 
